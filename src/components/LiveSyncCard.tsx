@@ -127,7 +127,7 @@ export const LiveSyncCard: React.FC = () => {
         league_id: leagueId.trim(),
         username: mflUsername.trim() || undefined,
         password: mflPassword.trim() || undefined,
-        mfl_token: mflAuth?.token || undefined,
+        mfl_api_key: undefined,
         franchise_id: identifier.trim() || undefined,
         year: mflYear.trim() || '2024',
         valuation_mode: 'auction_desc',

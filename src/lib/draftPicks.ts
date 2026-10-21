@@ -16,10 +16,11 @@ import {
   StrategicTarget,
   FlexForFirstOpportunity,
 } from '../types';
+import { SEASON } from './season';
 
 export class DraftPickEngine {
-  public static readonly CURRENT_SEASON = 2026;
-  public static readonly UPCOMING_DRAFT_YEAR = 2027; // The next rookie draft to occur
+  public static readonly CURRENT_SEASON = SEASON.seasonYear;
+  public static readonly UPCOMING_DRAFT_YEAR = SEASON.upcomingDraftYear; // The next rookie draft to occur
 
   /**
    * Calculates consensus market value for a future draft pick.

@@ -17,6 +17,7 @@ import {
   ChampionshipWindow,
   RosterRemediationAdvice,
 } from '../types';
+import { SEASON } from './season';
 
 export class RosterDNAMathEngine {
   // Peak-performance dropoff thresholds in fractional years by position
@@ -112,7 +113,7 @@ export class RosterDNAMathEngine {
 
       const qbCount = explicitStarters.filter((p) => p.position === 'QB').length;
       // If explicit starters has <= max allowed QBs, accept it
-      const maxAllowedQBs = (slots.QB || 1) + (slots.SUPER_FLEX || 0);
+      const maxAllowedQBs = (slots.QB ?? 1) + (slots.SUPER_FLEX || 0);
       if (qbCount <= maxAllowedQBs && explicitStarters.length >= 8) {
         return { starters: explicitStarters, bench: explicitBench };
       }
@@ -135,10 +136,10 @@ export class RosterDNAMathEngine {
     };
 
     // 1. Core Mandatory Positional Slots
-    pickForSlot((p) => p.position === 'QB', slots.QB || 1);
-    pickForSlot((p) => p.position === 'RB', slots.RB || 2);
-    pickForSlot((p) => p.position === 'WR', slots.WR || 3);
-    pickForSlot((p) => p.position === 'TE', slots.TE || 1);
+    pickForSlot((p) => p.position === 'QB', slots.QB ?? 1);
+    pickForSlot((p) => p.position === 'RB', slots.RB ?? 2);
+    pickForSlot((p) => p.position === 'WR', slots.WR ?? 3);
+    pickForSlot((p) => p.position === 'TE', slots.TE ?? 1);
 
     // 2. Regular Flex Slots (RB / WR / TE)
     if (slots.FLEX && slots.FLEX > 0) {
@@ -252,7 +253,7 @@ export class RosterDNAMathEngine {
     classification: ClassificationType,
     starters: MasterPlayer[]
   ): ChampionshipWindow {
-    const currentYear = 2026;
+    const currentYear = SEASON.seasonYear;
     const yearsRemaining = Math.max(0.5, Math.round(halfLife * 10) / 10);
     const peakEndYear = currentYear + Math.min(5, Math.max(1, Math.round(yearsRemaining)));
 

@@ -77,6 +77,17 @@ export interface LeagueSettings {
     DEF?: number;
   };
   scoring_type?: string;
+  /** Superflex or 2QB: QBs valued on the Superflex scale */
+  superflex?: boolean;
+  /** League gives a bonus per TE reception */
+  te_premium?: boolean;
+}
+
+/** Where the market values came from and how fresh they are */
+export interface ValuesMeta {
+  source: string;
+  scrape_date: string | null;
+  player_count: number;
 }
 
 export interface ChampionshipWindow {
@@ -303,14 +314,17 @@ export interface RosterEvaluationResult {
   remediations?: RosterRemediationAdvice[];
   warnings?: string[];
   unmatched_names?: string[];
+  values_meta?: ValuesMeta;
+  /** All teams in the league, for switching "my team" without re-syncing */
+  league_franchises?: { franchise_id: string; franchise_name: string; owner_name?: string }[];
 }
 
 export interface SyncRequest {
   platform: Platform;
   league_id: string;
   username?: string;
-  password?: string; // MFL login password for private league authentication
-  mfl_token?: string; // Authenticated MFL session token from OAuth2 / link
+  password?: string; // MFL password (private leagues). Sent once over HTTPS, never stored.
+  mfl_api_key?: string; // MFL per-league API key (private leagues, read-only)
   franchise_id?: string;
   year?: string; // MFL season year (e.g. 2024, 2025)
   valuation_mode?: ValuationMode;

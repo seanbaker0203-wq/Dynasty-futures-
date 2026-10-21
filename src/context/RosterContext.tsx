@@ -135,7 +135,7 @@ export const RosterProvider: React.FC<{ children: React.ReactNode }> = ({ childr
           return;
         } else if (req.platform === 'mfl') {
           const { MFLClientAdapter } = await import('../lib/adapters/mflAdapter');
-          const adapter = new MFLClientAdapter(req.year || '2026', req.username, req.password, req.mfl_token);
+          const adapter = new MFLClientAdapter(req.year || '2026', req.username, req.password, req.mfl_api_key);
           const identifier = req.franchise_id || req.username || '0001';
           const rosterRecord = await adapter.fetchRoster(req.league_id, identifier);
           const result = RosterDNAMathEngine.evaluateRoster(rosterRecord, SEED_PLAYERS);
@@ -185,7 +185,7 @@ export const RosterProvider: React.FC<{ children: React.ReactNode }> = ({ childr
           return;
         } else if (req.platform === 'mfl') {
           const { MFLClientAdapter } = await import('../lib/adapters/mflAdapter');
-          const adapter = new MFLClientAdapter(req.year || '2026', req.username, req.password, req.mfl_token);
+          const adapter = new MFLClientAdapter(req.year || '2026', req.username, req.password, req.mfl_api_key);
           const identifier = req.franchise_id || req.username || '0001';
           const rosterRecord = await adapter.fetchRoster(req.league_id, identifier);
           const result = RosterDNAMathEngine.evaluateRoster(rosterRecord, SEED_PLAYERS);
