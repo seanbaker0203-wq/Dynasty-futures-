@@ -11,6 +11,7 @@ export type DashboardViewMode =
   | 'optimization'
   | 'league'
   | 'compare'
+  | 'freeagents'
   | 'trade';
 
 interface RosterContextType {
@@ -37,6 +38,9 @@ interface RosterContextType {
   clearRoster: () => void;
   clearComparisonRoster: () => void;
   syncHistory: SyncRequest[];
+  /** Team picked as trade partner / comparison from the league screens */
+  partnerId: string | null;
+  setPartnerId: (id: string | null) => void;
 }
 
 const RosterContext = createContext<RosterContextType | undefined>(undefined);
@@ -79,6 +83,7 @@ export const RosterProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   const [activePlatform, setActivePlatform] = useState<Platform>('mfl');
   const [isDemo, setIsDemo] = useState(false);
   const [syncHistory, setSyncHistory] = useState<SyncRequest[]>([]);
+  const [partnerId, setPartnerId] = useState<string | null>(null);
   // Last successful request, kept in memory only (may hold an MFL password or API key).
   const lastSync = useRef<SyncRequest | null>(null);
 
@@ -115,6 +120,7 @@ export const RosterProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       setIsDemo(false);
       setEvaluation(result);
       setComparisonEvaluation(null);
+      setPartnerId(null);
       setActiveView('single');
       saveToHistory({ ...req, franchise_id: myTeamId });
     } catch (err: any) {
@@ -206,6 +212,8 @@ export const RosterProvider: React.FC<{ children: React.ReactNode }> = ({ childr
           setComparisonError(null);
         },
         syncHistory,
+        partnerId,
+        setPartnerId,
       }}
     >
       {children}

@@ -316,144 +316,130 @@ export class RosterDNAMathEngine {
     settings?: LeagueSettings
   ): RosterRemediationAdvice[] {
     const remediations: RosterRemediationAdvice[] = [];
-    const is1QB = (settings?.slots?.QB || 1) === 1 && (settings?.slots?.SUPER_FLEX || 0) === 0;
+    const is1QB = (settings?.slots?.QB ?? 1) <= 1 && (settings?.slots?.SUPER_FLEX || 0) === 0;
+    const next = SEASON.upcomingDraftYear;
+    const contending = ['Juggernaut', 'Contender', 'Fraudulent Contender'].includes(metrics.classification);
+    const list = (ps: MasterPlayer[]) => ps.map((p) => p.full_name).join(', ');
 
-    // 1. Surplus QB Capital in 1-QB League Check
+    // 1. Valuable backup QBs in a 1QB league score nothing.
     if (is1QB) {
-      const allQBs = [...starters, ...bench].filter((p) => p.position === 'QB' && p.market_value >= 3500);
-      if (allQBs.length >= 3) {
-        const benchQBs = bench.filter((p) => p.position === 'QB' && p.market_value >= 3500);
-        const benchQbValue = benchQBs.reduce((sum, p) => sum + p.market_value, 0);
-        const names = benchQBs.map((p) => p.full_name).join(', ');
-
+      const benchQBs = bench.filter((p) => p.position === 'QB' && p.market_value >= 1000);
+      if (benchQBs.length >= 1 && benchQBs.reduce((s, p) => s + p.market_value, 0) >= 2000) {
+        const value = benchQBs.reduce((s, p) => s + p.market_value, 0);
         remediations.push({
           category: 'Surplus Capital',
           severity: 'opportunity',
-          metric_name: 'QB Capital Inefficiency',
-          current_value: `${allQBs.length} Top-Tier QBs (${benchQBs.length} on bench)`,
-          threshold: 'Max 2 QBs in 1-QB League',
-          issue: `You are holding ${names} on your bench (${benchQbValue.toLocaleString()} pts idle market value) in a 1-QB league.`,
-          actionable_step: `Package one or two elite backup QBs to QB-needy rivals to acquire a top-tier WR1 or RB1 to start every week.`,
+          metric_name: 'Backup QBs',
+          current_value: `${benchQBs.length} worth ${value.toLocaleString()}`,
+          threshold: 'one starter in a 1QB league',
+          issue: `${list(benchQBs)} ${benchQBs.length === 1 ? 'sits' : 'sit'} behind your starter. In a 1QB league a backup QB adds no points.`,
+          actionable_step: `Turn ${benchQBs.length === 1 ? 'your backup QB' : 'a backup QB'} into a starter at a position where you're thin.`,
           recommended_moves: [
-            `Package ${benchQBs[0]?.full_name || 'backup QB'} + 2nd round pick for a top-8 dynasty WR (e.g. Garrett Wilson, Marvin Harrison Jr.)`,
-            `Offer ${benchQBs[1]?.full_name || 'QB2'} to a contender with a weak QB for high-leverage 2027 1st round draft capital`,
-            `Streamline to 2 active QBs max to free up roster spots for running back handcuffs and rookie stashes`,
+            `Shop ${benchQBs[0].full_name} to a team whose starting QB is weak or hurt`,
+            'Ask for a starting RB or WR, or a first-round pick, rather than more depth',
           ],
         });
       }
     }
 
-    // 2. Gross Liquidity Threshold Check (< 100)
+    // 2. Lineup below the league median.
     if (metrics.gross_liquidity < 100) {
       remediations.push({
         category: 'Asset Liquidity',
         severity: metrics.gross_liquidity < 85 ? 'critical' : 'warning',
-        metric_name: 'Gross Liquidity',
-        current_value: `${metrics.gross_liquidity} Index`,
-        threshold: '100.0 Baseline Target',
-        issue: `Starting lineup power is below league baseline, creating a weekly scoring handicap against high-end rosters.`,
-        actionable_step: `Execute consolidation trades (2-for-1 or 3-for-1 packages) to upgrade good depth players into an elite, game-breaking cornerstone.`,
+        metric_name: 'Lineup strength',
+        current_value: `${Math.round(metrics.gross_liquidity)}`,
+        threshold: '100, the league median',
+        issue: 'Your starting lineup is weaker than most of your league.',
+        actionable_step: contending
+          ? 'Combine two depth pieces into one better starter.'
+          : 'Decide: buy starters now, or lean into a rebuild and sell veterans for picks.',
         recommended_moves: [
-          'Trade two WR2/WR3 depth assets for one elite WR1 tier anchor',
-          'Target buy-low elite performers experiencing temporary injuries or offensive scheme changes',
-          'Avoid lateral tier-for-tier trades that do not raise your weekly ceiling',
+          'Two-for-one trades that upgrade a starting spot',
+          'Buy injured or slumping starters while their price is down',
+          'Skip sideways swaps that don’t raise your weekly lineup',
         ],
       });
     }
 
-    // 3. Asset Half-Life / Age Cliff Check (< 3.0 years)
+    // 3. Old roster.
     if (metrics.asset_half_life < 3.2) {
-      const agingRBs = starters.filter((p) => p.position === 'RB' && p.age >= 28);
-      const names = agingRBs.map((p) => `${p.full_name} (${p.age})`).join(', ');
-
+      const aging = [...starters, ...bench]
+        .filter((p) => (p.position === 'RB' && p.age >= 27) || (p.position === 'WR' && p.age >= 29) || (p.position === 'TE' && p.age >= 30))
+        .sort((a, b) => b.market_value - a.market_value)
+        .slice(0, 3);
       remediations.push({
         category: 'Age Cliff Warning',
         severity: metrics.asset_half_life < 2.2 ? 'critical' : 'warning',
-        metric_name: 'Asset Half-Life',
-        current_value: `${metrics.asset_half_life} Years`,
-        threshold: '3.5+ Years Longevity',
-        issue: `Portfolio is within 2-3 years of steep depreciation cliff, driven by aging veterans${names ? ` such as ${names}` : ''}.`,
-        actionable_step: `Begin phased liquidation of high-risk veterans aged 28+ to contending rivals before performance dropoff occurs.`,
+        metric_name: 'Prime years left',
+        current_value: `${metrics.asset_half_life} yrs`,
+        threshold: '3.5 yrs or more',
+        issue: `A lot of your value is in players near their age cliff${aging.length ? `: ${list(aging)}` : ''}.`,
+        actionable_step: contending
+          ? 'Keep competing, but sell one aging starter a year before their value drops.'
+          : 'Sell aging starters to contenders now, while they still bring a good return.',
         recommended_moves: [
-          'Sell veteran RBs during hot early-season scoring streaks',
-          'Tier down from an aging veteran to a 2nd-year upside player plus an early draft pick',
-          'Prioritize rookie WR drafts to extend core franchise longevity into 2028-2030',
+          'Running backs lose value fastest after 27; sell on a big game',
+          `Swap a veteran for a younger player plus a ${next} pick`,
         ],
       });
     }
 
-    // 4. Structural Integrity Threshold Check (< 68%)
+    // 4. Depth vs top-heaviness.
     if (metrics.structural_integrity < 68) {
       const starterVal = starters.reduce((acc, p) => acc + p.market_value, 0);
       const benchVal = bench.reduce((acc, p) => acc + p.market_value, 0);
       const isTopHeavy = starterVal > benchVal * 2.8;
-
       remediations.push({
         category: 'Structural Imbalance',
         severity: metrics.structural_integrity < 50 ? 'critical' : 'warning',
-        metric_name: 'Structural Integrity',
-        current_value: `${metrics.structural_integrity}%`,
-        threshold: '70%+ Insulation Target',
+        metric_name: 'Depth',
+        current_value: `${Math.round(metrics.structural_integrity)}%`,
+        threshold: '70% or more',
         issue: isTopHeavy
-          ? 'Roster is dangerously top-heavy: a single injury to a starter will catastrophically collapse weekly lineup output.'
-          : 'Roster has bloated depth but lacks the true elite studs required to win playoff matchups.',
+          ? 'Almost all your value is in your starters. One injury leaves a hole you can’t fill.'
+          : 'You have plenty of depth but few players who win weeks on their own.',
         actionable_step: isTopHeavy
-          ? 'Tier down one elite asset into two productive high-floor starters to insulate weekly lineup floor.'
-          : 'Package depth players (3-for-1) to acquire an elite alpha superstar.',
-        recommended_moves: [
-          isTopHeavy
-            ? 'Acquire immediate starting handcuffs for your RB1/RB2'
-            : 'Consolidate bench WRs into a top-15 consensus starter',
-          'Ensure every starting position has at least one dependable, high-snap reserve backup',
-        ],
+          ? 'Add reliable backups at RB and WR, cheaply.'
+          : 'Package bench players into one difference-maker.',
+        recommended_moves: isTopHeavy
+          ? ['Pick up backup RBs who would start if the starter got hurt', 'Use late picks, not starters, to buy depth']
+          : ['Offer two or three bench players for one top-24 starter'],
       });
     }
 
-    // 5. Positional Depth Deficit Checks
-    const starterPosCounts: Record<string, number> = {};
-    starters.forEach((p) => {
-      starterPosCounts[p.position] = (starterPosCounts[p.position] || 0) + 1;
-    });
-
-    const benchPosCounts: Record<string, number> = {};
-    bench.forEach((p) => {
-      benchPosCounts[p.position] = (benchPosCounts[p.position] || 0) + 1;
-    });
-
-    if ((starterPosCounts['RB'] || 0) >= 2 && (benchPosCounts['RB'] || 0) < 3) {
+    // 5. Thin at running back.
+    const benchRBs = bench.filter((p) => p.position === 'RB').length;
+    if (starters.filter((p) => p.position === 'RB').length >= 2 && benchRBs < 2) {
       remediations.push({
         category: 'Depth Deficit',
         severity: 'warning',
-        metric_name: 'RB Depth Reserve',
-        current_value: `${benchPosCounts['RB'] || 0} Bench RBs`,
-        threshold: 'Minimum 3 Bench RBs',
-        issue: 'Running back positions have high attrition rates. Insufficient backup depth creates catastrophic injury vulnerability.',
-        actionable_step: 'Target backup running backs on high-scoring offenses through waivers or cheap pick swaps.',
-        recommended_moves: [
-          'Stash high-upside backup running backs with standalone passing-down roles',
-          'Use 3rd round rookie draft picks on athletic rookie running backs with path to touches',
-        ],
+        metric_name: 'RB depth',
+        current_value: `${benchRBs} on the bench`,
+        threshold: '2 or more',
+        issue: 'Running backs get hurt more than any position, and you have little cover.',
+        actionable_step: 'Add a backup running back with a path to touches.',
+        recommended_moves: ['Look at the free-agent list first', 'A late-round pick can buy a handcuff'],
       });
     }
 
-    // 6. Cardinal Dynasty Rule: "Flex for a First" Liquidation Check
-    const flexAssets = [...starters, ...bench].filter(
-      (p) => (p.position === 'WR' || p.position === 'RB' || p.position === 'TE') && p.market_value >= 1400 && p.market_value <= 3900
-    );
-    if (flexAssets.length >= 2 && metrics.classification !== 'Juggernaut') {
-      const names = flexAssets.slice(0, 3).map((p) => p.full_name).join(', ');
+    // 6. Non-contenders holding mid-value flex players: sell them for picks.
+    const flexAssets = [...starters, ...bench]
+      .filter((p) => ['WR', 'RB', 'TE'].includes(p.position) && p.market_value >= 1400 && p.market_value <= 3900)
+      .filter((p) => p.position !== 'RB' || p.age >= 25)
+      .sort((a, b) => b.market_value - a.market_value);
+    if (!contending && flexAssets.length >= 2) {
       remediations.push({
         category: 'Surplus Capital',
         severity: 'opportunity',
-        metric_name: 'Dynasty Rule: "Flex for a First"',
-        current_value: `${flexAssets.length} Tradable Flex Producers`,
-        threshold: 'Convert Depth to 2027/2028 1sts',
-        issue: `You hold high-liquidity flex producers (${names}). In-season contender urgency makes this the optimal window to flip secondary producers for future firsts.`,
-        actionable_step: `Execute the cardinal dynasty rule: "Flex for a First". Flex points are replaceable through depth and waivers; 2027 & 2028 first-round picks appreciate 25%+ into the off-season.`,
+        metric_name: 'Sell flex players for picks',
+        current_value: `${flexAssets.length} candidates`,
+        threshold: 'convert while contenders are buying',
+        issue: `${list(flexAssets.slice(0, 3))} help a contender more than they help you.`,
+        actionable_step: `Sell one to a contender for a ${next} or ${next + 1} first-round pick.`,
         recommended_moves: [
-          'Target playoff-bound contenders suffering injury attrition in the Flex spot',
-          'Offer your hot flex producer for their 2027 1st round pick (or 2028 1st multi-year)',
-          'Multi-Year Arbitrage: Collect distant picks (2028/2029) at steep market discounts',
+          'Contenders with an injured starter pay the most',
+          `Picks further out (${next + 1}, ${next + 2}) are often cheaper to get thrown in`,
         ],
       });
     }

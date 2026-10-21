@@ -254,6 +254,8 @@ export interface LeagueTeamSummary {
   top_players: MasterPlayer[];
   starters: MasterPlayer[];
   bench: MasterPlayer[];
+  /** Taxi squad and IR players (not counted in starter/bench value) */
+  reserves?: MasterPlayer[];
   draft_picks: DraftPick[];
   target_assets_for_user: string[];
 }

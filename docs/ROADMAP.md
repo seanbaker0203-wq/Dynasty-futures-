@@ -49,7 +49,9 @@ Caveats: values are derived from FantasyPros expert rankings; repo is GPL-3. Fin
 5. AI trade finder's "predicted Gross Liquidity delta" still uses the old fixed 22,500 baseline (`src/lib/aiTradeFinder.ts`).
 6. Explanatory copy on League Radar still mentions 2027/2028 by name.
 7. ~~Phone layout~~ — shell done: 4 destinations (My team · League · Trade · Connect), bottom tab bar on phones, no horizontal scroll on any screen at 390 px.
-8. **Visual pass on inner screens.** Still the AI Studio look: all-caps mono labels, badges everywhere, long dashboard pages. Needs a real design direction and shorter, phone-first screens.
+8. ~~Visual pass~~ — done: "Front office" design system (`docs/DESIGN.md`), light + dark, every screen rebuilt phone-first. Front end went from ~17,700 to ~3,700 lines; JS bundle 984 KB → 300 KB.
+   **Removed from the UI for now** (code is in git history before the design-pass commit): AI Trade Architect, trade history log, 3-season projection chart, market heatmap. AI trade ideas come back in Phase 3 built on manager profiles; the `/api/trade/ai-suggest` endpoint still exists.
+9. The "prime years left" model gives RBs a 26.5 age cliff, so swapping a 30-year-old RB for a 24-year-old RB can show little change. Revisit age curves (per-position value curves rather than a single cliff).
 
 ## Roadmap
 

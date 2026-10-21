@@ -208,6 +208,7 @@ export function evaluateLeague(league: NormalizedLeague, requestedTeamId?: strin
       top_players: [...ev.starters].sort((a, b) => b.market_value - a.market_value).slice(0, 4),
       starters: ev.starters,
       bench: ev.bench,
+      reserves: [...(ev.injured_reserve || []), ...(ev.taxi_squad || [])],
       draft_picks: picks,
       target_assets_for_user: DraftPickEngine.generateTargetAssetsForUser(userStance.stance, stance.stance, ev.players, picks),
     };
@@ -238,7 +239,11 @@ export function evaluateLeague(league: NormalizedLeague, requestedTeamId?: strin
   const unvalued = userEval.players.filter((p) => p.market_value === 0 && !['K', 'DEF'].includes(p.position));
   const warnings = [...(userEval.warnings || [])];
   if (unvalued.length) {
-    warnings.push(`${unvalued.length} player(s) have no market value yet (deep stashes or very new players) and count as 0.`);
+    warnings.push(
+      unvalued.length === 1
+        ? `${unvalued[0].full_name} has no market value yet, so counts as 0.`
+        : `${unvalued.length} players have no market value yet (deep stashes or very new players), so count as 0.`
+    );
   }
 
   return {

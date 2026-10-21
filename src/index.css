@@ -1,29 +1,144 @@
 @import "tailwindcss";
+@import "@fontsource/barlow/400.css";
+@import "@fontsource/barlow/500.css";
+@import "@fontsource/barlow/600.css";
+@import "@fontsource/barlow-condensed/600.css";
+@import "@fontsource/barlow-condensed/700.css";
 
-@layer base {
-  :root {
+/* Front-office palette. See docs/DESIGN.md. */
+:root {
+  --paper: #f6f8f6;
+  --card: #ffffff;
+  --ink: #0f3d2e;
+  --text: #1c2622;
+  --muted: #5e6c65;
+  --line: #dce3df;
+  --gold: #a87a1c;
+  --up: #1d7a4c;
+  --down: #b0412c;
+  --ink-soft: #e6efe9; /* ink at low strength, for selected rows / bars */
+  color-scheme: light;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --paper: #0d1411;
+    --card: #141d19;
+    --ink: #d8ebdf;
+    --text: #d3dcd7;
+    --muted: #8e9c95;
+    --line: #25322c;
+    --gold: #d8ae55;
+    --up: #62c48f;
+    --down: #e07b66;
+    --ink-soft: #1d2b24;
     color-scheme: dark;
   }
-  
+}
+
+:root[data-theme="dark"] {
+  --paper: #0d1411;
+  --card: #141d19;
+  --ink: #d8ebdf;
+  --text: #d3dcd7;
+  --muted: #8e9c95;
+  --line: #25322c;
+  --gold: #d8ae55;
+  --up: #62c48f;
+  --down: #e07b66;
+  --ink-soft: #1d2b24;
+  color-scheme: dark;
+}
+
+@theme inline {
+  --color-paper: var(--paper);
+  --color-card: var(--card);
+  --color-ink: var(--ink);
+  --color-text: var(--text);
+  --color-muted: var(--muted);
+  --color-line: var(--line);
+  --color-gold: var(--gold);
+  --color-up: var(--up);
+  --color-down: var(--down);
+  --color-ink-soft: var(--ink-soft);
+  --font-sans: "Barlow", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Barlow Condensed", "Barlow", ui-sans-serif, sans-serif;
+}
+
+@layer base {
+  html {
+    -webkit-text-size-adjust: 100%;
+  }
   body {
-    background-color: #020617; /* slate-950 */
-    color: #f4f4f5; /* zinc-100 */
-    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
-    min-height: 100vh;
     margin: 0;
-    font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    min-height: 100vh;
+    background: var(--paper);
+    color: var(--text);
+    font-family: var(--font-sans);
+    font-size: 15px;
+    line-height: 1.5;
+    font-variant-numeric: tabular-nums;
+  }
+  :focus-visible {
+    outline: 2px solid var(--gold);
+    outline-offset: 2px;
+    border-radius: 6px;
+  }
+  button:not(:disabled) {
+    cursor: pointer;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      transition-duration: 0.01ms !important;
+      animation-duration: 0.01ms !important;
+    }
   }
 }
 
-/* Custom neon glow utility classes */
-.neon-glow-cyan {
-  box-shadow: 0 0 20px -3px rgba(6, 182, 212, 0.35);
-}
-
-.neon-glow-emerald {
-  box-shadow: 0 0 20px -3px rgba(16, 185, 129, 0.35);
-}
-
-.neon-glow-amber {
-  box-shadow: 0 0 20px -3px rgba(245, 158, 11, 0.35);
+@layer components {
+  .display {
+    font-family: var(--font-display);
+    font-weight: 700;
+    line-height: 1.05;
+    letter-spacing: 0.005em;
+  }
+  .field {
+    width: 100%;
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 0.6rem 0.8rem;
+    color: var(--text);
+    outline: none;
+  }
+  .field:focus {
+    border-color: var(--ink);
+  }
+  .btn-primary {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    background: var(--ink);
+    color: var(--paper);
+    font-weight: 600;
+    border-radius: 8px;
+    padding: 0.65rem 1.2rem;
+  }
+  .btn-primary:disabled {
+    opacity: 0.5;
+  }
+  .btn-quiet {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    color: var(--ink);
+    font-weight: 600;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 0.45rem 0.8rem;
+    background: var(--card);
+  }
 }

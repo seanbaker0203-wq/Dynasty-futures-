@@ -3,6 +3,7 @@
  * API routes live here; league adapters, values and evaluation live in ./server.
  * In development Vite is mounted as middleware; in production the built app is served from /dist.
  */
+import 'dotenv/config';
 import express, { Request, Response, NextFunction } from 'express';
 import path from 'path';
 import { fileURLToPath } from 'url';

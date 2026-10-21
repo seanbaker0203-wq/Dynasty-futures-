@@ -11,7 +11,7 @@ npm install
 npm run dev        # http://localhost:3000
 ```
 
-Optional: set `GEMINI_API_KEY` in `.env.local` for AI trade ideas.
+Optional: copy `.env.example` to `.env` and set `GEMINI_API_KEY` (used by the AI trade-ideas API).
 
 ## Production
 
