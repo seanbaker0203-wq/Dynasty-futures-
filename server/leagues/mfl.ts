@@ -142,13 +142,16 @@ export async function fetchMflLeague(
   const settings = parseMflSettings(L, rules);
   const franchiseMeta = new Map(asArray<any>(L.franchises?.franchise).map((f) => [String(f.id), f]));
 
-  // Picks: MFL lists only picks for drafts that haven't happened yet.
+  // Picks. Some leagues draft offline and never run the draft on MFL, so MFL keeps listing
+  // picks for drafts that already happened. Only count picks from the next real draft onward.
+  const { upcomingDraftYear } = getSeasonContext();
   const picksByTeam = new Map<string, LeaguePickRef[]>();
   for (const f of asArray<any>(futurePicks?.futureDraftPicks?.franchise)) {
     picksByTeam.set(
       String(f.id),
       asArray<any>(f.futureDraftPick)
         .map((p) => ({ year: Number(p.year), round: Number(p.round), original_team_id: String(p.originalPickFor || f.id) }))
+        .filter((p) => p.year >= upcomingDraftYear)
         .sort((a, b) => a.year - b.year || a.round - b.round)
     );
   }

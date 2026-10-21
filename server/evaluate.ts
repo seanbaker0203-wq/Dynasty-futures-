@@ -81,10 +81,9 @@ export function evaluateLeague(league: NormalizedLeague, requestedTeamId?: strin
   const mid = Math.floor(sorted.length / 2);
   const baseline = Math.max(1, sorted.length % 2 ? sorted[mid] : (sorted[mid - 1] + sorted[mid]) / 2 || 1);
 
-  // Next draft: the earliest pick year anyone holds (platforms only list undrafted picks).
+  // Next rookie draft comes from the calendar (adapters drop picks from drafts already held).
   const { upcomingDraftYear } = getSeasonContext();
-  const allPickYears = league.teams.flatMap((t) => t.picks.map((p) => p.year));
-  const firstDraftYear = allPickYears.length ? Math.min(...allPickYears) : upcomingDraftYear;
+  const firstDraftYear = upcomingDraftYear;
 
   // Next-draft pick tier from the original team's current strength (weakest third pick early).
   const strengthOrder = [...starterValue.entries()].sort((a, b) => a[1] - b[1]).map(([id]) => id);
