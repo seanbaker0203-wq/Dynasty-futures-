@@ -12,5 +12,4 @@ services:
     envVars:
       - key: NODE_VERSION
         value: "22"
-      - key: GEMINI_API_KEY
-        sync: false
+      # Optional, add later under Environment: GEMINI_API_KEY (AI trade-ideas API)
