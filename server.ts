@@ -6,7 +6,6 @@
 import 'dotenv/config';
 import express, { Request, Response, NextFunction } from 'express';
 import path from 'path';
-import { fileURLToPath } from 'url';
 import { valueStore } from './server/values';
 import { playerDirectory } from './server/players';
 import { fetchSleeperLeague } from './server/leagues/sleeper';
@@ -16,7 +15,6 @@ import { evaluateLeague } from './server/evaluate';
 import { aiTradeRouter } from './server/aiTrade';
 import { SEASON } from './src/lib/season';
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const app = express();
 const PORT = Number(process.env.PORT) || 3000;
 const isProduction = process.env.NODE_ENV === 'production';
@@ -92,8 +90,9 @@ async function start() {
     });
     app.use(vite.middlewares);
   } else {
-    app.use(express.static(path.resolve(__dirname, 'dist')));
-    app.get('*', (_req, res) => res.sendFile(path.resolve(__dirname, 'dist', 'index.html')));
+    const dist = path.resolve(process.cwd(), 'dist');
+    app.use(express.static(dist, { maxAge: '1h', index: false }));
+    app.get('*', (_req, res) => res.sendFile(path.join(dist, 'index.html')));
   }
   app.listen(PORT, '0.0.0.0', () => console.log(`Dynasty Futures running on http://localhost:${PORT}`));
 }

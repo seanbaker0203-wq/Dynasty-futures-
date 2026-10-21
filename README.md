@@ -16,11 +16,12 @@ Optional: copy `.env.example` to `.env` and set `GEMINI_API_KEY` (used by the AI
 ## Production
 
 ```bash
-npm run build
-NODE_ENV=production npm start
+npm run build      # client to dist/, server to build/server.mjs
+npm start          # NODE_ENV=production node build/server.mjs
 ```
 
-The server needs outbound HTTPS to `api.sleeper.app`, `*.myfantasyleague.com` and `raw.githubusercontent.com`.
+Deploys to Render from `render.yaml` (New > Blueprint). The server needs outbound HTTPS to `api.sleeper.app`,
+`*.myfantasyleague.com` and `raw.githubusercontent.com`. Health check: `/api/health`.
 
 ## Data
 
