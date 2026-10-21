@@ -1,0 +1,6 @@
+{
+  "name": "Dynasty AI Evaluator",
+  "description": "Roster DNA Platform — Quantitative dynasty fantasy football roster evaluation, portfolio health metrics, and market value analytics.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

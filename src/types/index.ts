@@ -1,0 +1,432 @@
+/**
+ * Dynasty AI Evaluator - TypeScript Interfaces (Slice 1)
+ * Roster DNA Platform Data Models & Enums
+ */
+
+export type Position = 'QB' | 'RB' | 'WR' | 'TE' | 'K' | 'DEF' | 'PICK';
+
+export type Platform = 'sleeper' | 'mfl' | 'csv' | 'manual';
+
+export type ValuationMode = 'rankings_asc' | 'auction_desc';
+
+export type ClassificationType =
+  | 'Juggernaut'
+  | 'Contender'
+  | 'Productive Struggle'
+  | 'Fraudulent Contender'
+  | 'Total Rebuild'
+  | 'Middle of the Pack';
+
+export type RosterDesignation = 'ACTIVE' | 'IR' | 'TAXI';
+
+export interface MasterPlayer {
+  id: string;
+  full_name: string;
+  position: Position;
+  nfl_team: string;
+  age: number;
+  consensus_rank: number;
+  market_value: number;
+  tier?: number;
+  is_starter?: boolean;
+  normalized_name?: string;
+  roster_designation?: RosterDesignation;
+  salary?: string | number;
+  contract_year?: string | number;
+  fantasy_points_ppr?: number;
+  points?: number;
+  projected_points?: number;
+  adp?: number;
+}
+
+export interface HistoricalValuePoint {
+  date: string;
+  market_value: number;
+  rank: number;
+}
+
+export type TradeSignalType = 'SELL_HIGH' | 'BUY_LOW' | 'STRONG_BUY' | 'HOLD_CORNERSTONE';
+
+export interface PlayerMarketTrend {
+  player: MasterPlayer;
+  current_value: number;
+  previous_value_30d: number;
+  previous_value_90d: number;
+  change_30d_points: number;
+  change_30d_pct: number;
+  change_90d_points: number;
+  change_90d_pct: number;
+  rank_change_30d: number;
+  history: HistoricalValuePoint[];
+  trade_signal: TradeSignalType;
+  signal_rationale: string;
+}
+
+export interface LeagueSettings {
+  league_size: number;
+  roster_size?: number;
+  starter_count: number;
+  slots: {
+    QB: number;
+    RB: number;
+    WR: number;
+    TE: number;
+    FLEX: number; // RB/WR/TE
+    SUPER_FLEX?: number; // QB/RB/WR/TE
+    K?: number;
+    DEF?: number;
+  };
+  scoring_type?: string;
+}
+
+export interface ChampionshipWindow {
+  status: 'Win-Now Peak' | 'Strong Contender' | '2-Year Horizon' | 'Productive Youth' | 'Rebuild Horizon';
+  years_remaining: number;
+  peak_start_year: number;
+  peak_end_year: number;
+  verdict: string;
+  urgency_level: 'Critical' | 'Moderate' | 'Low' | 'Rebuilding';
+  target_acquisitions: string[];
+}
+
+export interface RosterRemediationAdvice {
+  category: 'Asset Liquidity' | 'Age Cliff Warning' | 'Structural Imbalance' | 'Surplus Capital' | 'Depth Deficit';
+  severity: 'critical' | 'warning' | 'opportunity';
+  metric_name: string;
+  current_value: string;
+  threshold: string;
+  issue: string;
+  actionable_step: string;
+  recommended_moves: string[];
+}
+
+export type ProjectionSourceKey =
+  | 'espn'
+  | 'yahoo'
+  | 'footballguys'
+  | 'ktc'
+  | 'fantasypros'
+  | 'ballers';
+
+export interface SourceProjection {
+  source_key: ProjectionSourceKey;
+  source_name: string;
+  url: string;
+  projected_points: number;
+  rank_in_pos: number;
+  sentiment?: string;
+}
+
+export interface MultiSourceWeeklyProjection {
+  player: MasterPlayer;
+  opponent: string;
+  is_home: boolean;
+  matchup_rating: 'Smash Spot' | 'Favorable' | 'Neutral' | 'Tough' | 'Shadow Coverage';
+  matchup_rank_vs_pos: number;
+  source_projections: Record<ProjectionSourceKey, SourceProjection>;
+  composite_average: number;
+  high_projection: { source: string; points: number };
+  low_projection: { source: string; points: number };
+  spread: number;
+  sit_start_status: 'MUST_START' | 'START' | 'TOSS_UP' | 'SIT';
+  rationale: string;
+  floor: number;
+  ceiling: number;
+  expert_notes?: string;
+  external_links: {
+    footballguys: string;
+    thefantasyfootballers: string;
+    keeptradecut: string;
+    fantasypros: string;
+    yahoo: string;
+    espn: string;
+  };
+}
+
+export interface WeeklyMatchup {
+  opponent: string;
+  is_home: boolean;
+  projected_points: number;
+  matchup_rating: 'Smash Spot' | 'Favorable' | 'Neutral' | 'Tough' | 'Shadow Coverage';
+  matchup_rank_vs_pos: number; // 1 to 32 (32 = easiest matchup)
+  confidence: number; // 0-100%
+  sit_start_status: 'MUST_START' | 'START' | 'TOSS_UP' | 'SIT';
+  rationale: string;
+  floor: number;
+  ceiling: number;
+  source_breakdown?: Record<ProjectionSourceKey, SourceProjection>;
+}
+
+export interface WeeklySitStartRecommendation {
+  player: MasterPlayer;
+  slot: string; // 'QB', 'RB1', 'RB2', 'WR1', 'WR2', 'WR3', 'TE', 'FLEX1', 'FLEX2', 'K', 'DEF', 'BENCH'
+  is_recommended_starter: boolean;
+  matchup: WeeklyMatchup;
+}
+
+export interface DraftPick {
+  id: string;
+  year: number;
+  round: number;
+  original_owner_id: string;
+  original_owner_name?: string;
+  current_owner_id: string;
+  description: string;
+  market_value: number;
+  tier?: 'Early' | 'Mid' | 'Late';
+  is_priority_class?: boolean; // True for 2027 upcoming draft class
+  years_out?: number; // 0 for 2027 (next draft), 1 for 2028, 2 for 2029
+}
+
+export type TradeStance = 'WIN_NOW_BUYER' | 'BALANCED_CONTENDER' | 'REBUILD_SELLER' | 'YOUTH_ACCUMULATOR';
+
+export type StrategyGoal = 'WIN_NOW' | 'REBUILD' | 'FLEX_FOR_FIRST';
+
+export interface StrategicTarget {
+  id: string;
+  type: 'VETERAN' | 'PICK' | 'YOUTH' | 'MULTI_YEAR_PICK' | 'FLEX_FOR_FIRST';
+  name: string;
+  position?: Position | string;
+  age?: number;
+  market_value: number;
+  owner_franchise_id: string;
+  owner_franchise_name: string;
+  owner_trade_stance: TradeStance;
+  rationale: string;
+  suggested_offer: string;
+  player?: MasterPlayer;
+  pick?: DraftPick;
+  multi_year_bonus?: string;
+}
+
+export interface FlexForFirstOpportunity {
+  id: string;
+  flex_player: MasterPlayer;
+  target_team: LeagueTeamSummary;
+  target_pick: DraftPick;
+  urgency: 'HIGH' | 'MEDIUM';
+  timing_window: 'In-Season Sweet Spot (Weeks 3-10)' | 'Contender Injury Attrition' | 'Peak Trade Leverage';
+  rationale: string;
+  suggested_offer: string;
+  contender_vulnerability: string;
+  equity_gain_summary: string;
+}
+
+export type DashboardViewMode =
+  | 'ingest'
+  | 'single'
+  | 'sitstart'
+  | 'optimization'
+  | 'league'
+  | 'compare'
+  | 'trade'
+  | 'market';
+
+export interface LeagueTeamSummary {
+  franchise_id: string;
+  franchise_name: string;
+  owner_name?: string;
+  power_rank: number;
+  classification: ClassificationType;
+  championship_window_status: string;
+  total_value: number;
+  starter_value: number;
+  bench_value: number;
+  draft_capital_value: number;
+  gross_liquidity: number;
+  asset_half_life: number;
+  structural_integrity: number;
+  player_count: number;
+  trade_stance: TradeStance;
+  stance_label: string;
+  stance_description: string;
+  top_players: MasterPlayer[];
+  starters: MasterPlayer[];
+  bench: MasterPlayer[];
+  draft_picks: DraftPick[];
+  target_assets_for_user: string[];
+}
+
+export interface RosterRecord {
+  roster_id: string;
+  platform: Platform;
+  external_league_id: string;
+  franchise_id: string;
+  player_ids: string[];
+  valuation_mode: ValuationMode;
+  league_name?: string;
+  franchise_name?: string;
+  starters?: string[];
+  taxi_ids?: string[];
+  reserve_ids?: string[];
+  draft_picks?: DraftPick[];
+  settings?: LeagueSettings;
+}
+
+export interface RosterDNAMetrics {
+  classification: string;
+  gross_liquidity: number;
+  asset_half_life: number;
+  structural_integrity: number;
+  total_roster_value?: number;
+  starter_value?: number;
+  bench_value?: number;
+  draft_capital_value?: number;
+  starter_equity_ratio?: number;
+  mean_roster_age?: number;
+  peak_window_years?: number;
+  championship_window?: ChampionshipWindow;
+}
+
+export interface PositionalBreakdown {
+  count: number;
+  total_value: number;
+  share_of_roster: number;
+  avg_age: number;
+}
+
+export interface RosterEvaluationResult {
+  roster: RosterRecord;
+  metrics: RosterDNAMetrics;
+  players: MasterPlayer[];
+  starters: MasterPlayer[];
+  bench: MasterPlayer[];
+  active_roster?: MasterPlayer[];
+  injured_reserve?: MasterPlayer[];
+  taxi_squad?: MasterPlayer[];
+  draft_picks?: DraftPick[];
+  league_teams?: LeagueTeamSummary[];
+  free_agents?: MasterPlayer[];
+  positional_breakdown: Record<string, PositionalBreakdown>;
+  settings?: LeagueSettings;
+  championship_window?: ChampionshipWindow;
+  remediations?: RosterRemediationAdvice[];
+  warnings?: string[];
+  unmatched_names?: string[];
+}
+
+export interface SyncRequest {
+  platform: Platform;
+  league_id: string;
+  username?: string;
+  password?: string; // MFL login password for private league authentication
+  mfl_token?: string; // Authenticated MFL session token from OAuth2 / link
+  franchise_id?: string;
+  year?: string; // MFL season year (e.g. 2024, 2025)
+  valuation_mode?: ValuationMode;
+}
+
+export interface MFLLinkedLeague {
+  league_id: string;
+  name: string;
+  franchise_id?: string;
+  url?: string;
+}
+
+export interface MFLAuthState {
+  isAuthenticated: boolean;
+  username: string;
+  token: string;
+  year: string;
+  leagues: MFLLinkedLeague[];
+  linkedAt?: string;
+}
+
+export interface FuzzyMatchCandidate {
+  raw_input: string;
+  normalized_input: string;
+  matched_player_id?: string;
+  matched_player_name?: string;
+  similarity_score: number;
+  is_match: boolean;
+}
+
+export interface LeagueFranchise {
+  roster_id: string;
+  owner_id?: string;
+  display_name: string;
+  team_name: string;
+  avatar?: string;
+  player_ids: string[];
+  starters: string[];
+}
+
+export interface WeeklyAssetPerformance {
+  week_number: number;
+  label: string;
+  incoming_fantasy_pts: number;
+  outgoing_fantasy_pts: number;
+  net_points_delta: number;
+  incoming_market_value: number;
+  outgoing_market_value: number;
+  net_value_delta: number;
+  realized_gross_liquidity: number;
+  notes?: string;
+}
+
+export interface LoggedTradeRecord {
+  id: string;
+  timestamp: string;
+  executed_week: number;
+  strategy_tag: 'FLEX_FOR_FIRST' | 'WIN_NOW' | 'REBUILD' | 'MULTI_YEAR_PICK' | 'BALANCED';
+  partner_franchise_id: string;
+  partner_franchise_name: string;
+
+  // Sent assets
+  sent_players: MasterPlayer[];
+  sent_picks: DraftPick[];
+  total_sent_market_value: number;
+
+  // Received assets
+  received_players: MasterPlayer[];
+  received_picks: DraftPick[];
+  total_received_market_value: number;
+
+  // Predictions at execution time
+  pre_trade_gross_liquidity: number;
+  predicted_gross_liquidity: number;
+  predicted_liquidity_delta: number;
+  predicted_structural_integrity_delta: number;
+  prediction_rationale: string;
+
+  // Tracking over subsequent weeks
+  tracking_weeks: WeeklyAssetPerformance[];
+
+  // Realized evaluation
+  latest_realized_gross_liquidity: number;
+  latest_realized_liquidity_delta: number;
+  liquidity_prediction_variance: number; // realized - predicted
+  accuracy_percentage: number;
+  accuracy_verdict: 'OUTPERFORMED' | 'ACCURATE' | 'UNDERPERFORMED';
+  verdict_analysis: string;
+}
+
+export interface AITradeProposal {
+  id: string;
+  title: string;
+  blueprint_type: 'FAIR_EQUILIBRIUM' | 'TIER_UP_SWEETENER' | 'FLEX_FOR_FIRST' | 'REBUILD_PIVOT' | 'WIN_NOW_BOOST';
+  summary: string;
+  partner_franchise_id: string;
+  partner_franchise_name: string;
+  send_players: MasterPlayer[];
+  send_picks: DraftPick[];
+  receive_players: MasterPlayer[];
+  receive_picks: DraftPick[];
+  total_ktc_sent: number;
+  total_ktc_received: number;
+  ktc_difference: number;
+  fairness_verdict: 'FAIR' | 'SLIGHT_FAVOR_YOU' | 'SLIGHT_FAVOR_THEM' | 'OVERPAY';
+  fairness_score_pct: number;
+  predicted_gross_liquidity_delta: number;
+  rationale_for_you: string;
+  rationale_for_partner: string;
+}
+
+export interface AITradeRequest {
+  shop_player_id?: string;
+  target_player_id?: string;
+  target_partner_id?: string;
+  strategy_mode?: 'BALANCED' | 'WIN_NOW' | 'REBUILD' | 'FLEX_FOR_FIRST';
+}
+
+
