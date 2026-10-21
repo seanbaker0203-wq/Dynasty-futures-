@@ -1,6 +1,6 @@
 # Dynasty AI Evaluator — Code Review & Roadmap
 
-_Review of the AI Studio export, 21 Oct 2026. Code lives in `/home/claude/dynasty-ai` (git initialised, first commit = untouched export)._
+_Review of the AI Studio export, 21 Oct 2026. Code: github.com/seanbaker0203-wq/Dynasty-futures- (first commit = untouched export)._
 
 ## What the app actually is
 
