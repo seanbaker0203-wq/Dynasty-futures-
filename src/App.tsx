@@ -2,20 +2,18 @@ import React from 'react';
 import { RosterProvider, useRoster } from './context/RosterContext';
 import { LiveSyncCard } from './components/LiveSyncCard';
 import { RosterDashboard } from './components/RosterDashboard';
-import { WeeklySitStartView } from './components/WeeklySitStartView';
 import { RosterOptimizationView } from './components/RosterOptimizationView';
 import { HeadToHeadComparisonView } from './components/HeadToHeadComparisonView';
 import { TradeBuilder } from './components/TradeBuilder';
-import { MarketTracker } from './components/MarketTracker';
+import { LeagueBar } from './components/LeagueBar';
+import { SEASON } from './lib/season';
 import { LeaguePowerRankingsView } from './components/LeaguePowerRankingsView';
 import {
   Dna,
   Swords,
   Activity,
   ArrowLeftRight,
-  TrendingUp,
   DownloadCloud,
-  Calendar,
   Zap,
   RotateCcw,
   Trophy,
@@ -44,17 +42,17 @@ const AppContent: React.FC = () => {
             <div>
               <div className="flex items-center gap-2">
                 <span className="font-extrabold text-base tracking-tight text-white">
-                  Dynasty AI Evaluator
+                  Dynasty Futures
                 </span>
                 <span className="text-[10px] uppercase font-mono px-1.5 py-0.5 rounded bg-cyan-950/80 text-cyan-400 border border-cyan-800/60 font-semibold">
-                  2026 In-Season
+                  {SEASON.seasonYear} Season
                 </span>
                 <span className="text-[10px] uppercase font-mono px-1.5 py-0.5 rounded bg-amber-950/80 text-amber-300 border border-amber-800/60 font-semibold hidden md:inline">
-                  2027 Draft Priority
+                  {SEASON.upcomingDraftYear} Draft
                 </span>
               </div>
               <p className="text-[11px] text-zinc-400 font-medium hidden sm:block">
-                In-Season 2026 • 2027 Pick Priority • 'Flex for a 1st' Doctrine
+                Dynasty roster intelligence for your league
               </p>
             </div>
           </div>
@@ -104,21 +102,6 @@ const AppContent: React.FC = () => {
                 <Trophy className="w-3.5 h-3.5 text-amber-400" />
                 <span className="hidden md:inline">League Radar</span>
                 <span className="md:hidden">League</span>
-              </button>
-
-              {/* 4. Weekly Sit/Start Advisor */}
-              <button
-                type="button"
-                onClick={() => setActiveView('sitstart')}
-                className={`px-3 py-1.5 rounded-md transition-all flex items-center gap-1.5 cursor-pointer whitespace-nowrap ${
-                  activeView === 'sitstart'
-                    ? 'bg-zinc-800 text-emerald-400 font-bold shadow-sm'
-                    : 'text-zinc-400 hover:text-zinc-200'
-                }`}
-              >
-                <Calendar className="w-3.5 h-3.5 text-emerald-400" />
-                <span className="hidden md:inline">Sit / Start</span>
-                <span className="md:hidden">Sit/Start</span>
               </button>
 
               {/* 4. Roster Optimization */}
@@ -174,20 +157,6 @@ const AppContent: React.FC = () => {
                 <span className="xl:hidden">Trade</span>
               </button>
 
-              {/* 7. Market Trends */}
-              <button
-                type="button"
-                onClick={() => setActiveView('market')}
-                className={`px-3 py-1.5 rounded-md transition-all flex items-center gap-1.5 cursor-pointer whitespace-nowrap ${
-                  activeView === 'market'
-                    ? 'bg-zinc-800 text-emerald-300 font-bold shadow-sm'
-                    : 'text-zinc-400 hover:text-zinc-200'
-                }`}
-              >
-                <TrendingUp className="w-3.5 h-3.5 text-emerald-400" />
-                <span className="hidden xl:inline">Market Radar</span>
-                <span className="xl:hidden">Market</span>
-              </button>
             </div>
           </div>
         </div>
@@ -195,6 +164,7 @@ const AppContent: React.FC = () => {
 
       {/* Main Container */}
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+        {evaluation && activeView !== 'ingest' && <LeagueBar />}
         {/* VIEW 1: Roster Ingestion (First page on arrival) */}
         {activeView === 'ingest' && (
           <section aria-label="Roster Ingestion Engine" className="space-y-4">
@@ -230,13 +200,6 @@ const AppContent: React.FC = () => {
           </section>
         )}
 
-        {/* VIEW 4: Weekly Sit / Start Advisor */}
-        {activeView === 'sitstart' && (
-          <section aria-label="Weekly Sit Start Advisor">
-            <WeeklySitStartView />
-          </section>
-        )}
-
         {/* VIEW 4: Roster Optimization & Remediation Engine */}
         {activeView === 'optimization' && (
           <section aria-label="Roster Optimization Engine">
@@ -258,26 +221,19 @@ const AppContent: React.FC = () => {
           </section>
         )}
 
-        {/* VIEW 7: Market Trends and Trade Signals */}
-        {activeView === 'market' && (
-          <section aria-label="Market Trends and Trade Signals">
-            <MarketTracker />
-          </section>
-        )}
       </main>
 
       {/* Footer */}
-      <footer className="border-t border-zinc-900 bg-zinc-950 py-6 text-center text-xs text-zinc-500 font-mono">
+      <footer className="border-t border-zinc-900 bg-zinc-950 py-6 text-center text-xs text-zinc-500">
         <div className="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-2">
-          <span>Dynasty AI Evaluator • 2026 Roster DNA & Lineup Allocation Architecture</span>
-          <div className="flex items-center gap-4">
-            <span className="text-zinc-600">|</span>
-            <span className="text-cyan-400/80">Lineup-Slot Allocation</span>
-            <span className="text-zinc-600">|</span>
-            <span className="text-emerald-400/80">Weekly Sit/Start Projections</span>
-            <span className="text-zinc-600">|</span>
-            <span className="text-amber-400/80">Diagnostic Roster Remediation</span>
-          </div>
+          <span>Dynasty Futures</span>
+          <span>
+            Market values:{' '}
+            <a href="https://github.com/dynastyprocess/data" target="_blank" rel="noreferrer" className="underline underline-offset-2 hover:text-zinc-300">
+              DynastyProcess
+            </a>
+            {evaluation?.values_meta?.scrape_date ? ` · updated ${evaluation.values_meta.scrape_date}` : ''}
+          </span>
         </div>
       </footer>
     </div>

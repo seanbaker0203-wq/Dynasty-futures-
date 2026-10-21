@@ -1,26 +1,17 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
-import {
-  RosterEvaluationResult,
-  SyncRequest,
-  Platform,
-  MasterPlayer,
-  RosterRecord,
-} from '../types';
+import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
+import { RosterEvaluationResult, SyncRequest, Platform } from '../types';
 import { SEED_PLAYERS } from '../data/seedPlayers';
 import { DEMO_ROSTERS } from '../data/demoRosters';
 import { RosterDNAMathEngine } from '../lib/rosterMath';
-import { NormalizationEngine } from '../lib/normalization';
 import { generateDemoLeagueTeams } from '../lib/demoLeague';
 
 export type DashboardViewMode =
   | 'ingest'
   | 'single'
-  | 'sitstart'
   | 'optimization'
   | 'league'
   | 'compare'
-  | 'trade'
-  | 'market';
+  | 'trade';
 
 interface RosterContextType {
   evaluation: RosterEvaluationResult | null;
@@ -33,12 +24,16 @@ interface RosterContextType {
   error: string | null;
   comparisonError: string | null;
   activePlatform: Platform;
+  /** True when the current data is the built-in sample, not a real league */
+  isDemo: boolean;
   syncRoster: (req: SyncRequest) => Promise<void>;
   syncComparisonRoster: (req: SyncRequest) => Promise<void>;
+  /** Re-evaluate the synced league from another team's point of view (makes it "my team") */
+  selectMyTeam: (franchiseId: string) => Promise<void>;
+  /** Load another team in the synced league as the comparison / trade partner */
+  compareWithLeagueTeam: (franchiseId: string) => Promise<void>;
   loadDemoRoster: (type: 'juggernaut' | 'contender' | 'rebuild') => void;
   loadComparisonDemo: (type: 'juggernaut' | 'contender' | 'rebuild') => void;
-  uploadCsvRoster: (csvText: string, teamName?: string) => Promise<void>;
-  uploadComparisonCsv: (csvText: string, teamName?: string) => Promise<void>;
   clearRoster: () => void;
   clearComparisonRoster: () => void;
   syncHistory: SyncRequest[];
@@ -46,42 +41,64 @@ interface RosterContextType {
 
 const RosterContext = createContext<RosterContextType | undefined>(undefined);
 
+const HISTORY_KEY = 'dynasty_sync_history';
+
+/** Only non-secret fields are remembered between visits. */
+const toHistoryEntry = (req: SyncRequest): SyncRequest => ({
+  platform: req.platform,
+  league_id: req.league_id,
+  username: req.platform === 'sleeper' ? req.username : undefined,
+  franchise_id: req.franchise_id,
+});
+
+async function postSync(req: SyncRequest): Promise<RosterEvaluationResult> {
+  const endpoint = req.platform === 'sleeper' ? '/api/sync/sleeper' : '/api/sync/mfl';
+  let response: Response;
+  try {
+    response = await fetch(endpoint, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(req),
+    });
+  } catch {
+    throw new Error("Couldn't reach the server. Check your connection and try again.");
+  }
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(data.error || `Sync failed (${response.status}).`);
+  return data as RosterEvaluationResult;
+}
+
 export const RosterProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [evaluation, setEvaluation] = useState<RosterEvaluationResult | null>(null);
   const [comparisonEvaluation, setComparisonEvaluation] = useState<RosterEvaluationResult | null>(null);
   const [activeView, setActiveView] = useState<DashboardViewMode>('ingest');
-  const [isLoading, setIsLoading] = useState<boolean>(false);
-  const [isComparisonLoading, setIsComparisonLoading] = useState<boolean>(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [isComparisonLoading, setIsComparisonLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [comparisonError, setComparisonError] = useState<string | null>(null);
   const [activePlatform, setActivePlatform] = useState<Platform>('mfl');
+  const [isDemo, setIsDemo] = useState(false);
   const [syncHistory, setSyncHistory] = useState<SyncRequest[]>([]);
+  // Last successful request, kept in memory only (may hold an MFL password or API key).
+  const lastSync = useRef<SyncRequest | null>(null);
 
-  // Load initial demo data in background, but preserve 'ingest' as initial landing page
   useEffect(() => {
     try {
-      const savedHistory = localStorage.getItem('dynasty_sync_history');
-      if (savedHistory) {
-        setSyncHistory(JSON.parse(savedHistory));
-      }
+      const saved = localStorage.getItem(HISTORY_KEY);
+      if (saved) setSyncHistory((JSON.parse(saved) as SyncRequest[]).map(toHistoryEntry));
     } catch {
-      // Ignore localStorage errors
+      // Storage unavailable (private mode); history is a convenience only.
     }
-
-    // Pre-populate comparison demo in background
-    loadComparisonDemo('contender');
   }, []);
 
   const saveToHistory = (req: SyncRequest) => {
+    const entry = toHistoryEntry(req);
     setSyncHistory((prev) => {
-      const filtered = prev.filter(
-        (h) => !(h.platform === req.platform && h.league_id === req.league_id)
-      );
-      const updated = [req, ...filtered].slice(0, 5);
+      const updated = [entry, ...prev.filter((h) => !(h.platform === entry.platform && h.league_id === entry.league_id))].slice(0, 5);
       try {
-        localStorage.setItem('dynasty_sync_history', JSON.stringify(updated));
+        localStorage.setItem(HISTORY_KEY, JSON.stringify(updated));
       } catch {
-        // Ignore
+        // ignore
       }
       return updated;
     });
@@ -90,63 +107,18 @@ export const RosterProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   const syncRoster = async (req: SyncRequest): Promise<void> => {
     setIsLoading(true);
     setError(null);
-    setActivePlatform(req.platform);
-
     try {
-      const endpoint = req.platform === 'sleeper' ? '/sync/sleeper' : '/sync/mfl';
-      const response = await fetch(endpoint, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(req),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.error || errorData.detail || `Server error (${response.status})`);
-      }
-
-      const result: RosterEvaluationResult = await response.json();
-      const mockLeague = (!result.league_teams || result.league_teams.length === 0)
-        ? generateDemoLeagueTeams(result.roster.franchise_name || 'My Franchise')
-        : null;
-
-      const finalResult: RosterEvaluationResult = {
-        ...result,
-        league_teams: result.league_teams && result.league_teams.length > 0 ? result.league_teams : mockLeague?.league_teams,
-        free_agents: result.free_agents && result.free_agents.length > 0 ? result.free_agents : mockLeague?.free_agents,
-        draft_picks: result.draft_picks && result.draft_picks.length > 0 ? result.draft_picks : mockLeague?.user_draft_picks,
-      };
-
-      setEvaluation(finalResult);
+      const result = await postSync(req);
+      const myTeamId = result.roster.franchise_id;
+      lastSync.current = { ...req, franchise_id: myTeamId };
+      setActivePlatform(req.platform);
+      setIsDemo(false);
+      setEvaluation(result);
+      setComparisonEvaluation(null);
       setActiveView('single');
-      saveToHistory(req);
+      saveToHistory({ ...req, franchise_id: myTeamId });
     } catch (err: any) {
-      console.warn('API sync endpoint failed, attempting client-side adapter fallback:', err);
-      try {
-        if (req.platform === 'sleeper') {
-          const { SleeperClientAdapter } = await import('../lib/adapters/sleeperAdapter');
-          const adapter = new SleeperClientAdapter();
-          const identifier = req.username || req.franchise_id || '';
-          const rosterRecord = await adapter.fetchRoster(req.league_id, identifier);
-          const result = RosterDNAMathEngine.evaluateRoster(rosterRecord, SEED_PLAYERS);
-          setEvaluation(result);
-          setActiveView('single');
-          saveToHistory(req);
-          return;
-        } else if (req.platform === 'mfl') {
-          const { MFLClientAdapter } = await import('../lib/adapters/mflAdapter');
-          const adapter = new MFLClientAdapter(req.year || '2026', req.username, req.password, req.mfl_api_key);
-          const identifier = req.franchise_id || req.username || '0001';
-          const rosterRecord = await adapter.fetchRoster(req.league_id, identifier);
-          const result = RosterDNAMathEngine.evaluateRoster(rosterRecord, SEED_PLAYERS);
-          setEvaluation(result);
-          setActiveView('single');
-          saveToHistory(req);
-          return;
-        }
-      } catch (clientErr: any) {
-        setError(clientErr.message || err.message || 'Failed to sync fantasy roster.');
-      }
+      setError(err.message || 'Sync failed.');
     } finally {
       setIsLoading(false);
     }
@@ -155,170 +127,52 @@ export const RosterProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   const syncComparisonRoster = async (req: SyncRequest): Promise<void> => {
     setIsComparisonLoading(true);
     setComparisonError(null);
-
     try {
-      const endpoint = req.platform === 'sleeper' ? '/sync/sleeper' : '/sync/mfl';
-      const response = await fetch(endpoint, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(req),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.error || errorData.detail || `Server error (${response.status})`);
-      }
-
-      const result: RosterEvaluationResult = await response.json();
-      setComparisonEvaluation(result);
-      saveToHistory(req);
+      setComparisonEvaluation(await postSync(req));
     } catch (err: any) {
-      console.warn('Comparison sync endpoint failed, attempting client-side fallback:', err);
-      try {
-        if (req.platform === 'sleeper') {
-          const { SleeperClientAdapter } = await import('../lib/adapters/sleeperAdapter');
-          const adapter = new SleeperClientAdapter();
-          const identifier = req.username || req.franchise_id || '';
-          const rosterRecord = await adapter.fetchRoster(req.league_id, identifier);
-          const result = RosterDNAMathEngine.evaluateRoster(rosterRecord, SEED_PLAYERS);
-          setComparisonEvaluation(result);
-          return;
-        } else if (req.platform === 'mfl') {
-          const { MFLClientAdapter } = await import('../lib/adapters/mflAdapter');
-          const adapter = new MFLClientAdapter(req.year || '2026', req.username, req.password, req.mfl_api_key);
-          const identifier = req.franchise_id || req.username || '0001';
-          const rosterRecord = await adapter.fetchRoster(req.league_id, identifier);
-          const result = RosterDNAMathEngine.evaluateRoster(rosterRecord, SEED_PLAYERS);
-          setComparisonEvaluation(result);
-          return;
-        }
-      } catch (clientErr: any) {
-        setComparisonError(clientErr.message || err.message || 'Failed to sync opponent roster.');
-      }
+      setComparisonError(err.message || 'Sync failed.');
     } finally {
       setIsComparisonLoading(false);
     }
   };
 
-  const loadDemoRoster = (type: 'juggernaut' | 'contender' | 'rebuild') => {
-    setIsLoading(true);
-    setError(null);
-    const demo = DEMO_ROSTERS[type];
-    setActivePlatform(demo.platform);
-    const result = RosterDNAMathEngine.evaluateRoster(demo, SEED_PLAYERS);
-    const demoLeague = generateDemoLeagueTeams(demo.franchise_name);
-    setEvaluation({
-      ...result,
-      draft_picks: demoLeague.user_draft_picks,
-      league_teams: demoLeague.league_teams,
-      free_agents: demoLeague.free_agents,
-    });
-    setActiveView('single');
-    setIsLoading(false);
+  const selectMyTeam = async (franchiseId: string) => {
+    if (!lastSync.current) return;
+    await syncRoster({ ...lastSync.current, franchise_id: franchiseId });
   };
 
-  const loadComparisonDemo = (type: 'juggernaut' | 'contender' | 'rebuild') => {
-    setIsComparisonLoading(true);
-    setComparisonError(null);
-    const demo = DEMO_ROSTERS[type];
-    const result = RosterDNAMathEngine.evaluateRoster(demo, SEED_PLAYERS);
-    const demoLeague = generateDemoLeagueTeams(demo.franchise_name);
-    setComparisonEvaluation({
-      ...result,
-      draft_picks: demoLeague.user_draft_picks,
-      league_teams: demoLeague.league_teams,
-      free_agents: demoLeague.free_agents,
-    });
-    setIsComparisonLoading(false);
+  const compareWithLeagueTeam = async (franchiseId: string) => {
+    if (!lastSync.current) return;
+    await syncComparisonRoster({ ...lastSync.current, franchise_id: franchiseId });
   };
 
-  const parseCsvToRecord = (csvText: string, teamName?: string, defaultId = 'csv-roster'): RosterRecord => {
-    const lines = csvText
-      .split(/\r?\n/)
-      .map((l) => l.trim())
-      .filter((l) => l.length > 0);
-
-    const rawNames: string[] = [];
-    for (const line of lines) {
-      if (/player|name|roster/i.test(line) && /pos|team|rank/i.test(line)) {
-        continue;
-      }
-      const parts = line.split(/[,;\t]/);
-      const nameCandidate = parts[0].replace(/^["']|["']$/g, '').trim();
-      if (nameCandidate) {
-        rawNames.push(nameCandidate);
-      }
-    }
-
-    if (rawNames.length === 0) {
-      throw new Error('No valid player names found in CSV.');
-    }
-
-    const matchCandidates = NormalizationEngine.batchMatch(rawNames, SEED_PLAYERS, 85.0);
-    const matchedPlayerIds: string[] = [];
-
-    for (const c of matchCandidates) {
-      if (c.matched_player_id) {
-        matchedPlayerIds.push(c.matched_player_id);
-      }
-    }
-
+  // Sample data for first-time visitors: always explicit, always labelled.
+  const demoEvaluation = (type: 'juggernaut' | 'contender' | 'rebuild') => {
+    const demo = DEMO_ROSTERS[type];
+    const result = RosterDNAMathEngine.evaluateRoster(demo, SEED_PLAYERS);
+    const league = generateDemoLeagueTeams(demo.franchise_name);
     return {
-      roster_id: defaultId,
-      platform: 'csv',
-      external_league_id: 'csv-upload',
-      franchise_id: `${defaultId}-franchise`,
-      franchise_name: teamName || 'CSV Ingested Roster',
-      league_name: 'Custom CSV Portfolio',
-      player_ids: matchedPlayerIds,
-      valuation_mode: 'auction_desc',
+      ...result,
+      draft_picks: league.user_draft_picks,
+      league_teams: league.league_teams,
+      free_agents: league.free_agents,
+      warnings: ['Sample data: these are not real league rosters or current values.', ...(result.warnings || [])],
     };
   };
 
-  const uploadCsvRoster = async (csvText: string, teamName?: string): Promise<void> => {
-    setIsLoading(true);
+  const loadDemoRoster = (type: 'juggernaut' | 'contender' | 'rebuild') => {
+    lastSync.current = null;
     setError(null);
-    setActivePlatform('csv');
-    try {
-      const record = parseCsvToRecord(csvText, teamName, 'csv-primary');
-      const result = RosterDNAMathEngine.evaluateRoster(record, SEED_PLAYERS);
-      const demoLeague = generateDemoLeagueTeams(record.franchise_name || 'CSV Ingested Roster');
-      setEvaluation({
-        ...result,
-        draft_picks: demoLeague.user_draft_picks,
-        league_teams: demoLeague.league_teams,
-        free_agents: demoLeague.free_agents,
-      });
-      setActiveView('single');
-    } catch (err: any) {
-      setError(err.message || 'Failed to process CSV roster.');
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const uploadComparisonCsv = async (csvText: string, teamName?: string): Promise<void> => {
-    setIsComparisonLoading(true);
-    setComparisonError(null);
-    try {
-      const record = parseCsvToRecord(csvText, teamName, 'csv-comparison');
-      const result = RosterDNAMathEngine.evaluateRoster(record, SEED_PLAYERS);
-      setComparisonEvaluation(result);
-    } catch (err: any) {
-      setComparisonError(err.message || 'Failed to process opponent CSV roster.');
-    } finally {
-      setIsComparisonLoading(false);
-    }
-  };
-
-  const clearRoster = () => {
-    setEvaluation(null);
-    setError(null);
-  };
-
-  const clearComparisonRoster = () => {
+    setIsDemo(true);
+    setActivePlatform(DEMO_ROSTERS[type].platform);
+    setEvaluation(demoEvaluation(type));
     setComparisonEvaluation(null);
+    setActiveView('single');
+  };
+
+  const loadComparisonDemo = (type: 'juggernaut' | 'contender' | 'rebuild') => {
     setComparisonError(null);
+    setComparisonEvaluation(demoEvaluation(type));
   };
 
   return (
@@ -334,14 +188,23 @@ export const RosterProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         error,
         comparisonError,
         activePlatform,
+        isDemo,
         syncRoster,
         syncComparisonRoster,
+        selectMyTeam,
+        compareWithLeagueTeam,
         loadDemoRoster,
         loadComparisonDemo,
-        uploadCsvRoster,
-        uploadComparisonCsv,
-        clearRoster,
-        clearComparisonRoster,
+        clearRoster: () => {
+          setEvaluation(null);
+          setError(null);
+          setIsDemo(false);
+          lastSync.current = null;
+        },
+        clearComparisonRoster: () => {
+          setComparisonEvaluation(null);
+          setComparisonError(null);
+        },
         syncHistory,
       }}
     >
@@ -352,8 +215,6 @@ export const RosterProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
 export const useRoster = (): RosterContextType => {
   const context = useContext(RosterContext);
-  if (!context) {
-    throw new Error('useRoster must be used within a RosterProvider');
-  }
+  if (!context) throw new Error('useRoster must be used within a RosterProvider');
   return context;
 };

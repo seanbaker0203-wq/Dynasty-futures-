@@ -604,9 +604,9 @@ export const LeaguePowerRankingsView: React.FC = () => {
                               <div
                                 key={pick.id}
                                 className={`p-2 rounded border flex items-center justify-between text-xs font-mono ${
-                                  pick.year === 2027
+                                  pick.is_priority_class
                                     ? 'bg-amber-950/20 border-amber-500/30 text-zinc-200'
-                                    : pick.year >= 2028
+                                    : (pick.years_out ?? 0) >= 1
                                     ? 'bg-cyan-950/20 border-cyan-500/30 text-zinc-200'
                                     : 'bg-zinc-900 border-zinc-800 text-zinc-200'
                                 }`}
@@ -614,12 +614,12 @@ export const LeaguePowerRankingsView: React.FC = () => {
                                 <div className="flex flex-col">
                                   <span>{pick.description}</span>
                                   <div className="flex items-center gap-1 mt-0.5">
-                                    {pick.year === 2027 && (
+                                    {pick.is_priority_class && (
                                       <span className="px-1 py-0.2 rounded text-[9px] bg-amber-500/20 text-amber-300 font-bold">
                                         2027 Priority
                                       </span>
                                     )}
-                                    {pick.year >= 2028 && (
+                                    {(pick.years_out ?? 0) >= 1 && (
                                       <span className="px-1 py-0.2 rounded text-[9px] bg-cyan-500/20 text-cyan-300 font-bold">
                                         {pick.year} Multi-Year
                                       </span>
@@ -857,7 +857,7 @@ export const LeaguePowerRankingsView: React.FC = () => {
                         </span>
                       </div>
                       <span className="text-[10px] font-mono text-cyan-400 bg-cyan-950/40 px-2 py-0.5 rounded border border-cyan-800/40">
-                        {opp.target_pick.year === 2027 ? '🌟 Priority \'27 Class' : '💎 Multi-Year \'28 Pick'}
+                        {opp.target_pick.is_priority_class ? '🌟 Next draft' : '💎 Multi-Year \'28 Pick'}
                       </span>
                     </div>
 

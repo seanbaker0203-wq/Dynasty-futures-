@@ -159,7 +159,7 @@ export const MarketSaturationHeatmap: React.FC<MarketSaturationHeatmapProps> = (
         id: 'tier-1',
         name: 'Tier 1: Apex Cornerstone',
         shortName: 'T1 Apex',
-        desc: 'Elite Game-Changers (KTC ≥ 7,000 or PPG ≥ 18.0)',
+        desc: 'Elite Game-Changers (Value ≥ 7,000 or PPG ≥ 18.0)',
         minVal: 7000,
         maxVal: 10000,
       },
@@ -167,7 +167,7 @@ export const MarketSaturationHeatmap: React.FC<MarketSaturationHeatmapProps> = (
         id: 'tier-2',
         name: 'Tier 2: Premium Starter',
         shortName: 'T2 Premium',
-        desc: 'High-Ceiling Starters (KTC 5,000 – 6,999 or PPG 14.5 – 18.0)',
+        desc: 'High-Ceiling Starters (Value 5,000 – 6,999 or PPG 14.5 – 18.0)',
         minVal: 5000,
         maxVal: 6999,
       },
@@ -175,7 +175,7 @@ export const MarketSaturationHeatmap: React.FC<MarketSaturationHeatmapProps> = (
         id: 'tier-3',
         name: 'Tier 3: Quality Flex',
         shortName: 'T3 Flex',
-        desc: 'Weekly Flex Contributors (KTC 3,200 – 4,999 or PPG 11.0 – 14.5)',
+        desc: 'Weekly Flex Contributors (Value 3,200 – 4,999 or PPG 11.0 – 14.5)',
         minVal: 3200,
         maxVal: 4999,
       },
@@ -183,7 +183,7 @@ export const MarketSaturationHeatmap: React.FC<MarketSaturationHeatmapProps> = (
         id: 'tier-4',
         name: 'Tier 4: Roster Depth',
         shortName: 'T4 Depth',
-        desc: 'Rotational & Handcuffs (KTC 1,600 – 3,199 or PPG 7.5 – 11.0)',
+        desc: 'Rotational & Handcuffs (Value 1,600 – 3,199 or PPG 7.5 – 11.0)',
         minVal: 1600,
         maxVal: 3199,
       },
@@ -191,7 +191,7 @@ export const MarketSaturationHeatmap: React.FC<MarketSaturationHeatmapProps> = (
         id: 'tier-5',
         name: 'Tier 5: Stash & Prospects',
         shortName: 'T5 Stash',
-        desc: 'Speculative Upside (KTC < 1,600 or PPG < 7.5)',
+        desc: 'Speculative Upside (Value < 1,600 or PPG < 7.5)',
         minVal: 0,
         maxVal: 1599,
       },
@@ -537,7 +537,7 @@ export const MarketSaturationHeatmap: React.FC<MarketSaturationHeatmapProps> = (
         if (d.totalPlayers === 0) {
           return 'Empty Zone';
         }
-        return `~${(d.avgMarketValue / 1000).toFixed(1)}k KTC`;
+        return `~${(d.avgMarketValue / 1000).toFixed(1)}k value`;
       });
   }, [heatmapData, marketSegments, performanceTiers, selectedCell, heatmapMetric]);
 
@@ -727,7 +727,7 @@ export const MarketSaturationHeatmap: React.FC<MarketSaturationHeatmapProps> = (
                 ? 'Your Team %'
                 : mode === 'PLAYER_COUNT'
                 ? 'Asset Count'
-                : 'KTC Density'}
+                : 'Value Density'}
             </button>
           ))}
         </div>
@@ -822,7 +822,7 @@ export const MarketSaturationHeatmap: React.FC<MarketSaturationHeatmapProps> = (
 
             <div className="flex items-center gap-4 text-xs font-mono">
               <div>
-                <span className="text-zinc-500 text-[10px] block">Avg KTC Value</span>
+                <span className="text-zinc-500 text-[10px] block">Avg Value</span>
                 <span className="font-bold text-amber-300">{selectedCell.avgMarketValue.toLocaleString()} pts</span>
               </div>
               <div className="w-px h-6 bg-zinc-800" />
@@ -876,7 +876,7 @@ export const MarketSaturationHeatmap: React.FC<MarketSaturationHeatmapProps> = (
                         </div>
 
                         <span className="text-xs font-mono font-extrabold text-amber-300">
-                          {player.market_value.toLocaleString()} <span className="text-[9px] font-normal text-zinc-500">KTC</span>
+                          {player.market_value.toLocaleString()} <span className="text-[9px] font-normal text-zinc-500">value</span>
                         </span>
                       </div>
 

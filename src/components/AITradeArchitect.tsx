@@ -1,7 +1,7 @@
 /**
- * Dynasty AI Evaluator - AI Trade Architect & KTC Target Finder
+ * Dynasty AI Evaluator - AI Trade Architect
  * Allows users to select a player to shop from their roster, a player to target from another roster,
- * or both, and lets AI architect balanced, win-win trade packages using KTC values.
+ * or both, and lets AI architect balanced, win-win trade packages using market values.
  */
 
 import React, { useState, useMemo } from 'react';
@@ -181,10 +181,10 @@ export const AITradeArchitect: React.FC<AITradeArchitectProps> = ({
             <div>
               <div className="flex items-center gap-2">
                 <h3 className="text-base font-bold text-white tracking-tight">
-                  AI Trade Architect & KTC Target Finder
+                  AI Trade Architect
                 </h3>
                 <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/40 font-bold">
-                  KEEPTRADECUT (KTC) ENGINE
+                  MARKET VALUES
                 </span>
               </div>
               <p className="text-xs text-zinc-400 mt-0.5">
@@ -312,7 +312,7 @@ export const AITradeArchitect: React.FC<AITradeArchitectProps> = ({
 
                   <div className="text-right font-mono">
                     <span className="text-xs font-bold text-cyan-300 block">
-                      {player.market_value.toLocaleString()} <span className="text-[10px] text-zinc-500 font-sans">KTC</span>
+                      {player.market_value.toLocaleString()} <span className="text-[10px] text-zinc-500 font-sans">value</span>
                     </span>
                     <span className="text-[10px] text-zinc-500">{player.is_starter ? 'Starter' : 'Bench'}</span>
                   </div>
@@ -426,7 +426,7 @@ export const AITradeArchitect: React.FC<AITradeArchitectProps> = ({
 
                   <div className="text-right font-mono">
                     <span className="text-xs font-bold text-amber-300 block">
-                      {player.market_value.toLocaleString()} <span className="text-[10px] text-zinc-500 font-sans">KTC</span>
+                      {player.market_value.toLocaleString()} <span className="text-[10px] text-zinc-500 font-sans">value</span>
                     </span>
                     <span className="text-[10px] text-zinc-500">{player.is_starter ? 'Starter' : 'Bench'}</span>
                   </div>
@@ -459,7 +459,7 @@ export const AITradeArchitect: React.FC<AITradeArchitectProps> = ({
                   }`}
                 >
                   {mode === 'BALANCED'
-                    ? '50/50 KTC Value Parity'
+                    ? '50/50 Value Parity'
                     : mode === 'WIN_NOW'
                     ? 'Win-Now Starter Push'
                     : mode === 'REBUILD'
@@ -485,7 +485,7 @@ export const AITradeArchitect: React.FC<AITradeArchitectProps> = ({
               {isGenerating ? (
                 <>
                   <div className="w-4 h-4 border-2 border-zinc-950 border-t-transparent rounded-full animate-spin" />
-                  <span>Synthesizing KTC Values...</span>
+                  <span>Building trade ideas...</span>
                 </>
               ) : (
                 <>
@@ -505,7 +505,7 @@ export const AITradeArchitect: React.FC<AITradeArchitectProps> = ({
               <span className="px-2.5 py-1 rounded bg-cyan-950 text-cyan-300 border border-cyan-800/80 flex items-center gap-1.5">
                 <span>Shop:</span>
                 <strong>{shopPlayer.full_name}</strong>
-                <span className="text-[10px] text-cyan-400">({shopPlayer.market_value.toLocaleString()} KTC)</span>
+                <span className="text-[10px] text-cyan-400">({shopPlayer.market_value.toLocaleString()} market)</span>
               </span>
             )}
             {shopPlayer && targetPlayer && <ArrowRight className="w-3.5 h-3.5 text-zinc-500" />}
@@ -513,7 +513,7 @@ export const AITradeArchitect: React.FC<AITradeArchitectProps> = ({
               <span className="px-2.5 py-1 rounded bg-amber-950 text-amber-300 border border-amber-800/80 flex items-center gap-1.5">
                 <span>Target:</span>
                 <strong>{targetPlayer.full_name}</strong>
-                <span className="text-[10px] text-amber-400">({targetPlayer.market_value.toLocaleString()} KTC)</span>
+                <span className="text-[10px] text-amber-400">({targetPlayer.market_value.toLocaleString()} market)</span>
               </span>
             )}
             <span className="text-zinc-500">•</span>
@@ -543,7 +543,7 @@ export const AITradeArchitect: React.FC<AITradeArchitectProps> = ({
                 </span>
               </h4>
               <p className="text-xs text-zinc-400 mt-0.5">
-                Review balanced trade blueprints calibrated using consensus KeepTradeCut market value models.
+                Review balanced trade blueprints calibrated using consensus dynasty market value models.
               </p>
             </div>
           </div>
@@ -574,7 +574,7 @@ export const AITradeArchitect: React.FC<AITradeArchitectProps> = ({
 
                     <div className="flex items-center gap-3 bg-zinc-950 p-2.5 rounded-lg border border-zinc-800 self-start sm:self-auto font-mono text-xs">
                       <div>
-                        <span className="text-[10px] text-zinc-500 block">KTC Match</span>
+                        <span className="text-[10px] text-zinc-500 block">Value Match</span>
                         <span className="text-emerald-400 font-bold">{prop.fairness_score_pct}% Fair</span>
                       </div>
                       <div className="w-px h-6 bg-zinc-800" />
@@ -593,7 +593,7 @@ export const AITradeArchitect: React.FC<AITradeArchitectProps> = ({
                     <div className="bg-zinc-950/70 p-4 rounded-xl border border-cyan-900/50 space-y-2">
                       <div className="flex items-center justify-between text-xs font-mono font-bold pb-2 border-b border-zinc-800">
                         <span className="text-cyan-400 uppercase">You Send:</span>
-                        <span className="text-white">{prop.total_ktc_sent.toLocaleString()} KTC pts</span>
+                        <span className="text-white">{prop.total_ktc_sent.toLocaleString()} market pts</span>
                       </div>
 
                       <div className="flex flex-wrap gap-2 pt-1">
@@ -627,7 +627,7 @@ export const AITradeArchitect: React.FC<AITradeArchitectProps> = ({
                     <div className="bg-zinc-950/70 p-4 rounded-xl border border-amber-900/50 space-y-2">
                       <div className="flex items-center justify-between text-xs font-mono font-bold pb-2 border-b border-zinc-800">
                         <span className="text-amber-400 uppercase">You Receive:</span>
-                        <span className="text-white">{prop.total_ktc_received.toLocaleString()} KTC pts</span>
+                        <span className="text-white">{prop.total_ktc_received.toLocaleString()} market pts</span>
                       </div>
 
                       <div className="flex flex-wrap gap-2 pt-1">
@@ -678,7 +678,7 @@ export const AITradeArchitect: React.FC<AITradeArchitectProps> = ({
                   {/* Action CTA */}
                   <div className="pt-2 flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-t border-zinc-800/80">
                     <div className="text-xs font-mono text-zinc-400">
-                      <span>KTC Valuation Difference: </span>
+                      <span>Value Difference: </span>
                       <strong className={isPositive ? 'text-emerald-400' : 'text-rose-400'}>
                         {isPositive ? `+${netKtcDiff.toLocaleString()}` : `${netKtcDiff.toLocaleString()}`} pts
                       </strong>

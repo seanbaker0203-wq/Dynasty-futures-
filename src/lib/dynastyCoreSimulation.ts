@@ -131,7 +131,7 @@ export class DynastyCoreSimulationEngine {
 
   /**
    * Computes Talent Tier Score (0–100) based on asset density:
-   * Tier 1 (KTC >= 7000): 25 pts each
+   * Tier 1 (market >= 7000): 25 pts each
    * Tier 2 (5000-6999): 16 pts each
    * Tier 3 (3200-4999): 9 pts each
    * Tier 4 (1600-3199): 4 pts each

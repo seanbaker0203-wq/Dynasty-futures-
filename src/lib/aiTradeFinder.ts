@@ -1,6 +1,6 @@
 /**
- * Dynasty AI Evaluator - AI Trade Architect & KTC Optimizer Engine
- * Synthesizes KeepTradeCut (KTC) consensus market values with Roster DNA needs
+ * Dynasty AI Evaluator - AI Trade Architect & market Optimizer Engine
+ * Synthesizes market consensus market values with Roster DNA needs
  * to architect balanced, high-impact trades for any selected target or shopped player.
  */
 
@@ -38,7 +38,7 @@ export interface GenerateTradeOptions {
 
 export class AITradeFinderEngine {
   /**
-   * Generates AI-optimized trade proposals using server-side Gemini or local KTC algorithmic model
+   * Generates AI-optimized trade proposals using server-side Gemini or local market algorithmic model
    */
   public static async generateTradeProposals(options: GenerateTradeOptions): Promise<AITradeProposal[]> {
     const { userTeam, opponentTeam, leagueTeams, shopPlayer, targetPlayer, strategyMode = 'BALANCED' } = options;
@@ -65,16 +65,16 @@ export class AITradeFinderEngine {
         }
       }
     } catch (err) {
-      console.warn('Server-side Gemini AI trade generation unavailable, using local KTC algorithmic optimizer:', err);
+      console.warn('Server-side Gemini AI trade generation unavailable, using local market algorithmic optimizer:', err);
     }
 
-    // Algorithmic KTC Fallback Optimizer
+    // Algorithmic market Fallback Optimizer
     return this.generateAlgorithmicKtcProposals(options);
   }
 
   /**
-   * High-fidelity local KTC Algorithmic Engine:
-   * Generates 3 distinct, mathematically balanced KTC trade packages.
+   * High-fidelity local market Algorithmic Engine:
+   * Generates 3 distinct, mathematically balanced market trade packages.
    */
   public static generateAlgorithmicKtcProposals(options: GenerateTradeOptions): AITradeProposal[] {
     const { userTeam, opponentTeam, leagueTeams = [], shopPlayer, targetPlayer, strategyMode = 'BALANCED' } = options;
@@ -121,7 +121,7 @@ export class AITradeFinderEngine {
     const userPicks = userTeam.draft_picks || [];
     const partnerPicks = partner.draft_picks || [];
 
-    // Helper: calculate KTC total
+    // Helper: calculate market total
     const getKtc = (players: MasterPlayer[], picks: DraftPick[]) => {
       const pVal = players.reduce((s, p) => s + (p.market_value || 0), 0);
       const pickVal = picks.reduce((s, p) => s + (p.market_value || 0), 0);
@@ -132,7 +132,7 @@ export class AITradeFinderEngine {
     if (targetPlayer && !shopPlayer) {
       const targetVal = targetPlayer.market_value;
 
-      // Proposal A: 1-for-1 Fair Value Swap (Player of similar KTC value from user's roster)
+      // Proposal A: 1-for-1 Fair Value Swap (Player of similar market value from user's roster)
       const fairUserPlayer = [...userTeam.players]
         .filter((p) => p.id !== targetPlayer.id)
         .sort((a, b) => Math.abs(a.market_value - targetVal) - Math.abs(b.market_value - targetVal))[0];
@@ -146,7 +146,7 @@ export class AITradeFinderEngine {
           id: `ai-prop-1-${Date.now()}`,
           title: `Direct Positional Pivot for ${targetPlayer.full_name}`,
           blueprint_type: 'FAIR_EQUILIBRIUM',
-          summary: `Swap ${fairUserPlayer.full_name} (${fairUserPlayer.position}) directly for ${targetPlayer.full_name} (${targetPlayer.position}) at near-identical KTC valuation.`,
+          summary: `Swap ${fairUserPlayer.full_name} (${fairUserPlayer.position}) directly for ${targetPlayer.full_name} (${targetPlayer.position}) at near-identical market valuation.`,
           partner_franchise_id: partner.franchise_id,
           partner_franchise_name: partnerFranchiseName,
           send_players: [fairUserPlayer],
@@ -393,7 +393,7 @@ export class AITradeFinderEngine {
       const targetVal = targetPlayer.market_value;
       const baseDiff = targetVal - shopVal; // Positive means user needs to add sweetener; negative means partner adds sweetener
 
-      // Package 1: Exact KTC Draft Pick Balancer
+      // Package 1: Exact market Draft Pick Balancer
       const sendP = [shopPlayer];
       const receiveP = [targetPlayer];
       const sendPk: DraftPick[] = [];
@@ -434,9 +434,9 @@ export class AITradeFinderEngine {
 
       proposals.push({
         id: `ai-swap-1-${Date.now()}`,
-        title: `KTC Balanced Swap: ${shopPlayer.full_name} for ${targetPlayer.full_name}`,
+        title: `market Balanced Swap: ${shopPlayer.full_name} for ${targetPlayer.full_name}`,
         blueprint_type: 'FAIR_EQUILIBRIUM',
-        summary: `Core framework trades ${shopPlayer.full_name} for ${targetPlayer.full_name} with calibrated draft equity to establish 50/50 KTC equilibrium.`,
+        summary: `Core framework trades ${shopPlayer.full_name} for ${targetPlayer.full_name} with calibrated draft equity to establish 50/50 market equilibrium.`,
         partner_franchise_id: partner.franchise_id,
         partner_franchise_name: partnerFranchiseName,
         send_players: sendP,

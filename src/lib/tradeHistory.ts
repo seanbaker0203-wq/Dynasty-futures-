@@ -350,8 +350,8 @@ export class TradeHistoryEngine {
     } catch (e) {
       console.warn('Error reading trade history from storage', e);
     }
-    // Return demo default if empty
-    return INITIAL_DEMO_TRADES;
+    // Nothing logged yet for this league. (INITIAL_DEMO_TRADES is sample data for demo mode only.)
+    return leagueId === 'demo' ? INITIAL_DEMO_TRADES : [];
   }
 
   /**
@@ -423,11 +423,11 @@ export class TradeHistoryEngine {
       {
         week_number: currentWeek,
         label: `Week ${currentWeek} (Execution)`,
-        incoming_fantasy_pts: receivedPlayers.reduce((acc, p) => acc + (p.fantasy_points_ppr || 12.5), 0),
-        outgoing_fantasy_pts: sentPlayers.reduce((acc, p) => acc + (p.fantasy_points_ppr || 9.5), 0),
+        incoming_fantasy_pts: receivedPlayers.reduce((acc, p) => acc + (p.fantasy_points_ppr || 0), 0),
+        outgoing_fantasy_pts: sentPlayers.reduce((acc, p) => acc + (p.fantasy_points_ppr || 0), 0),
         net_points_delta:
-          receivedPlayers.reduce((acc, p) => acc + (p.fantasy_points_ppr || 12.5), 0) -
-          sentPlayers.reduce((acc, p) => acc + (p.fantasy_points_ppr || 9.5), 0),
+          receivedPlayers.reduce((acc, p) => acc + (p.fantasy_points_ppr || 0), 0) -
+          sentPlayers.reduce((acc, p) => acc + (p.fantasy_points_ppr || 0), 0),
         incoming_market_value: totalReceivedVal,
         outgoing_market_value: totalSentVal,
         net_value_delta: totalReceivedVal - totalSentVal,
@@ -498,7 +498,7 @@ export class TradeHistoryEngine {
     } catch (e) {
       console.warn('Error clearing storage', e);
     }
-    return INITIAL_DEMO_TRADES;
+    return leagueId === 'demo' ? INITIAL_DEMO_TRADES : [];
   }
 
   /**

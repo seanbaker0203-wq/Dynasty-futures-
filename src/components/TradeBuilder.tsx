@@ -4,10 +4,11 @@
  * Structural Integrity, Asset Half-Life, and Archetype Classification.
  */
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo , useEffect} from 'react';
 import { useRoster } from '../context/RosterContext';
 import { MasterPlayer, Position, DraftPick, AITradeProposal } from '../types';
 import { RosterDNAMathEngine } from '../lib/rosterMath';
+import { SEASON } from '../lib/season';
 import { DraftPickEngine } from '../lib/draftPicks';
 import { TradeHistory } from './TradeHistory';
 import { TradeHistoryEngine } from '../lib/tradeHistory';
@@ -106,16 +107,31 @@ export const TradeBuilder: React.FC = () => {
   const [dynamicPicksB, setDynamicPicksB] = useState<DraftPick[]>([]);
 
   // Dynamic Future Draft Pick Modeler Input States (2027, 2028, 2029)
-  const [dynPickYear, setDynPickYear] = useState<number>(2027);
+  const [dynPickYear, setDynPickYear] = useState<number>(SEASON.upcomingDraftYear);
   const [dynPickRound, setDynPickRound] = useState<number>(1);
   const [dynPickTier, setDynPickTier] = useState<'Early' | 'Mid' | 'Late'>('Mid');
   const [dynPickTarget, setDynPickTarget] = useState<'RECEIVE_B' | 'SEND_A'>('RECEIVE_B');
 
-  const dynPickMarketValue = useMemo(() => {
-    return DraftPickEngine.calculatePickValue(dynPickYear, dynPickRound, dynPickTier);
-  }, [dynPickYear, dynPickRound, dynPickTier]);
+  // Live pick value on this league's scale (1QB vs Superflex) from the server's value feed.
+  const [dynPickMarketValue, setDynPickMarketValue] = useState<number>(0);
+  const isSuperflex = !!teamA?.settings?.superflex;
+  useEffect(() => {
+    let cancelled = false;
+    const q = new URLSearchParams({ year: String(dynPickYear), round: String(dynPickRound), tier: dynPickTier, superflex: String(isSuperflex) });
+    fetch(`/api/values/pick?${q}`)
+      .then((r) => (r.ok ? r.json() : Promise.reject()))
+      .then((d) => !cancelled && setDynPickMarketValue(d.value))
+      .catch(() => !cancelled && setDynPickMarketValue(DraftPickEngine.calculatePickValue(dynPickYear, dynPickRound, dynPickTier)));
+    return () => {
+      cancelled = true;
+    };
+  }, [dynPickYear, dynPickRound, dynPickTier, isSuperflex]);
 
-  const baselineValue = RosterDNAMathEngine.DEFAULT_LEAGUE_BASELINE_VALUE; // 22500
+  // League baseline (median starting lineup) recovered from the synced team's metrics.
+  const baselineValue =
+    teamA && teamA.metrics.gross_liquidity > 0 && teamA.metrics.starter_value
+      ? (teamA.metrics.starter_value / teamA.metrics.gross_liquidity) * 100
+      : RosterDNAMathEngine.DEFAULT_LEAGUE_BASELINE_VALUE;
 
   // Direct Gross Liquidity Impact based on standard dynasty pick valuation models
   const dynPickGrossLiquidityImpact = useMemo(() => {
@@ -126,8 +142,8 @@ export const TradeBuilder: React.FC = () => {
   const handleAddDynamicPick = () => {
     const pickId = `dyn-${dynPickYear}-r${dynPickRound}-${dynPickTier.toLowerCase()}-${Date.now()}`;
     const desc = `${dynPickYear} Round ${dynPickRound} (${dynPickTier})`;
-    const isPriority = dynPickYear === 2027;
-    const yearsOut = dynPickYear - 2027;
+    const isPriority = dynPickYear === SEASON.upcomingDraftYear;
+    const yearsOut = dynPickYear - SEASON.upcomingDraftYear;
 
     const newPick: DraftPick = {
       id: pickId,
@@ -232,16 +248,16 @@ export const TradeBuilder: React.FC = () => {
 
   // Team A Post-Trade Metrics
   const { starters: postStartersA, bench: postBenchA } = useMemo(
-    () => RosterDNAMathEngine.splitStartersAndBench(postTradePlayersA),
+    () => RosterDNAMathEngine.splitStartersAndBench(postTradePlayersA, [], teamA?.settings),
     [postTradePlayersA]
   );
 
   const postLiquidityA = useMemo(
-    () => RosterDNAMathEngine.calculateGrossLiquidity(postStartersA),
+    () => RosterDNAMathEngine.calculateGrossLiquidity(postStartersA, baselineValue),
     [postStartersA]
   );
   const postIntegrityA = useMemo(
-    () => RosterDNAMathEngine.calculateStructuralIntegrity(postStartersA, postBenchA),
+    () => RosterDNAMathEngine.calculateStructuralIntegrity(postStartersA, postBenchA, baselineValue),
     [postStartersA, postBenchA]
   );
   const postHalfLifeA = useMemo(
@@ -276,7 +292,7 @@ export const TradeBuilder: React.FC = () => {
   }, [playersB, receiveIds, sendPlayers]);
 
   const { starters: postStartersB, bench: postBenchB } = useMemo(
-    () => RosterDNAMathEngine.splitStartersAndBench(postTradePlayersB),
+    () => RosterDNAMathEngine.splitStartersAndBench(postTradePlayersB, [], teamA?.settings),
     [postTradePlayersB]
   );
 
@@ -284,11 +300,11 @@ export const TradeBuilder: React.FC = () => {
   const preIntegrityB = teamB?.metrics.structural_integrity || 0;
 
   const postLiquidityB = useMemo(
-    () => (postStartersB.length ? RosterDNAMathEngine.calculateGrossLiquidity(postStartersB) : 0),
+    () => (postStartersB.length ? RosterDNAMathEngine.calculateGrossLiquidity(postStartersB, baselineValue) : 0),
     [postStartersB]
   );
   const postIntegrityB = useMemo(
-    () => (postTradePlayersB.length ? RosterDNAMathEngine.calculateStructuralIntegrity(postStartersB, postBenchB) : 0),
+    () => (postTradePlayersB.length ? RosterDNAMathEngine.calculateStructuralIntegrity(postStartersB, postBenchB, baselineValue) : 0),
     [postStartersB, postBenchB]
   );
 
@@ -304,7 +320,7 @@ export const TradeBuilder: React.FC = () => {
 
   const hasSelections = sendIds.length > 0 || receiveIds.length > 0 || sendPickIds.length > 0 || receivePickIds.length > 0;
 
-  // ---------------- Fair Market Value Notification Engine (KTC Logic) ----------------
+  // ---------------- Fair Market Value Notification Engine (market Logic) ----------------
   const fairMarketAnalysis = useMemo(() => {
     if (!hasSelections || totalOutgoingValue === 0) return null;
 
@@ -320,7 +336,7 @@ export const TradeBuilder: React.FC = () => {
     const isFair = !isCriticalUnderpay && !isModerateUnderpay && Math.abs(diff) < 600;
     const isSurplus = !isCriticalUnderpay && !isModerateUnderpay && !isFair && diff > 600;
 
-    // Find best KTC balancer asset from opponent if underpaid
+    // Find best market balancer asset from opponent if underpaid
     let recommendedBalancer: {
       type: 'PICK' | 'PLAYER';
       id: string;
@@ -451,7 +467,7 @@ export const TradeBuilder: React.FC = () => {
     if (!playersA.length || !picksB.length) return;
     // Find Team B's top 1st round pick (2027 priority or 2028 multi-year)
     const targetPick = [...picksB]
-      .filter((p) => p.round === 1 && p.year >= 2027)
+      .filter((p) => p.round === 1 && p.year >= SEASON.upcomingDraftYear)
       .sort((a, b) => a.year - b.year)[0];
     // Find best flex candidate on Team A (WR/RB/TE market_value between 1400 and 3900)
     const flexCandidate = [...playersA]
@@ -468,7 +484,7 @@ export const TradeBuilder: React.FC = () => {
 
   // Dynasty Rule Check: Flex for a First Execution
   const flexForFirstDetected = useMemo(() => {
-    const firstRoundPick = receivePicks.find((p) => p.round === 1 && p.year >= 2027);
+    const firstRoundPick = receivePicks.find((p) => p.round === 1 && p.year >= SEASON.upcomingDraftYear);
     if (!firstRoundPick) return null;
 
     const flexPlayer = sendPlayers.find(
@@ -484,7 +500,7 @@ export const TradeBuilder: React.FC = () => {
 
   // Multi-Year Pick Strategy Check: Picks 2+ years out (2028, 2029, 2030)
   const multiYearArbitrageDetected = useMemo(() => {
-    const distantPick = receivePicks.find((p) => p.year >= 2028 && p.round <= 2);
+    const distantPick = receivePicks.find((p) => p.year >= SEASON.upcomingDraftYear + 1 && p.round <= 2);
     return distantPick || null;
   }, [receivePicks]);
 
@@ -605,7 +621,7 @@ export const TradeBuilder: React.FC = () => {
             }`}
           >
             <Sparkles className="w-3.5 h-3.5" />
-            <span>AI Trade Architect (KTC Finder)</span>
+            <span>AI Trade Architect</span>
           </button>
 
           <button
@@ -928,7 +944,7 @@ export const TradeBuilder: React.FC = () => {
                 setActiveMainTab('AI_FINDER');
               }}
               className="px-2.5 py-1 rounded bg-amber-400 hover:bg-amber-300 text-zinc-950 text-xs font-black font-mono transition-all flex items-center gap-1 shadow-md shadow-amber-400/20 cursor-pointer"
-              title="Launch AI Trade Architect with KeepTradeCut models"
+              title="Launch AI Trade Architect"
             >
               <Sparkles className="w-3.5 h-3.5 text-zinc-950" />
               <span>AI Architect</span>
@@ -1246,7 +1262,7 @@ export const TradeBuilder: React.FC = () => {
                 </span>
               </div>
               <p className="text-xs text-zinc-400 mt-0.5">
-                Model upcoming draft capital (2027, 2028, 2029) and compute real-time impact on <strong>Gross Liquidity</strong> based on consensus dynasty pick trade models.
+                Model upcoming draft capital and compute real-time impact on <strong>Gross Liquidity</strong> based on consensus dynasty pick trade models.
               </p>
             </div>
           </div>
@@ -1275,21 +1291,21 @@ export const TradeBuilder: React.FC = () => {
           <div>
             <label className="text-[11px] font-mono uppercase text-zinc-300 block mb-1.5 font-bold flex items-center justify-between">
               <span>Draft Year</span>
-              {dynPickYear === 2027 ? (
+              {dynPickYear === SEASON.upcomingDraftYear ? (
                 <span className="text-[9px] text-amber-400">Priority Class</span>
               ) : (
                 <span className="text-[9px] text-cyan-400">Multi-Year</span>
               )}
             </label>
             <div className="flex bg-zinc-950 p-1 rounded-lg border border-zinc-800">
-              {[2027, 2028, 2029, 2030].map((yr) => (
+              {[0, 1, 2, 3].map((n) => SEASON.upcomingDraftYear + n).map((yr) => (
                 <button
                   key={yr}
                   type="button"
                   onClick={() => setDynPickYear(yr)}
                   className={`flex-1 py-1.5 rounded text-xs font-mono font-bold transition-all cursor-pointer ${
                     dynPickYear === yr
-                      ? yr === 2027
+                      ? yr === SEASON.upcomingDraftYear
                         ? 'bg-amber-400 text-zinc-950 shadow-sm'
                         : 'bg-cyan-500 text-zinc-950 shadow-sm'
                       : 'text-zinc-400 hover:text-white'
@@ -1388,9 +1404,9 @@ export const TradeBuilder: React.FC = () => {
           </div>
 
           <div>
-            {dynPickYear === 2027 ? (
+            {dynPickYear === SEASON.upcomingDraftYear ? (
               <span className="text-amber-300 bg-amber-950/40 px-2 py-0.5 rounded border border-amber-500/30">
-                🌟 2027 Priority Class: Prime upcoming draft currency (highest market liquidity)
+                🌟 {SEASON.upcomingDraftYear} Priority Class: Prime upcoming draft currency (highest market liquidity)
               </span>
             ) : (
               <span className="text-cyan-300 bg-cyan-950/40 px-2 py-0.5 rounded border border-cyan-500/30">
@@ -1401,7 +1417,7 @@ export const TradeBuilder: React.FC = () => {
         </div>
       </div>
 
-      {/* 2.8 Fair Market Value Notification System (KTC Logic) */}
+      {/* 2.8 Fair Market Value Notification System (market Logic) */}
       {hasSelections && fairMarketAnalysis && (
         <div
           className={`rounded-xl p-4 sm:p-5 border transition-all shadow-xl relative overflow-hidden ${
@@ -1461,7 +1477,7 @@ export const TradeBuilder: React.FC = () => {
                   </span>
                   <span className="text-xs font-bold text-white">
                     {fairMarketAnalysis.isCriticalUnderpay
-                      ? `Proposal is ${fairMarketAnalysis.deficitPct.toFixed(1)}% Below Consensus KTC Value`
+                      ? `Proposal is ${fairMarketAnalysis.deficitPct.toFixed(1)}% Below Consensus Market Value`
                       : fairMarketAnalysis.isModerateUnderpay
                       ? `Mild Deficit: -${fairMarketAnalysis.deficitPct.toFixed(1)}% vs Consensus Market Value`
                       : fairMarketAnalysis.isFair
@@ -1473,7 +1489,7 @@ export const TradeBuilder: React.FC = () => {
                 <p className="text-xs text-zinc-300 leading-relaxed">
                   {fairMarketAnalysis.isCriticalUnderpay ? (
                     <>
-                      You are surrendering <strong className="text-white font-mono">{totalOutgoingValue.toLocaleString()} pts</strong> in KTC consensus market value while only receiving <strong className="text-white font-mono">{totalIncomingValue.toLocaleString()} pts</strong>. This leaves you with an uncompensated deficit of <strong className="text-rose-400 font-mono">-{fairMarketAnalysis.deficit.toLocaleString()} pts</strong>. Accepting this deal locks in a severe negative value transfer and depreciates your dynasty roster equity.
+                      You are surrendering <strong className="text-white font-mono">{totalOutgoingValue.toLocaleString()} pts</strong> in market consensus market value while only receiving <strong className="text-white font-mono">{totalIncomingValue.toLocaleString()} pts</strong>. This leaves you with an uncompensated deficit of <strong className="text-rose-400 font-mono">-{fairMarketAnalysis.deficit.toLocaleString()} pts</strong>. Accepting this deal locks in a severe negative value transfer and depreciates your dynasty roster equity.
                     </>
                   ) : fairMarketAnalysis.isModerateUnderpay ? (
                     <>
@@ -1485,7 +1501,7 @@ export const TradeBuilder: React.FC = () => {
                     </>
                   ) : (
                     <>
-                      You receive a surplus of <strong className="text-cyan-300 font-mono">+{fairMarketAnalysis.diff.toLocaleString()} KTC pts</strong> relative to outgoing capital. This trade represents a high-leverage value acquisition for your roster portfolio.
+                      You receive a surplus of <strong className="text-cyan-300 font-mono">+{fairMarketAnalysis.diff.toLocaleString()} market pts</strong> relative to outgoing capital. This trade represents a high-leverage value acquisition for your roster portfolio.
                     </>
                   )}
                 </p>
@@ -1498,7 +1514,7 @@ export const TradeBuilder: React.FC = () => {
                 <div className="flex items-center justify-between text-[11px] font-mono">
                   <span className="text-zinc-400 font-bold flex items-center gap-1">
                     <Scale className="w-3.5 h-3.5 text-amber-400" />
-                    KTC Market Balancer:
+                    Market Balancer:
                   </span>
                   <span className="text-amber-400 font-bold">
                     +{fairMarketAnalysis.recommendedBalancer.value.toLocaleString()} pts
@@ -1824,7 +1840,7 @@ export const TradeBuilder: React.FC = () => {
                     <div className="text-right font-mono flex items-center gap-2">
                       <div>
                         <span className="text-xs font-bold text-cyan-300 block">
-                          {player.market_value.toLocaleString()} <span className="text-[10px] text-zinc-500 font-sans">KTC</span>
+                          {player.market_value.toLocaleString()} <span className="text-[10px] text-zinc-500 font-sans">value</span>
                         </span>
                         <span className="text-[10px] text-zinc-500">
                           {player.is_starter ? 'Starter' : 'Bench'}
@@ -1882,12 +1898,12 @@ export const TradeBuilder: React.FC = () => {
                             <span className="font-semibold text-xs text-white">
                               {pick.description}
                             </span>
-                            {pick.year === 2027 && (
+                            {pick.is_priority_class && (
                               <span className="px-1.5 py-0.2 rounded text-[9px] bg-amber-500/20 text-amber-300 font-bold border border-amber-500/30">
                                 Priority '27
                               </span>
                             )}
-                            {pick.year >= 2028 && (
+                            {(pick.years_out ?? 0) >= 1 && (
                               <span className="px-1.5 py-0.2 rounded text-[9px] bg-cyan-500/20 text-cyan-300 font-bold border border-cyan-500/30">
                                 {pick.year} Multi-Year
                               </span>
@@ -2025,7 +2041,7 @@ export const TradeBuilder: React.FC = () => {
                     <div className="text-right font-mono flex items-center gap-2">
                       <div>
                         <span className="text-xs font-bold text-amber-300 block">
-                          {player.market_value.toLocaleString()} <span className="text-[10px] text-zinc-500 font-sans">KTC</span>
+                          {player.market_value.toLocaleString()} <span className="text-[10px] text-zinc-500 font-sans">value</span>
                         </span>
                         <span className="text-[10px] text-zinc-500">
                           {player.is_starter ? 'Starter' : 'Bench'}
@@ -2083,12 +2099,12 @@ export const TradeBuilder: React.FC = () => {
                             <span className="font-semibold text-xs text-white">
                               {pick.description}
                             </span>
-                            {pick.year === 2027 && (
+                            {pick.is_priority_class && (
                               <span className="px-1.5 py-0.2 rounded text-[9px] bg-amber-500/20 text-amber-300 font-bold border border-amber-500/30">
                                 Priority '27
                               </span>
                             )}
-                            {pick.year >= 2028 && (
+                            {(pick.years_out ?? 0) >= 1 && (
                               <span className="px-1.5 py-0.2 rounded text-[9px] bg-cyan-500/20 text-cyan-300 font-bold border border-cyan-500/30">
                                 {pick.year} Multi-Year
                               </span>

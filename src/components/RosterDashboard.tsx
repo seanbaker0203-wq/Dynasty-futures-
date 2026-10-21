@@ -70,7 +70,6 @@ export const RosterDashboard: React.FC = () => {
         championshipWindow={championship_window}
         warnings={warnings}
         onNavigateToOptimization={() => setActiveView('optimization')}
-        onNavigateToSitStart={() => setActiveView('sitstart')}
       />
 
       {/* 2. League Power Rankings & Trade Radar Banner */}
