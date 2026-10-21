@@ -37,6 +37,9 @@ Caveats: values are derived from FantasyPros expert rankings; repo is GPL-3. Fin
 
 ## Status — 21 Oct 2026
 
+**Live:** https://dynasty-futures.onrender.com (Render free plan, auto-deploys on every push to `main`). Verified: health check, both data feeds loaded, league 37804 syncs and renders.
+
+
 **Phase 1 done** (commits `23ee22e`, `0c9ae57`). Verified against real leagues:
 - MFL 37804 *Nothin' But Babies & Memories* (public, 10 teams, 1QB, half PPR, salary/contract league): all 385 rostered players resolve by id, sync in ~1.5 s.
 - Sleeper Superflex (*Hollywood Randos*) and 1QB (*Ballers Dynasty*) public leagues: correct format detection, username → team, traded picks.
