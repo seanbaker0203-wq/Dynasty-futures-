@@ -100,30 +100,37 @@ export class DraftPickEngine {
     structuralIntegrity: number
   ): { stance: TradeStance; label: string; description: string } {
     if (classification === 'Juggernaut' || (grossLiquidity >= 105 && assetHalfLife < 3.2)) {
-      return {
-        stance: 'WIN_NOW_BUYER',
-        label: 'Win-Now Buyer',
-        description: 'Pushing all-in for a championship in 2026. Actively buying veteran starters & flex depth in exchange for 2027/2028 future picks.',
-      };
+      return this.stanceInfo('WIN_NOW_BUYER');
     } else if (classification === 'Contender') {
-      return {
-        stance: 'BALANCED_CONTENDER',
-        label: 'Balanced Contender',
-        description: 'Strong playoff roster. Looking for selective high-leverage flex upgrades without sacrificing long-term core.',
-      };
+      return this.stanceInfo('BALANCED_CONTENDER');
     } else if (classification === 'Total Rebuild' || (grossLiquidity < 75 && assetHalfLife < 3.0)) {
-      return {
-        stance: 'REBUILD_SELLER',
-        label: 'Rebuilding Seller',
-        description: 'Liquidating veterans and flex players to hoard 2027 priority 1sts and multi-year 2028/2029 draft capital.',
-      };
-    } else {
-      return {
-        stance: 'YOUTH_ACCUMULATOR',
-        label: 'Youth Accumulator',
-        description: 'Patiently building through 2027 draft capital, multi-year picks, and ascending assets under age 24. Selling short-term rentals.',
-      };
+      return this.stanceInfo('REBUILD_SELLER');
     }
+    return this.stanceInfo('YOUTH_ACCUMULATOR');
+  }
+
+  /** Label and description for a trade stance. */
+  public static stanceInfo(stance: TradeStance): { stance: TradeStance; label: string; description: string } {
+    const next = SEASON.upcomingDraftYear;
+    const info: Record<TradeStance, { label: string; description: string }> = {
+      WIN_NOW_BUYER: {
+        label: 'Win-Now Buyer',
+        description: `Pushing for a ${SEASON.seasonYear} title. Likely to pay future picks for proven starters and flex depth.`,
+      },
+      BALANCED_CONTENDER: {
+        label: 'Balanced Contender',
+        description: 'Playoff-calibre roster. Wants targeted upgrades without giving up the young core.',
+      },
+      REBUILD_SELLER: {
+        label: 'Rebuilding Seller',
+        description: `Should be selling veterans for ${next} and ${next + 1} picks and young players.`,
+      },
+      YOUTH_ACCUMULATOR: {
+        label: 'Youth Accumulator',
+        description: `Building through picks and ascending young players. Open to selling short-term rentals.`,
+      },
+    };
+    return { stance, ...info[stance] };
   }
 
   /**

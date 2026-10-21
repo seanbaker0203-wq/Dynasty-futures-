@@ -262,12 +262,12 @@ export class RosterDNAMathEngine {
     let verdict = '';
     const targets: string[] = [];
 
-    if (classification === 'Juggernaut' || (liquidity >= 115 && yearsRemaining >= 3.0)) {
+    if (classification === 'Juggernaut') {
       status = 'Win-Now Peak';
       urgency = 'Moderate';
       verdict = `Elite multi-year championship window open through ${peakEndYear}. You possess dominant top-end firepower coupled with high insulation. Hold core cornerstones and acquire veteran depth for championship pushes.`;
       targets.push('High-volume target WRs', 'Win-now veteran RB1 handcuffs', 'Consolidate bench QBs for elite flex pieces');
-    } else if (classification === 'Contender' || liquidity >= 95) {
+    } else if (classification === 'Contender') {
       status = 'Strong Contender';
       urgency = yearsRemaining < 2.5 ? 'Critical' : 'Moderate';
       verdict = `Primary championship window active through ${peakEndYear}. Starting equity is competitive. Protect against mid-season injury attrition with depth flex acquisitions.`;
@@ -277,6 +277,11 @@ export class RosterDNAMathEngine {
       urgency = 'Critical';
       verdict = `High starter reliance with severe age-cliff exposure. Your window closes by ${peakEndYear} unless aging veterans are liquidated for youthful prime producers.`;
       targets.push('Execute "Flex for a First": Sell hot flex producers for 2027/2028 1sts', 'Sell aging RBs (>28) to desperate contenders', 'Pivot to 2027 priority 1st round picks');
+    } else if (classification === 'Middle of the Pack') {
+      status = '2-Year Horizon';
+      urgency = 'Moderate';
+      verdict = `Mid-table roster: not good enough to be a favourite, not bad enough to tank. Pick a direction. Consolidate depth into one or two difference-makers to push in, or sell veterans for picks before their value fades.`;
+      targets.push('Consolidate 2-for-1 into a top starter', 'Or sell aging starters to contenders for picks', 'Avoid lateral moves');
     } else if (classification === 'Productive Struggle') {
       status = 'Productive Youth';
       urgency = 'Low';

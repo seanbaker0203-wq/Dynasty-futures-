@@ -18,6 +18,7 @@ import type {
   RosterRecord,
 } from '../src/types';
 import { valueStore } from './values';
+import { gradeLeague } from './classify';
 import type { NormalizedLeague } from './leagues/types';
 
 /** Applied to TE values in leagues that pay a TE reception bonus. Market feeds are not TEP-adjusted. */
@@ -141,24 +142,51 @@ export function evaluateLeague(league: NormalizedLeague, requestedTeamId?: strin
     evaluations.set(t.team_id, RosterDNAMathEngine.evaluateRoster(recordFor(t.team_id), poolList, baseline));
   }
 
-  const userEval = evaluations.get(userTeamId)!;
-  const userStance = DraftPickEngine.determineTradeStance(
-    userEval.metrics.classification as ClassificationType,
-    userEval.metrics.gross_liquidity,
-    userEval.metrics.asset_half_life,
-    userEval.metrics.structural_integrity
+  // Pass 3: grade every team against its own league and re-derive labels, window and advice.
+  const grades = gradeLeague(
+    league.teams.map((t) => {
+      const ev = evaluations.get(t.team_id)!;
+      return {
+        id: t.team_id,
+        starterValue: ev.metrics.starter_value ?? 0,
+        halfLife: ev.metrics.asset_half_life,
+        pickValue: ev.metrics.draft_capital_value ?? 0,
+        grossLiquidity: ev.metrics.gross_liquidity,
+      };
+    })
   );
+  const equities = [...evaluations.values()].map((e) => e.metrics.starter_equity_ratio ?? 0).sort((a, b) => a - b);
+  const fragileCutoff = equities[Math.floor(equities.length * 0.8)] ?? 100; // top 20% most top-heavy
+  for (const [teamId, ev] of evaluations) {
+    const grade = grades.get(teamId)!;
+    const m = ev.metrics;
+    m.classification = grade.classification;
+    const window = RosterDNAMathEngine.calculateChampionshipWindow(m.asset_half_life, m.gross_liquidity, grade.classification, ev.starters);
+    m.championship_window = window;
+    m.peak_window_years = window.years_remaining;
+    ev.championship_window = window;
+    ev.remediations = RosterDNAMathEngine.generateRemediations(
+      { gross_liquidity: m.gross_liquidity, asset_half_life: m.asset_half_life, structural_integrity: m.structural_integrity, classification: grade.classification },
+      ev.starters,
+      ev.bench,
+      league.settings
+    );
+    ev.warnings = (ev.warnings || []).filter((w) => !w.startsWith('High Fragility Warning'));
+    if ((m.starter_equity_ratio ?? 0) >= fragileCutoff && (m.starter_equity_ratio ?? 0) >= 85) {
+      ev.warnings.push(
+        `Top-heavy: starters hold ${m.starter_equity_ratio}% of your player value, among the highest in the league. One injury hurts more than usual.`
+      );
+    }
+  }
+
+  const userEval = evaluations.get(userTeamId)!;
+  const userStance = DraftPickEngine.stanceInfo(grades.get(userTeamId)!.stance);
 
   const leagueTeams: LeagueTeamSummary[] = league.teams.map((t) => {
     const ev = evaluations.get(t.team_id)!;
     const picks = ev.draft_picks || [];
     const draftCapital = picks.reduce((s, p) => s + p.market_value, 0);
-    const stance = DraftPickEngine.determineTradeStance(
-      ev.metrics.classification as ClassificationType,
-      ev.metrics.gross_liquidity,
-      ev.metrics.asset_half_life,
-      ev.metrics.structural_integrity
-    );
+    const stance = DraftPickEngine.stanceInfo(grades.get(t.team_id)!.stance);
     return {
       franchise_id: t.team_id,
       franchise_name: t.name,
