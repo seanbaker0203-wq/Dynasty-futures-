@@ -35,9 +35,24 @@ _Review of the AI Studio export, 21 Oct 2026. Code lives in `/home/claude/dynast
 
 Caveats: values are derived from FantasyPros expert rankings; repo is GPL-3. Fine for an MVP and personal/league use. **Before charging money**, confirm commercial terms or build our own value model on top (blend + our trade-data signal).
 
+## Status — 21 Oct 2026
+
+**Phase 1 done** (commits `23ee22e`, `0c9ae57`). Verified against real leagues:
+- MFL 37804 *Nothin' But Babies & Memories* (public, 10 teams, 1QB, half PPR, salary/contract league): all 385 rostered players resolve by id, sync in ~1.5 s.
+- Sleeper Superflex (*Hollywood Randos*) and 1QB (*Ballers Dynasty*) public leagues: correct format detection, username → team, traded picks.
+
+**Found while testing — next up**
+1. **Re-calibrate classifications.** DynastyProcess values are steep (top player ~10,000, mid 1st ~1,900, late 2nd ~120), so the old absolute thresholds over-fire: top 3–4 teams all "Juggernaut", "starters > 82% of value" warning on nearly everyone. Switch to within-league percentiles.
+2. **Pick values assume 12 teams.** Scale for league size (picks in a 10-team league are worth more).
+3. **MFL lists "2026" picks as still to come** in league 37804 (no 2026 draft results). We treat the earliest listed year as the next draft — confirm with Sean how his league labels its rookie draft.
+4. **Salary/contract leagues.** League 37804 has salaries and contract years; value should account for contract cost. Big differentiator — few tools do this.
+5. AI trade finder's "predicted Gross Liquidity delta" still uses the old fixed 22,500 baseline (`src/lib/aiTradeFinder.ts`).
+6. Explanatory copy on League Radar still mentions 2027/2028 by name.
+7. Phone layout: top tab bar overflows at 390 px → Phase 2 bottom tab bar.
+
 ## Roadmap
 
-### Phase 1 — Make the numbers true (do first)
+### Phase 1 — Make the numbers true ✅
 1. Nightly job pulls DynastyProcess → `players.json` keyed by Sleeper ID and MFL ID; values by format (1QB / SF).
 2. Load the **full** Sleeper player DB for names/ages/teams; every rostered player resolves by ID. Unvalued players = 0 and shown as "no market value", never a guess.
 3. Correct league settings: Superflex/2QB detection for both platforms, TE premium, real slot counts, league size.
@@ -62,6 +77,7 @@ Caveats: values are derived from FantasyPros expert rankings; repo is GPL-3. Fin
 - Deploy on Render or Railway (~$5–20/mo). Domain. PWA install on phones.
 - Beta with your league + 5–10 others before building payments.
 
-## Environment blockers (this workspace)
-Needs these on the claude.ai network allowlist (Settings → Capabilities) to install and run/test here:
-`registry.npmjs.org`, `api.sleeper.app`, `api.myfantasyleague.com` (+ `www*.myfantasyleague.com`), optionally `api.fantasycalc.com`.
+## Running it
+- `npm install`, then `npm run dev` → http://localhost:3000. Optional `GEMINI_API_KEY` for AI trade ideas.
+- Production: `npm run build` then `NODE_ENV=production npm start` (Render/Railway). Server needs outbound access to `api.sleeper.app`, `*.myfantasyleague.com`, `raw.githubusercontent.com`.
+- In the Claude workspace only: start with `NODE_USE_ENV_PROXY=1` so the server's fetches use the sandbox proxy.
