@@ -6,3 +6,6 @@ coverage/
 *.log
 .env*
 !.env.example
+
+# Daily Sleeper player cache (rebuilt by the server)
+cache/
