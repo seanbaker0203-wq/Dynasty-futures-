@@ -42,13 +42,14 @@ Caveats: values are derived from FantasyPros expert rankings; repo is GPL-3. Fin
 - Sleeper Superflex (*Hollywood Randos*) and 1QB (*Ballers Dynasty*) public leagues: correct format detection, username → team, traded picks.
 
 **Found while testing — next up**
-1. **Re-calibrate classifications.** DynastyProcess values are steep (top player ~10,000, mid 1st ~1,900, late 2nd ~120), so the old absolute thresholds over-fire: top 3–4 teams all "Juggernaut", "starters > 82% of value" warning on nearly everyone. Switch to within-league percentiles.
+1. ~~Re-calibrate classifications~~ — done (`810d2db`): labels and trade stance graded within each league (lineup, age runway, picks).
 2. **Pick values assume 12 teams.** Scale for league size (picks in a 10-team league are worth more).
 3. ~~MFL lists "2026" picks as still to come~~ — resolved: league 37804 drafts in person and adds players manually, so MFL never consumes the picks. Picks before the next calendar draft are now ignored (`b83c0c8`). Sean's team is franchise **0010** (*Injured Reserve 4 Lyfe*).
 4. **Salary/contract leagues.** League 37804 has salaries and contract years; value should account for contract cost. Big differentiator — few tools do this.
 5. AI trade finder's "predicted Gross Liquidity delta" still uses the old fixed 22,500 baseline (`src/lib/aiTradeFinder.ts`).
 6. Explanatory copy on League Radar still mentions 2027/2028 by name.
-7. Phone layout: top tab bar overflows at 390 px → Phase 2 bottom tab bar.
+7. ~~Phone layout~~ — shell done: 4 destinations (My team · League · Trade · Connect), bottom tab bar on phones, no horizontal scroll on any screen at 390 px.
+8. **Visual pass on inner screens.** Still the AI Studio look: all-caps mono labels, badges everywhere, long dashboard pages. Needs a real design direction and shorter, phone-first screens.
 
 ## Roadmap
 

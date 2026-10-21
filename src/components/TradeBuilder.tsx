@@ -593,7 +593,7 @@ export const TradeBuilder: React.FC = () => {
     <div className="w-full space-y-6">
       {/* Top Tab Switcher: Active Simulator vs AI Trade Architect vs Trade History */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-zinc-800 pb-3">
-        <div className="flex items-center gap-2 flex-wrap">
+        <div className="flex items-center gap-2 overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0 sm:flex-wrap [&>button]:shrink-0 [&>button]:whitespace-nowrap">
           <button
             type="button"
             onClick={() => setActiveMainTab('BUILDER')}
@@ -675,8 +675,7 @@ export const TradeBuilder: React.FC = () => {
 
         {activeMainTab === 'BUILDER' && (
           <div className="text-[11px] font-mono text-zinc-400 hidden sm:flex items-center gap-2">
-            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-            <span>Quantitative Model Active (In-Season 2026)</span>
+            <span>{teamA?.values_meta?.scrape_date ? `Values from ${teamA.values_meta.scrape_date}` : 'Sample values'}</span>
           </div>
         )}
       </div>
@@ -866,7 +865,7 @@ export const TradeBuilder: React.FC = () => {
                     clearTrade();
                   }
                 }}
-                className="px-2.5 py-1.5 bg-zinc-950 border border-zinc-700 rounded-lg text-xs font-mono text-white outline-none focus:border-amber-500 font-bold"
+                className="w-full min-w-0 max-w-full px-2.5 py-1.5 bg-zinc-950 border border-zinc-700 rounded-lg text-xs font-mono text-white outline-none focus:border-amber-500 font-bold"
               >
                 {teamA.league_teams
                   .filter((t) => t.franchise_id !== teamA.roster.franchise_id && t.franchise_name !== teamA.roster.franchise_name)

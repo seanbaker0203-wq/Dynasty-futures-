@@ -318,7 +318,7 @@ export const RosterTable: React.FC<RosterTableProps> = ({
         {/* View Filters & Position Tabs */}
         <div className="flex flex-wrap items-center gap-2.5">
           {/* Section Tabs */}
-          <div className="flex items-center bg-zinc-950 border border-zinc-800 rounded-lg p-1 text-xs font-mono">
+          <div className="flex items-center max-w-full overflow-x-auto bg-zinc-950 border border-zinc-800 rounded-lg p-1 text-xs font-mono">
             <button
               type="button"
               onClick={() => setActiveTab('GROUPED')}
