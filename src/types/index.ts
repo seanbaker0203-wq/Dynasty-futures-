@@ -39,6 +39,8 @@ export interface MasterPlayer {
   adp?: number;
   /** Futures Value breakdown; market_value above is the Futures Value itself */
   futures?: FuturesInfo;
+  /** Salary-cap leagues only */
+  contract?: ContractValue;
 }
 
 export type ProjectionTier = 'Starter' | 'Flex' | 'Depth' | 'Fading';
@@ -142,6 +144,28 @@ export interface LeagueSettings {
   superflex?: boolean;
   /** League gives a bonus per TE reception */
   te_premium?: boolean;
+  /** Salary-cap leagues (MFL) */
+  salary_cap?: { cap: number; taxi_pct: number; ir_pct: number };
+}
+
+export interface CapOutlook {
+  season: number;
+  committed: number; // salaries under contract that season
+  space: number; // cap - committed
+}
+
+export interface TeamCap {
+  hit: number; // this season's cap hit (taxi / IR discounted)
+  space: number;
+  by_season: CapOutlook[];
+  expiring: number; // salary coming off after this season
+}
+
+export interface ContractValue {
+  salary: number;
+  years_left: number | null; // 1 = final season is this one
+  fair_salary: number; // what a player of this value costs in this league
+  surplus: number; // fair_salary - salary (positive = bargain)
 }
 
 /** Where the market values came from and how fresh they are */
@@ -246,6 +270,10 @@ export interface DraftPick {
   description: string;
   market_value: number;
   tier?: 'Early' | 'Mid' | 'Late';
+  /** Chance of a starter-level season, rookie year first (measured from past drafts at this slot) */
+  hit_rates?: number[];
+  /** Points per game a hit produces, by season after the draft */
+  ppg_if_hit?: number[];
   is_priority_class?: boolean; // True for 2027 upcoming draft class
   years_out?: number; // 0 for 2027 (next draft), 1 for 2028, 2 for 2029
 }
@@ -319,6 +347,7 @@ export interface LeagueTeamSummary {
   reserves?: MasterPlayer[];
   /** Projected starting-lineup points per week for this and the next seasons */
   season_outlook?: SeasonOutlook[];
+  cap?: TeamCap;
   draft_picks: DraftPick[];
   target_assets_for_user: string[];
 }
@@ -382,6 +411,7 @@ export interface RosterEvaluationResult {
   values_meta?: ValuesMeta;
   season_outlook?: SeasonOutlook[];
   pick_plan?: PickPlan[];
+  cap?: TeamCap;
   /** All teams in the league, for switching "my team" without re-syncing */
   league_franchises?: { franchise_id: string; franchise_name: string; owner_name?: string }[];
 }

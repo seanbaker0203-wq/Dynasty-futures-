@@ -22,6 +22,7 @@ import type {
 } from '../src/types';
 import { getBoard, WEIGHTS, type Board } from './model/futures';
 import { pickOutlook } from './model/rookies';
+import { projectOutlook, rankOutlooks } from '../src/lib/outlook';
 import { valueStore } from './values';
 import { gradeLeague } from './classify';
 import type { NormalizedLeague } from './leagues/types';
@@ -58,9 +59,58 @@ export function buildPlayerPool(league: NormalizedLeague, board: Board): Map<str
   return pool;
 }
 
+/**
+ * Salary-cap leagues: attach salary / years left, and a fair salary for each player: the salary paid, in this league,
+ * to players of the same Futures Value rank (rank-matched across every rostered player under contract).
+ * Returns each team's cap picture by season.
+ */
+function applyContracts(league: NormalizedLeague, pool: Map<string, MasterPlayer>) {
+  const capCfg = league.settings.salary_cap;
+  const caps = new Map<string, NonNullable<LeagueTeamSummary['cap']>>();
+  if (!capCfg) return caps;
+  const contracted: MasterPlayer[] = [];
+  for (const t of league.teams) {
+    for (const [pid, c] of Object.entries(t.contracts || {})) {
+      const p = pool.get(pid);
+      if (!p) continue;
+      p.contract = { salary: c.salary, years_left: c.years, fair_salary: 0, surplus: 0 };
+      contracted.push(p);
+    }
+  }
+  const salaries = contracted.map((p) => p.contract!.salary).sort((a, b) => b - a);
+  const byValue = [...contracted].sort((a, b) => b.market_value - a.market_value);
+  byValue.forEach((p, i) => {
+    // Median of the five salaries around this rank, so one outlier contract can't set the price.
+    const window = salaries.slice(Math.max(0, i - 2), i + 3).sort((a, b) => a - b);
+    const fair = window[Math.floor(window.length / 2)] ?? 0;
+    p.contract!.fair_salary = Math.round(fair);
+    p.contract!.surplus = Math.round(fair - p.contract!.salary);
+  });
+
+  const { seasonYear } = getSeasonContext();
+  for (const t of league.teams) {
+    const entries = Object.entries(t.contracts || {});
+    const hitOf = (pid: string, salary: number) => {
+      const d = t.designations[pid];
+      return salary * (d === 'TAXI' ? capCfg.taxi_pct : d === 'IR' ? capCfg.ir_pct : 1);
+    };
+    const hit = entries.reduce((s, [pid, c]) => s + hitOf(pid, c.salary), 0);
+    const by_season = [0, 1, 2, 3, 4].map((k) => {
+      // Contracts with more than k years left are still on the books k seasons from now (full salary: taxi
+      // players usually graduate). Players without contract years count only this season.
+      const committed = k === 0 ? hit : entries.filter(([, c]) => (c.years ?? 0) > k).reduce((s, [, c]) => s + c.salary, 0);
+      return { season: seasonYear + k, committed: Math.round(committed), space: Math.round(capCfg.cap - committed) };
+    });
+    const expiring = entries.filter(([, c]) => (c.years ?? 1) <= 1).reduce((s, [, c]) => s + c.salary, 0);
+    caps.set(t.team_id, { hit: Math.round(hit), space: Math.round(capCfg.cap - hit), by_season, expiring: Math.round(expiring) });
+  }
+  return caps;
+}
+
 export async function evaluateLeague(league: NormalizedLeague, requestedTeamId?: string | null) {
   const board = await getBoard(league.settings);
   const pool = buildPlayerPool(league, board);
+  const capInfo = applyContracts(league, pool);
   const teamById = new Map(league.teams.map((t) => [t.team_id, t]));
   const userTeamId =
     (requestedTeamId && teamById.has(requestedTeamId) ? requestedTeamId : null) ||
@@ -101,6 +151,14 @@ export async function evaluateLeague(league: NormalizedLeague, requestedTeamId?:
     return i < third ? 'Early' : i >= 2 * third ? 'Late' : 'Mid';
   };
 
+  const sf = !!league.settings.superflex;
+  const teams = league.settings.league_size || league.teams.length || 12;
+  const pprScale = league.settings.scoring_type === 'PPR' ? 1.12 : league.settings.scoring_type === 'Half PPR' ? 1 : 0.88;
+  const pickOdds = (round: number, tier?: 'Early' | 'Mid' | 'Late') => {
+    const o = pickOutlook(round, teams, sf, tier);
+    return { hit_rates: o.map((x) => x.hit_rate), ppg_if_hit: o.map((x) => Math.round(x.ppg_if_hit * pprScale * 10) / 10) };
+  };
+
   const picksFor = (teamId: string): DraftPick[] =>
     (teamById.get(teamId)?.picks || []).map((p) => {
       const offset = p.year - firstDraftYear;
@@ -117,6 +175,7 @@ export async function evaluateLeague(league: NormalizedLeague, requestedTeamId?:
         current_owner_id: teamId,
         description: `${p.year} Round ${p.round}${tier ? ` (${tier})` : ''}${own ? '' : ` via ${origName}`}`,
         market_value: board.pickValue(upcomingDraftYear + offset, p.round, tier),
+        ...pickOdds(p.round, tier),
         is_priority_class: offset === 0,
         years_out: offset,
       };
@@ -224,69 +283,32 @@ export async function evaluateLeague(league: NormalizedLeague, requestedTeamId?:
   const power = (t: LeagueTeamSummary) => t.starter_value * 0.55 + t.bench_value * 0.3 + t.draft_capital_value * 0.15;
   leagueTeams.sort((a, b) => power(b) - power(a)).forEach((t, i) => (t.power_rank = i + 1));
 
-  // Season outlook: best projected lineup (points per week) for each of the next seasons, ranked in the league.
-  // Everyone on the roster counts (taxi and IR players are back in future years). Rookie picks add their
-  // expected value: chance of a starter-level season (measured from past drafts, by slot) times what a hit
-  // adds over the team's weakest projected starter that season.
+  // Season outlook (src/lib/outlook.ts): projected lineup points per week by season, plus expected points from picks.
   const seasons = board.players[0]?.projection.map((p) => p.season) ?? [];
-  const sf = !!league.settings.superflex;
-  const teams = league.settings.league_size || league.teams.length || 12;
-  const pprScale = league.settings.scoring_type === 'PPR' ? 1.12 : league.settings.scoring_type === 'Half PPR' ? 1 : 0.88;
   const outlook = new Map<string, SeasonOutlook[]>();
   const pickPlans = new Map<string, PickPlan[]>();
   for (const t of league.teams) {
-    const players = rosterPlayers(t.team_id);
-    const lineups = seasons.map((season, i) => {
-      const asPoints = players.map((p) => ({ ...p, roster_designation: 'ACTIVE' as const, market_value: p.futures?.projection[i]?.ppg ?? 0 }));
-      const { starters } = RosterDNAMathEngine.splitStartersAndBench(asPoints, [], league.settings);
-      const skill = starters.filter((p) => ['QB', 'RB', 'WR', 'TE'].includes(p.position));
-      return {
-        points: starters.reduce((s, p) => s + p.market_value, 0),
-        starterPpg: skill.map((p) => p.market_value).sort((a, b) => a - b), // weakest first
-      };
-    });
     const picks = picksFor(t.team_id);
-    const plans: PickPlan[] = picks.map((pk) => {
-      const o = pickOutlook(pk.round, teams, sf, pk.tier);
-      return {
+    outlook.set(t.team_id, projectOutlook(rosterPlayers(t.team_id), picks, league.settings, seasons));
+    pickPlans.set(
+      t.team_id,
+      picks.map((pk) => ({
         pick_id: pk.id,
         year: pk.year,
         round: pk.round,
         tier: pk.tier,
         value_now: pk.market_value,
         value_at_draft: board.pickValue(upcomingDraftYear, pk.round, pk.tier),
-        hit_rates: o.map((x) => x.hit_rate),
-        ppg_if_hit: o.map((x) => Math.round(x.ppg_if_hit * pprScale * 10) / 10),
-      };
-    });
-    pickPlans.set(t.team_id, plans);
-    outlook.set(
-      t.team_id,
-      seasons.map((season, i) => {
-        // Best expected picks first; each one can only displace the next-weakest starter, so stacking picks
-        // has diminishing returns and can never add more than the lineup has slots.
-        const live = plans
-          .map((pl) => ({ k: season - pl.year, pl })) // k = 0 is the rookie season (drafted the spring before)
-          .filter(({ k, pl }) => k >= 0 && k < pl.hit_rates.length)
-          .sort((a, b) => b.pl.hit_rates[b.k] * b.pl.ppg_if_hit[b.k] - a.pl.hit_rates[a.k] * a.pl.ppg_if_hit[a.k]);
-        const slotsPpg = lineups[i].starterPpg;
-        let pickPts = 0;
-        live.forEach(({ k, pl }, j) => {
-          if (j >= slotsPpg.length) return;
-          pickPts += pl.hit_rates[k] * Math.max(0, pl.ppg_if_hit[k] - slotsPpg[j]);
-        });
-        const points = Math.round(lineups[i].points * 10) / 10;
-        const pick_points = Math.round(pickPts * 10) / 10;
-        return { season, points, pick_points, total: Math.round((points + pick_points) * 10) / 10, rank: 0, rank_roster: 0 };
-      })
+        hit_rates: pk.hit_rates ?? [],
+        ppg_if_hit: pk.ppg_if_hit ?? [],
+      }))
     );
   }
-  seasons.forEach((_, i) => {
-    const all = [...outlook.values()];
-    [...all].sort((a, b) => b[i].total - a[i].total).forEach((o, r) => (o[i].rank = r + 1));
-    [...all].sort((a, b) => b[i].points - a[i].points).forEach((o, r) => (o[i].rank_roster = r + 1));
-  });
-  for (const lt of leagueTeams) lt.season_outlook = outlook.get(lt.franchise_id);
+  rankOutlooks([...outlook.values()]);
+  for (const lt of leagueTeams) {
+    lt.season_outlook = outlook.get(lt.franchise_id);
+    lt.cap = capInfo.get(lt.franchise_id);
+  }
 
   // Free agents: valued players nobody in this league rosters.
   const rostered = new Set(league.teams.flatMap((t) => t.player_ids));
@@ -329,6 +351,7 @@ export async function evaluateLeague(league: NormalizedLeague, requestedTeamId?:
     },
     season_outlook: outlook.get(userTeamId),
     pick_plan: pickPlans.get(userTeamId),
+    cap: capInfo.get(userTeamId),
     league_franchises: league.teams.map((t) => ({ franchise_id: t.team_id, franchise_name: t.name, owner_name: t.owner_name })),
   } satisfies RosterEvaluationResult;
 }

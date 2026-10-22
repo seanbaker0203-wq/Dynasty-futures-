@@ -140,6 +140,13 @@ export async function fetchMflLeague(
 
   const L = league.league;
   const settings = parseMflSettings(L, rules);
+  if (L.usesSalaries === '1' && Number(L.salaryCapAmount) > 0) {
+    settings.salary_cap = {
+      cap: Number(L.salaryCapAmount),
+      taxi_pct: L.includeTaxiWithSalary !== undefined && L.includeTaxiWithSalary !== '' ? Number(L.includeTaxiWithSalary) / 100 : 1,
+      ir_pct: L.includeIRWithSalary !== undefined && L.includeIRWithSalary !== '' ? Number(L.includeIRWithSalary) / 100 : 1,
+    };
+  }
   const franchiseMeta = new Map(asArray<any>(L.franchises?.franchise).map((f) => [String(f.id), f]));
 
   // Picks. Some leagues draft offline and never run the draft on MFL, so MFL keeps listing
@@ -158,10 +165,15 @@ export async function fetchMflLeague(
 
   const teams: LeagueTeam[] = asArray<any>(rosters?.rosters?.franchise).map((f) => {
     const designations: LeagueTeam['designations'] = {};
+    const contracts: NonNullable<LeagueTeam['contracts']> = {};
     const ids: string[] = [];
     for (const p of asArray<any>(f.player)) {
       const pid = String(p.id);
       ids.push(pid);
+      if (p.salary !== undefined && p.salary !== '') {
+        const yrs = parseInt(p.contractYear, 10);
+        contracts[pid] = { salary: Number(p.salary) || 0, years: Number.isFinite(yrs) ? yrs : null };
+      }
       if (p.status === 'TAXI_SQUAD') designations[pid] = 'TAXI';
       else if (p.status === 'INJURED_RESERVE') designations[pid] = 'IR';
     }
@@ -173,6 +185,7 @@ export async function fetchMflLeague(
       player_ids: ids,
       starters: [], // MFL rosters don't flag weekly starters; lineup is optimized by value.
       designations,
+      contracts: Object.keys(contracts).length ? contracts : undefined,
       picks: picksByTeam.get(String(f.id)) || [],
     };
   });

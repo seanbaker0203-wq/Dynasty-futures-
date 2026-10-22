@@ -2,7 +2,8 @@ import React, { useMemo, useState } from 'react';
 import { Plus, Search, X } from 'lucide-react';
 import { useRoster } from '../context/RosterContext';
 import { RosterDNAMathEngine } from '../lib/rosterMath';
-import { fmt, fmtShort, pickName } from '../lib/leagueStats';
+import { fmt, fmtShort, ordinal, pickName } from '../lib/leagueStats';
+import { projectOutlook } from '../lib/outlook';
 import { PlayerRow } from '../components/PlayerRow';
 import type { DraftPick, LeagueSettings, MasterPlayer } from '../types';
 
@@ -204,6 +205,25 @@ export const TradeScreen: React.FC = () => {
   const themAfter = measure(applyTrade(theirSide, get, give), settings, baseline);
   const hasTrade = give.length > 0 || get.length > 0;
 
+  // Five-season view: each team's projected lineup (with picks) and league rank, before and after.
+  const seasons = (evaluation.season_outlook || []).map((o) => o.season);
+  const rest = teams.filter((t) => t.franchise_id !== me && t.franchise_id !== partner.franchise_id);
+  const mineAfterSide = applyTrade(mySide, give, get);
+  const theirsAfterSide = applyTrade(theirSide, get, give);
+  const outMeBefore = projectOutlook(mySide.players, mySide.picks, settings, seasons);
+  const outMeAfter = projectOutlook(mineAfterSide.players, mineAfterSide.picks, settings, seasons);
+  const outThemBefore = projectOutlook(theirSide.players, theirSide.picks, settings, seasons);
+  const outThemAfter = projectOutlook(theirsAfterSide.players, theirsAfterSide.picks, settings, seasons);
+  const rankAmong = (i: number, total: number, other: number) =>
+    1 + rest.filter((t) => (t.season_outlook?.[i]?.total ?? 0) > total).length + (other > total ? 1 : 0);
+  const fiveYear = seasons.map((season, i) => ({
+    season,
+    me: { before: outMeBefore[i].total, after: outMeAfter[i].total },
+    them: { before: outThemBefore[i].total, after: outThemAfter[i].total },
+    meRank: { before: rankAmong(i, outMeBefore[i].total, outThemBefore[i].total), after: rankAmong(i, outMeAfter[i].total, outThemAfter[i].total) },
+    themRank: { before: rankAmong(i, outThemBefore[i].total, outMeBefore[i].total), after: rankAmong(i, outThemAfter[i].total, outMeAfter[i].total) },
+  }));
+
   const impactRows = (b: typeof meBefore, a: typeof meAfter) => [
     { name: 'Lineup strength', b: b.lineup, a: a.lineup, show: (v: number) => `${Math.round(v)}` },
     { name: 'Prime years left', b: b.prime, a: a.prime, show: (v: number) => `${v.toFixed(1)} yrs` },
@@ -270,6 +290,69 @@ export const TradeScreen: React.FC = () => {
               </div>
             ))}
           </div>
+
+          {settings?.salary_cap && (() => {
+            const sal = (list: Asset[]) => list.reduce((s, a) => s + (a.kind === 'player' ? a.item.contract?.salary ?? 0 : 0), 0);
+            const cap = settings.salary_cap!.cap;
+            const meAfterHit = (evaluation.cap?.hit ?? 0) - sal(give) + sal(get);
+            const themAfterHit = (partner.cap?.hit ?? 0) - sal(get) + sal(give);
+            const line = (label: string, hit: number) => (
+              <div className="py-2 flex items-baseline justify-between gap-3">
+                <span className="text-muted text-[14px]">{label}</span>
+                <span className={`font-semibold ${hit > cap ? 'text-down' : ''}`}>
+                  ${fmt(cap - hit)} {hit > cap ? 'over the cap' : 'cap space'}
+                </span>
+              </div>
+            );
+            return (
+              <div className="divide-y divide-line">
+                <h3 className="font-semibold text-ink pb-1">Cap after the trade</h3>
+                {line('You', meAfterHit)}
+                {line(partner.franchise_name, themAfterHit)}
+              </div>
+            );
+          })()}
+
+          {fiveYear.length > 0 && (
+            <div className="space-y-2">
+              <h3 className="display text-[22px] text-ink">Over the next five seasons</h3>
+              <p className="text-[13px] text-muted">Projected starting lineup points per week (including expected points from picks) and league rank.</p>
+              <div className="overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0">
+                <table className="w-full min-w-[20rem] text-[14px]">
+                  <thead>
+                    <tr className="text-muted text-[13px] border-b border-line">
+                      <th className="text-left font-semibold py-1.5">Season</th>
+                      <th className="text-right font-semibold py-1.5">You</th>
+                      <th className="text-right font-semibold py-1.5 truncate max-w-[8rem]">{partner.franchise_name}</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-line">
+                    {fiveYear.map((r) => {
+                      const cell = (v: { before: number; after: number }, rk: { before: number; after: number }) => {
+                        const d = Math.round((v.after - v.before) * 10) / 10;
+                        return (
+                          <td className="py-2 text-right">
+                            <span className="font-semibold">{ordinal(rk.after)}</span>
+                            {rk.after !== rk.before && <span className="text-muted"> (was {ordinal(rk.before)})</span>}
+                            <span className={`block text-[12px] ${d > 0 ? 'text-up' : d < 0 ? 'text-down' : 'text-muted'}`}>
+                              {d === 0 ? 'no change' : `${d > 0 ? '+' : '−'}${Math.abs(d)} pts/wk`}
+                            </span>
+                          </td>
+                        );
+                      };
+                      return (
+                        <tr key={r.season}>
+                          <td className="py-2 font-semibold">{r.season}</td>
+                          {cell(r.me, r.meRank)}
+                          {cell(r.them, r.themRank)}
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
 
           <button type="button" className="btn-quiet" onClick={() => { setGive([]); setGet([]); }}>
             Clear trade

@@ -125,6 +125,22 @@ export const TeamScreen: React.FC = () => {
             </div>
           </div>
         ))}
+        {evaluation.cap && evaluation.settings?.salary_cap && (
+          <div className="px-4 py-3.5 grid grid-cols-[1fr_auto] gap-x-4 items-baseline">
+            <div>
+              <div className="font-semibold">Cap space</div>
+              <div className="text-[13px] text-muted">
+                ${fmt(evaluation.cap.hit)} used of ${fmt(evaluation.settings.salary_cap.cap)}. ${fmt(evaluation.cap.expiring)} comes off after this season.
+              </div>
+            </div>
+            <div className="text-right">
+              <span className="display text-[30px] text-ink">${fmt(evaluation.cap.space)}</span>
+              <div className="text-[13px] font-semibold text-gold">
+                {ordinal(rankBy(teams, me, (t) => t.cap?.space ?? 0))} most of {n}
+              </div>
+            </div>
+          </div>
+        )}
         {titleWindow && (
           <button type="button" onClick={() => setActiveView('plan')} className="w-full px-4 py-3.5 flex items-baseline justify-between gap-4 text-left">
             <div>

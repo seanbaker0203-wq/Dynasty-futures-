@@ -103,6 +103,24 @@ export const PlanScreen: React.FC = () => {
     });
   }
 
+  // Contracts: good players whose deal ends after this season, and expensive declining ones.
+  for (const p of players) {
+    const c = p.contract;
+    if (!c) continue;
+    if (c.years_left === 1 && p.market_value >= 2000)
+      moves.push({
+        when: 'offseason',
+        title: `${name(p)}: contract ends after ${thisSeason}`,
+        detail: `Paid $${c.salary} now; players of his value cost about $${c.fair_salary} in this league. Decide whether to re-sign, or trade him before he walks.`,
+      });
+    if (c.surplus <= -60 && (c.years_left ?? 0) >= 2)
+      moves.push({
+        when: 'now',
+        title: `Shed ${name(p)}'s contract`,
+        detail: `$${c.salary} a year for ${c.years_left} more seasons; his value is worth about $${c.fair_salary}. Moving him frees $${c.salary} of cap.`,
+      });
+  }
+
   const buckets: { key: Move['when']; label: string }[] = [
     { key: 'now', label: `This season (${thisSeason})` },
     { key: 'offseason', label: `Next off-season (${thisSeason + 1})` },
@@ -225,6 +243,32 @@ export const PlanScreen: React.FC = () => {
         </section>
       )}
 
+      {evaluation.cap && evaluation.settings?.salary_cap && (
+        <section className="space-y-3">
+          <h2 className="display text-[26px] text-ink">Cap by season</h2>
+          <p className="text-[14px] text-muted">
+            Salary already committed each season under current contracts, against your ${fmt(evaluation.settings.salary_cap.cap)} cap. This season counts
+            taxi and IR players at the league's discount.
+          </p>
+          <ul className="space-y-3">
+            {evaluation.cap.by_season.map((c) => {
+              const cap = evaluation.settings!.salary_cap!.cap;
+              return (
+                <li key={c.season} className="grid grid-cols-[3.25rem_1fr_auto] items-center gap-3">
+                  <span className="font-semibold">{c.season}</span>
+                  <span className="relative h-3 rounded-full bg-line overflow-hidden" aria-hidden>
+                    <span className="absolute inset-y-0 left-0 rounded-full bg-ink" style={{ width: `${Math.min(100, (c.committed / cap) * 100)}%` }} />
+                  </span>
+                  <span className="text-right text-[14px] w-[8.5rem]">
+                    <span className="font-semibold">${fmt(c.space)}</span> free
+                  </span>
+                </li>
+              );
+            })}
+          </ul>
+        </section>
+      )}
+
       <section className="space-y-3">
         <h2 className="display text-[26px] text-ink">Roster timeline</h2>
         <div className="flex flex-wrap gap-3 text-[12px] text-muted">
@@ -253,25 +297,32 @@ export const PlanScreen: React.FC = () => {
                     <span className="block font-semibold text-text truncate max-w-[9rem] sm:max-w-none">{p.full_name}</span>
                     <span className="block text-[12px] text-muted">
                       {p.position}, {Math.floor(p.age)}
+                      {p.contract && `, $${p.contract.salary}`}
                       <SignalTag signal={p.futures?.signal} className="ml-1.5" />
                     </span>
                   </td>
-                  {p.futures!.projection.map((s) => (
-                    <td key={s.season} className="px-0.5">
-                      <div
-                        className={`rounded-md text-center py-1.5 ${TIER_STYLE[s.tier]} ${p.futures!.falloff_season === s.season ? 'ring-2 ring-down' : ''}`}
-                        title={`${s.season}: ${s.tier}, ${s.ppg} pts per game`}
-                      >
-                        {s.ppg}
-                      </div>
-                    </td>
-                  ))}
+                  {p.futures!.projection.map((s, i) => {
+                    const offContract = p.contract?.years_left != null && i >= p.contract.years_left;
+                    return (
+                      <td key={s.season} className="px-0.5">
+                        <div
+                          className={`rounded-md text-center py-1.5 ${TIER_STYLE[s.tier]} ${p.futures!.falloff_season === s.season ? 'ring-2 ring-down' : ''} ${offContract ? 'opacity-40' : ''}`}
+                          title={`${s.season}: ${s.tier}, ${s.ppg} pts per game${offContract ? ', contract ended' : ''}`}
+                        >
+                          {s.ppg}
+                        </div>
+                      </td>
+                    );
+                  })}
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
-        <p className="text-[13px] text-muted">Numbers are projected points per game. A red ring marks the season a player falls off.</p>
+        <p className="text-[13px] text-muted">
+          Numbers are projected points per game. A red ring marks the season a player falls off.
+          {evaluation.settings?.salary_cap && ' Faded cells are seasons after his contract ends.'}
+        </p>
       </section>
     </div>
   );

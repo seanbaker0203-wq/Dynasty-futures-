@@ -25,6 +25,8 @@ export interface LeagueTeam {
   player_ids: string[];
   starters: string[];
   designations: Record<string, RosterDesignation>;
+  /** Salary-cap leagues: salary and contract years left per player */
+  contracts?: Record<string, { salary: number; years: number | null }>;
   picks: LeaguePickRef[];
 }
 

@@ -1,5 +1,5 @@
 import React from 'react';
-import type { ProjectionTier, ValueSignal } from '../types';
+import type { ContractValue, ProjectionTier, ValueSignal } from '../types';
 
 export const SIGNAL_LABEL: Record<ValueSignal, string> = {
   BUY_LOW: 'Buy low',
@@ -52,4 +52,20 @@ export const TIER_STYLE: Record<ProjectionTier, string> = {
   Flex: 'bg-ink/45 text-paper',
   Depth: 'bg-line text-text',
   Fading: 'border border-dashed border-line text-muted',
+};
+
+/** "$90, 5 yrs" plus a bargain / overpaid tag for salary-cap leagues. */
+export const ContractNote: React.FC<{ c: ContractValue }> = ({ c }) => {
+  const big = Math.abs(c.surplus) >= Math.max(40, c.salary * 0.5);
+  return (
+    <span className="ml-2 whitespace-nowrap">
+      ${c.salary}
+      {c.years_left ? `, ${c.years_left} yr${c.years_left === 1 ? '' : 's'}` : ''}
+      {big && (
+        <span className={`ml-1.5 inline-block rounded px-1.5 py-px text-[12px] font-semibold ${c.surplus > 0 ? 'bg-up/12 text-up' : 'bg-down/12 text-down'}`}>
+          {c.surplus > 0 ? 'Bargain' : 'Overpaid'}
+        </span>
+      )}
+    </span>
+  );
 };
