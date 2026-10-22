@@ -1,17 +1,30 @@
 /**
  * Position aging curves: expected production at each age relative to that position's peak (1.0).
- * v1 assumptions drawn from widely published fantasy aging research; tune as we collect data.
- *   RB: peaks 24-25, falls off quickly after 27.
- *   WR: peaks 25-27, steady decline from 29.
- *   TE: slow developers, peak 26-28, decline from 30.
- *   QB: long plateau 26-32, decline from mid-30s.
+ *
+ * Loaded from data/age-curves.json, produced by scripts/analysis/age_curves.py: our measurement on Sleeper stats
+ * since 2012 (delta method, prior-season selection, retirements counted as zero) blended 50/50 with published
+ * research (4for4 production curves, PFF aging work). Re-run each off-season.
  */
-const CURVES: Record<string, [number, number][]> = {
-  RB: [[21, 0.8], [22, 0.9], [23, 0.97], [24, 1], [25, 1], [26, 0.97], [27, 0.9], [28, 0.8], [29, 0.68], [30, 0.55], [31, 0.42], [32, 0.3], [33, 0.18], [34, 0.08], [35, 0]],
-  WR: [[21, 0.72], [22, 0.84], [23, 0.92], [24, 0.97], [25, 1], [26, 1], [27, 1], [28, 0.97], [29, 0.92], [30, 0.85], [31, 0.76], [32, 0.65], [33, 0.52], [34, 0.38], [35, 0.25], [36, 0.12], [37, 0]],
-  TE: [[21, 0.58], [22, 0.7], [23, 0.8], [24, 0.89], [25, 0.95], [26, 1], [27, 1], [28, 1], [29, 0.97], [30, 0.92], [31, 0.85], [32, 0.76], [33, 0.65], [34, 0.52], [35, 0.38], [36, 0.24], [37, 0.1], [38, 0]],
-  QB: [[21, 0.7], [22, 0.8], [23, 0.88], [24, 0.93], [25, 0.97], [26, 1], [32, 1], [33, 0.98], [34, 0.95], [35, 0.9], [36, 0.84], [37, 0.76], [38, 0.66], [39, 0.55], [40, 0.42], [41, 0.28], [42, 0.12], [43, 0]],
+import fs from 'node:fs';
+import path from 'node:path';
+
+const FALLBACK: Record<string, [number, number][]> = {
+  RB: [[21, 0.93], [23, 1], [27, 0.97], [28, 0.91], [29, 0.77], [30, 0.57], [31, 0.42], [32, 0.32], [33, 0.24], [34, 0.15], [35, 0]],
+  WR: [[21, 0.78], [23, 0.87], [25, 0.98], [26, 1], [28, 0.95], [29, 0.88], [30, 0.81], [31, 0.73], [32, 0.6], [33, 0.47], [34, 0.34], [35, 0.22], [36, 0.14], [37, 0]],
+  TE: [[21, 0.74], [23, 0.88], [25, 0.99], [26, 1], [27, 0.95], [28, 0.89], [29, 0.83], [30, 0.78], [32, 0.74], [33, 0.67], [34, 0.57], [35, 0.43], [36, 0.33], [37, 0.25], [38, 0]],
+  QB: [[21, 0.73], [24, 0.81], [26, 0.83], [27, 0.9], [28, 0.98], [29, 1], [32, 0.96], [33, 0.92], [34, 0.87], [35, 0.82], [36, 0.78], [37, 0.73], [38, 0.65], [39, 0.56], [40, 0.47], [41, 0.38], [42, 0.31], [43, 0]],
 };
+
+function load(): Record<string, [number, number][]> {
+  try {
+    const raw = JSON.parse(fs.readFileSync(path.resolve(process.cwd(), 'data', 'age-curves.json'), 'utf8'));
+    return raw.curves ?? FALLBACK;
+  } catch {
+    return FALLBACK;
+  }
+}
+
+const CURVES = load();
 
 /** Production multiplier at a (fractional) age, linearly interpolated. Curves end at 0 (retirement). */
 export function curveAt(position: string, age: number): number {

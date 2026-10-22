@@ -26,7 +26,7 @@ export const PlanScreen: React.FC = () => {
 
   // ---- Lineup by season vs the league --------------------------------------------------------
   const perSeason = seasons.map((season, i) => {
-    const all = teams.map((t) => t.season_outlook?.[i]?.points ?? 0);
+    const all = teams.map((t) => t.season_outlook?.[i]?.total ?? t.season_outlook?.[i]?.points ?? 0);
     return { season, mine: outlook[i], max: Math.max(...all, 1), med: median(all) };
   });
   const scaleMax = Math.max(...perSeason.map((s) => s.max));
@@ -88,15 +88,18 @@ export const PlanScreen: React.FC = () => {
     }
   }
 
-  // Picks you hold to restock.
-  const firsts = (evaluation.draft_picks || []).filter((p) => p.round === 1);
-  if (firsts.length) {
-    const byYear = new Map<number, number>();
-    firsts.forEach((p) => byYear.set(p.year, (byYear.get(p.year) || 0) + 1));
+  // Years where several picks land: a boost if you keep them, peak trade value if you sell before the draft.
+  const plans = evaluation.pick_plan || [];
+  const byDraft = new Map<number, typeof plans>();
+  plans.forEach((pl) => byDraft.set(pl.year, [...(byDraft.get(pl.year) || []), pl]));
+  for (const [year, list] of [...byDraft.entries()].sort((a, b) => a[0] - b[0])) {
+    const firsts = list.filter((p) => p.round === 1);
+    if (firsts.length < 2) continue;
+    const expectedStarters = list.reduce((s, p) => s + Math.max(...p.hit_rates.slice(0, 3)), 0);
     moves.push({
-      when: 'offseason',
-      title: `${firsts.length} first-round pick${firsts.length === 1 ? '' : 's'} to restock with`,
-      detail: [...byYear.entries()].sort().map(([y, n]) => `${n} in ${y}`).join(', ') + '. Use them on the positions that thin out first, or as trade currency.',
+      when: year <= thisSeason + 1 ? 'offseason' : 'later',
+      title: `${firsts.length} first-round picks land in ${year}`,
+      detail: `Expect about ${expectedStarters.toFixed(1)} of your ${list.length} picks that year to become starters at some point. Keep them for a boost from ${year + 1}, or sell the spring before the ${year} draft, when picks are worth the most.`,
     });
   }
 
@@ -116,25 +119,30 @@ export const PlanScreen: React.FC = () => {
       <section className="space-y-3">
         <h2 className="display text-[26px] text-ink">Your lineup, season by season</h2>
         <p className="text-[14px] text-muted">
-          Projected starting lineup points per week from today's roster, aged forward. Future rookies and trades aren't in it, so every
-          team trends down; your rank is what matters.
+          Projected starting lineup points per week: today's roster aged forward, plus what your draft picks are expected to add
+          (their chance of becoming a starter, measured from past rookie drafts, times what a hit adds over your weakest starter).
         </p>
         <ul className="space-y-3">
           {perSeason.map((s) => (
             <li key={s.season} className="grid grid-cols-[3.25rem_1fr_auto] items-center gap-3">
               <span className="font-semibold">{s.season}</span>
               <span className="relative h-3 rounded-full bg-line overflow-hidden" aria-hidden>
-                <span className="absolute inset-y-0 left-0 rounded-full bg-gold" style={{ width: `${(s.mine.points / scaleMax) * 100}%` }} />
+                <span className="absolute inset-y-0 left-0 rounded-l-full bg-gold" style={{ width: `${(s.mine.points / scaleMax) * 100}%` }} />
+                <span
+                  className="absolute inset-y-0 bg-gold/40"
+                  style={{ left: `${(s.mine.points / scaleMax) * 100}%`, width: `${((s.mine.pick_points ?? 0) / scaleMax) * 100}%` }}
+                />
                 <span className="absolute inset-y-0 w-0.5 bg-ink" style={{ left: `${(s.med / scaleMax) * 100}%` }} title="League median" />
               </span>
-              <span className="text-right text-[14px] w-[7.5rem]">
-                <span className="font-semibold">{s.mine.points}</span> pts,{' '}
+              <span className="text-right text-[14px] w-[8.5rem]">
+                <span className="font-semibold">{Math.round(s.mine.total ?? s.mine.points)}</span> pts,{' '}
                 <span className={s.mine.rank <= 3 ? 'text-gold font-semibold' : 'font-semibold'}>{ordinal(s.mine.rank)}</span>
+                {!!s.mine.pick_points && <span className="block text-[12px] text-muted">{s.mine.pick_points} from picks</span>}
               </span>
             </li>
           ))}
         </ul>
-        <p className="text-[13px] text-muted">The dark tick on each bar is the league median.</p>
+        <p className="text-[13px] text-muted">Solid gold is your roster, light gold is expected from picks. The dark tick is the league median.</p>
       </section>
 
       <section className="space-y-5">
@@ -158,6 +166,64 @@ export const PlanScreen: React.FC = () => {
           );
         })}
       </section>
+
+      {plans.length > 0 && (
+        <section className="space-y-3">
+          <h2 className="display text-[26px] text-ink">Draft picks</h2>
+          <p className="text-[14px] text-muted">
+            Value today, and what the same pick is worth once it's the next draft's pick. Starter odds are how often players taken at that
+            slot were starting-calibre in their second or third season (whichever is higher), from 13 years of rookie drafts.
+          </p>
+          {[...byDraft.entries()]
+            .sort((a, b) => a[0] - b[0])
+            .map(([year, list]) => {
+              const now = list.reduce((s, p) => s + p.value_now, 0);
+              const later = list.reduce((s, p) => s + p.value_at_draft, 0);
+              return (
+                <div key={year}>
+                  <div className="flex items-baseline justify-between text-[13px] pt-1">
+                    <span className="font-semibold">{year} draft</span>
+                    <span className="text-muted">
+                      {fmt(now)}
+                      {later !== now && (
+                        <>
+                          {' '}
+                          now, about <span className="font-semibold text-text">{fmt(later)}</span> at draft time
+                        </>
+                      )}
+                    </span>
+                  </div>
+                  <ul className="divide-y divide-line">
+                    {[...list]
+                      .sort((a, b) => a.round - b.round)
+                      .map((pl) => {
+                        const pick = (evaluation.draft_picks || []).find((d) => d.id === pl.pick_id);
+                        const odds = Math.max(0, ...pl.hit_rates.slice(0, 3));
+                        return (
+                          <li key={pl.pick_id} className="py-2 flex items-center justify-between gap-3">
+                            <span className="min-w-0">
+                              <span className="block truncate">
+                                {ordinal(pl.round)}
+                                {pl.tier ? ` (${pl.tier.toLowerCase()})` : ''}
+                                {pick && pick.original_owner_id !== me ? `, from ${pick.original_owner_name}` : ''}
+                              </span>
+                              <span className="block text-[12px] text-muted">{Math.round(odds * 100)}% starter odds by year 2 or 3</span>
+                            </span>
+                            <span className="text-right shrink-0">
+                              <span className="block font-semibold">{fmt(pl.value_now)}</span>
+                              {pl.value_at_draft !== pl.value_now && (
+                                <span className="block text-[12px] text-up">{fmt(pl.value_at_draft)} at draft</span>
+                              )}
+                            </span>
+                          </li>
+                        );
+                      })}
+                  </ul>
+                </div>
+              );
+            })}
+        </section>
+      )}
 
       <section className="space-y-3">
         <h2 className="display text-[26px] text-ink">Roster timeline</h2>

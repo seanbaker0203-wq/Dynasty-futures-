@@ -81,8 +81,23 @@ export interface BoardPlayer extends FuturesInfo {
 
 export interface SeasonOutlook {
   season: number;
-  points: number; // projected starting-lineup points per week
-  rank: number; // within the league
+  points: number; // projected starting-lineup points per week from today's roster
+  pick_points: number; // expected extra points per week from rookie picks drafted by this season
+  total: number; // points + pick_points
+  rank: number; // within the league, counting picks
+  rank_roster: number; // within the league, roster only
+}
+
+/** One draft pick's expected outlook (Plan page). */
+export interface PickPlan {
+  pick_id: string;
+  year: number;
+  round: number;
+  tier?: 'Early' | 'Mid' | 'Late';
+  value_now: number;
+  value_at_draft: number; // what the same pick is worth once it's the next draft's pick
+  hit_rates: number[]; // chance of a starter-level season, rookie year first
+  ppg_if_hit: number[];
 }
 
 export interface HistoricalValuePoint {
@@ -366,6 +381,7 @@ export interface RosterEvaluationResult {
   unmatched_names?: string[];
   values_meta?: ValuesMeta;
   season_outlook?: SeasonOutlook[];
+  pick_plan?: PickPlan[];
   /** All teams in the league, for switching "my team" without re-syncing */
   league_franchises?: { franchise_id: string; franchise_name: string; owner_name?: string }[];
 }

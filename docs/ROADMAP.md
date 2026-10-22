@@ -66,8 +66,12 @@ Caveats: values are derived from FantasyPros expert rankings; repo is GPL-3. Fin
   season (sell before fall-off, positional holes with buy-low targets, picks to restock), roster timeline grid.
 - Expert value history: 26 weeks bundled (`scripts/build-expert-history.mjs`), extended from GitHub at runtime.
 
-**Next for values:** calibrate aging curves on historical seasons; add rookie draft picks to the season outlook;
-store our own daily Futures Value snapshots for longer history; injury/depth-chart awareness; FantasyCalc permission.
+- **Measured aging curves** (14 seasons, blended with published research) and **rookie pick outcomes by slot**; picks
+  now count in the season outlook (with diminishing returns) and the Plan shows each pick's value now vs at draft time.
+
+**Next for values:** store our own daily Futures Value snapshots (pick appreciation into the draft, longer history);
+injury/depth-chart awareness; rookie-draft order from real rookie ADP instead of NFL draft order; FantasyCalc permission
+before charging.
 
 ## Roadmap
 

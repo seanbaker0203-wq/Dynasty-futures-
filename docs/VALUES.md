@@ -24,9 +24,14 @@ If a source has no value for a player, the remaining weights are scaled up to 10
 2. **Regress to the market.** Production is blended 60/40 with what the market implies the player produces (his rank at
    his position mapped to the points-per-game of the player at that rank). Players without enough games use the implied
    number only, so rookies and injured players aren't punished for missing stats.
-3. **Age forward.** Each of the next five seasons is projected with a position aging curve
-   (`server/model/ageCurves.ts`: RB peak 24–25 and steep after 27; WR peak 25–27, decline from 29; TE peak 26–28, decline
-   from 30; QB plateau 26–32, decline from mid-30s; all curves reach zero by retirement age).
+3. **Age forward.** Each of the next five seasons is projected with a position aging curve (`data/age-curves.json`).
+   Curves are measured from Sleeper stats since 2012 with `scripts/analysis/age_curves.py` (delta method on half-PPR
+   points per game; players selected on the prior season to avoid regression-to-the-mean bias; players who leave the
+   league count as zero to avoid survivorship bias; smoothed) and blended 50/50 with published research
+   ([4for4 production curves](https://www.4for4.com/2025/preseason/production-curves-positional-breakouts-prime-years-and-falloffs-age),
+   [PFF aging curves](https://pff.com/news/fantasy-football-metrics-that-matter-aging-curves-by-position)).
+   Result: RB full strength to 27, 91% at 28, 77% at 29, 57% at 30. WR peak 26, 88% at 29, 73% at 31. TE peak 26,
+   ~75% by 30–32. QB improves to 29, plateau to 32, then declines. Re-run every off-season.
 4. **Only points that win weeks count.** For each season, points per game above a replacement-level starter in *this*
    league (from league size and starting slots), times 17 games, discounted 15% per year, summed over five seasons.
 5. **Per-season role.** Each projected season is tagged Starter, Flex, Depth or Fading against the league's starter and
@@ -48,8 +53,34 @@ expert pick value mapped to the same scale. Years past what the market lists are
 
 ## Season outlook (Plan page)
 
-Each team's best possible starting lineup is built from projected points per game for each of the next five seasons,
-then ranked within the league. Future rookies and trades are not included, so every team trends down; ranks are the signal.
+Each team's best possible starting lineup is built from projected points per game for each of the next five seasons.
+**Draft picks** add their expected value from the season after their draft: the chance of a starter-level season that
+year times what a hit adds over the team's weakest starter. Picks are applied best first and each can only displace the
+next-weakest starter, so stacking picks has diminishing returns. Teams are ranked with and without picks.
+
+### Rookie pick outcomes (`data/rookie-picks.json`, `scripts/analysis/rookie_picks.py`)
+
+Rookie-draft order is estimated from each class's NFL draft order of skill players (QBs pushed down in 1QB, up in
+Superflex; TEs slightly down). Over the 2013–2025 classes, the share of picks that were starter-level in a given season
+(half PPR: QB 16+, RB 9.5+, WR 9+, TE 7.5+ points per game, 6+ games), 1QB:
+
+| Slots (12-team) | Year 1 | Year 2 | Year 3 |
+|---|---|---|---|
+| 1.01–1.04 | 52% | 62% | 57% |
+| 1.05–1.08 | 42% | 58% | 64% |
+| 1.09–1.12 | 40% | 38% | 48% |
+| 2nd round | 10–25% | 25–31% | 30–36% |
+| 3rd round | 2–12% | 10–17% | 14–20% |
+| 4th round | 4–8% | 8–12% | 7–14% |
+
+Consistent with [PFF's rookie draft study](https://www.pff.com/news/fantasy-dynasty-rookie-draft-history-lesson)
+(top 3 picks 67%, picks 4–12 32%, picks 13–22 24%).
+
+### Pick value at draft time
+
+A pick's value once it is the next draft's pick is taken as today's market value of a next-draft pick in the same round
+and tier (e.g. a 2028 1st worth 2,162 today ≈ 2,606 when it becomes the next draft's pick). Spring pre-draft
+appreciation isn't measured yet; storing our own daily snapshots will let us measure it.
 
 ## Limits and next steps
 

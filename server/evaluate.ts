@@ -16,10 +16,12 @@ import type {
   MasterPlayer,
   Position,
   RosterEvaluationResult,
+  PickPlan,
   RosterRecord,
   SeasonOutlook,
 } from '../src/types';
 import { getBoard, WEIGHTS, type Board } from './model/futures';
+import { pickOutlook } from './model/rookies';
 import { valueStore } from './values';
 import { gradeLeague } from './classify';
 import type { NormalizedLeague } from './leagues/types';
@@ -223,24 +225,66 @@ export async function evaluateLeague(league: NormalizedLeague, requestedTeamId?:
   leagueTeams.sort((a, b) => power(b) - power(a)).forEach((t, i) => (t.power_rank = i + 1));
 
   // Season outlook: best projected lineup (points per week) for each of the next seasons, ranked in the league.
-  // Everyone on the roster counts (taxi and IR players are back in future years); future rookies are not included.
+  // Everyone on the roster counts (taxi and IR players are back in future years). Rookie picks add their
+  // expected value: chance of a starter-level season (measured from past drafts, by slot) times what a hit
+  // adds over the team's weakest projected starter that season.
   const seasons = board.players[0]?.projection.map((p) => p.season) ?? [];
+  const sf = !!league.settings.superflex;
+  const teams = league.settings.league_size || league.teams.length || 12;
+  const pprScale = league.settings.scoring_type === 'PPR' ? 1.12 : league.settings.scoring_type === 'Half PPR' ? 1 : 0.88;
   const outlook = new Map<string, SeasonOutlook[]>();
+  const pickPlans = new Map<string, PickPlan[]>();
   for (const t of league.teams) {
     const players = rosterPlayers(t.team_id);
+    const lineups = seasons.map((season, i) => {
+      const asPoints = players.map((p) => ({ ...p, roster_designation: 'ACTIVE' as const, market_value: p.futures?.projection[i]?.ppg ?? 0 }));
+      const { starters } = RosterDNAMathEngine.splitStartersAndBench(asPoints, [], league.settings);
+      const skill = starters.filter((p) => ['QB', 'RB', 'WR', 'TE'].includes(p.position));
+      return {
+        points: starters.reduce((s, p) => s + p.market_value, 0),
+        starterPpg: skill.map((p) => p.market_value).sort((a, b) => a - b), // weakest first
+      };
+    });
+    const picks = picksFor(t.team_id);
+    const plans: PickPlan[] = picks.map((pk) => {
+      const o = pickOutlook(pk.round, teams, sf, pk.tier);
+      return {
+        pick_id: pk.id,
+        year: pk.year,
+        round: pk.round,
+        tier: pk.tier,
+        value_now: pk.market_value,
+        value_at_draft: board.pickValue(upcomingDraftYear, pk.round, pk.tier),
+        hit_rates: o.map((x) => x.hit_rate),
+        ppg_if_hit: o.map((x) => Math.round(x.ppg_if_hit * pprScale * 10) / 10),
+      };
+    });
+    pickPlans.set(t.team_id, plans);
     outlook.set(
       t.team_id,
       seasons.map((season, i) => {
-        const asPoints = players.map((p) => ({ ...p, roster_designation: 'ACTIVE' as const, market_value: p.futures?.projection[i]?.ppg ?? 0 }));
-        const { starters } = RosterDNAMathEngine.splitStartersAndBench(asPoints, [], league.settings);
-        return { season, points: Math.round(starters.reduce((s, p) => s + p.market_value, 0) * 10) / 10, rank: 0 };
+        // Best expected picks first; each one can only displace the next-weakest starter, so stacking picks
+        // has diminishing returns and can never add more than the lineup has slots.
+        const live = plans
+          .map((pl) => ({ k: season - pl.year, pl })) // k = 0 is the rookie season (drafted the spring before)
+          .filter(({ k, pl }) => k >= 0 && k < pl.hit_rates.length)
+          .sort((a, b) => b.pl.hit_rates[b.k] * b.pl.ppg_if_hit[b.k] - a.pl.hit_rates[a.k] * a.pl.ppg_if_hit[a.k]);
+        const slotsPpg = lineups[i].starterPpg;
+        let pickPts = 0;
+        live.forEach(({ k, pl }, j) => {
+          if (j >= slotsPpg.length) return;
+          pickPts += pl.hit_rates[k] * Math.max(0, pl.ppg_if_hit[k] - slotsPpg[j]);
+        });
+        const points = Math.round(lineups[i].points * 10) / 10;
+        const pick_points = Math.round(pickPts * 10) / 10;
+        return { season, points, pick_points, total: Math.round((points + pick_points) * 10) / 10, rank: 0, rank_roster: 0 };
       })
     );
   }
   seasons.forEach((_, i) => {
-    [...outlook.entries()]
-      .sort((a, b) => b[1][i].points - a[1][i].points)
-      .forEach(([, o], r) => (o[i].rank = r + 1));
+    const all = [...outlook.values()];
+    [...all].sort((a, b) => b[i].total - a[i].total).forEach((o, r) => (o[i].rank = r + 1));
+    [...all].sort((a, b) => b[i].points - a[i].points).forEach((o, r) => (o[i].rank_roster = r + 1));
   });
   for (const lt of leagueTeams) lt.season_outlook = outlook.get(lt.franchise_id);
 
@@ -284,6 +328,7 @@ export async function evaluateLeague(league: NormalizedLeague, requestedTeamId?:
       player_count: board.players.length,
     },
     season_outlook: outlook.get(userTeamId),
+    pick_plan: pickPlans.get(userTeamId),
     league_franchises: league.teams.map((t) => ({ franchise_id: t.team_id, franchise_name: t.name, owner_name: t.owner_name })),
   } satisfies RosterEvaluationResult;
 }

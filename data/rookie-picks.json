@@ -1,0 +1,1095 @@
+{
+ "method": "",
+ "hit_thresholds_half_ppr": {
+  "QB": 16,
+  "RB": 9.5,
+  "WR": 9,
+  "TE": 7.5
+ },
+ "bins": {
+  "1qb": [
+   {
+    "slots": [
+     1,
+     4
+    ],
+    "hit_in_first_3_years": 0.841,
+    "classes": 44,
+    "years": [
+     {
+      "year": 1,
+      "n": 52,
+      "hit_rate": 0.519,
+      "ppg_if_hit": 15.5,
+      "ppg_avg": 12.3
+     },
+     {
+      "year": 2,
+      "n": 48,
+      "hit_rate": 0.625,
+      "ppg_if_hit": 15.8,
+      "ppg_avg": 13.7
+     },
+     {
+      "year": 3,
+      "n": 44,
+      "hit_rate": 0.568,
+      "ppg_if_hit": 15.7,
+      "ppg_avg": 12.7
+     },
+     {
+      "year": 4,
+      "n": 40,
+      "hit_rate": 0.525,
+      "ppg_if_hit": 14.8,
+      "ppg_avg": 12.3
+     },
+     {
+      "year": 5,
+      "n": 36,
+      "hit_rate": 0.639,
+      "ppg_if_hit": 15.7,
+      "ppg_avg": 12.0
+     }
+    ]
+   },
+   {
+    "slots": [
+     5,
+     8
+    ],
+    "hit_in_first_3_years": 0.705,
+    "classes": 44,
+    "years": [
+     {
+      "year": 1,
+      "n": 52,
+      "hit_rate": 0.423,
+      "ppg_if_hit": 11.4,
+      "ppg_avg": 8.7
+     },
+     {
+      "year": 2,
+      "n": 48,
+      "hit_rate": 0.583,
+      "ppg_if_hit": 13.0,
+      "ppg_avg": 10.1
+     },
+     {
+      "year": 3,
+      "n": 44,
+      "hit_rate": 0.636,
+      "ppg_if_hit": 13.7,
+      "ppg_avg": 9.9
+     },
+     {
+      "year": 4,
+      "n": 40,
+      "hit_rate": 0.425,
+      "ppg_if_hit": 14.0,
+      "ppg_avg": 8.9
+     },
+     {
+      "year": 5,
+      "n": 36,
+      "hit_rate": 0.472,
+      "ppg_if_hit": 13.1,
+      "ppg_avg": 7.9
+     }
+    ]
+   },
+   {
+    "slots": [
+     9,
+     12
+    ],
+    "hit_in_first_3_years": 0.614,
+    "classes": 44,
+    "years": [
+     {
+      "year": 1,
+      "n": 52,
+      "hit_rate": 0.404,
+      "ppg_if_hit": 12.9,
+      "ppg_avg": 8.0
+     },
+     {
+      "year": 2,
+      "n": 48,
+      "hit_rate": 0.375,
+      "ppg_if_hit": 13.7,
+      "ppg_avg": 9.1
+     },
+     {
+      "year": 3,
+      "n": 44,
+      "hit_rate": 0.477,
+      "ppg_if_hit": 12.8,
+      "ppg_avg": 8.1
+     },
+     {
+      "year": 4,
+      "n": 40,
+      "hit_rate": 0.475,
+      "ppg_if_hit": 13.6,
+      "ppg_avg": 8.7
+     },
+     {
+      "year": 5,
+      "n": 36,
+      "hit_rate": 0.306,
+      "ppg_if_hit": 14.2,
+      "ppg_avg": 7.4
+     }
+    ]
+   },
+   {
+    "slots": [
+     13,
+     16
+    ],
+    "hit_in_first_3_years": 0.455,
+    "classes": 44,
+    "years": [
+     {
+      "year": 1,
+      "n": 52,
+      "hit_rate": 0.25,
+      "ppg_if_hit": 12.3,
+      "ppg_avg": 7.0
+     },
+     {
+      "year": 2,
+      "n": 48,
+      "hit_rate": 0.312,
+      "ppg_if_hit": 12.3,
+      "ppg_avg": 7.1
+     },
+     {
+      "year": 3,
+      "n": 44,
+      "hit_rate": 0.295,
+      "ppg_if_hit": 11.4,
+      "ppg_avg": 6.0
+     },
+     {
+      "year": 4,
+      "n": 40,
+      "hit_rate": 0.275,
+      "ppg_if_hit": 13.2,
+      "ppg_avg": 6.3
+     },
+     {
+      "year": 5,
+      "n": 36,
+      "hit_rate": 0.25,
+      "ppg_if_hit": 13.4,
+      "ppg_avg": 5.1
+     }
+    ]
+   },
+   {
+    "slots": [
+     17,
+     20
+    ],
+    "hit_in_first_3_years": 0.455,
+    "classes": 44,
+    "years": [
+     {
+      "year": 1,
+      "n": 52,
+      "hit_rate": 0.231,
+      "ppg_if_hit": 11.2,
+      "ppg_avg": 5.2
+     },
+     {
+      "year": 2,
+      "n": 48,
+      "hit_rate": 0.271,
+      "ppg_if_hit": 13.2,
+      "ppg_avg": 6.8
+     },
+     {
+      "year": 3,
+      "n": 44,
+      "hit_rate": 0.364,
+      "ppg_if_hit": 12.4,
+      "ppg_avg": 7.1
+     },
+     {
+      "year": 4,
+      "n": 40,
+      "hit_rate": 0.325,
+      "ppg_if_hit": 12.2,
+      "ppg_avg": 6.3
+     },
+     {
+      "year": 5,
+      "n": 36,
+      "hit_rate": 0.222,
+      "ppg_if_hit": 13.8,
+      "ppg_avg": 5.7
+     }
+    ]
+   },
+   {
+    "slots": [
+     21,
+     24
+    ],
+    "hit_in_first_3_years": 0.386,
+    "classes": 44,
+    "years": [
+     {
+      "year": 1,
+      "n": 52,
+      "hit_rate": 0.096,
+      "ppg_if_hit": 12.3,
+      "ppg_avg": 4.5
+     },
+     {
+      "year": 2,
+      "n": 48,
+      "hit_rate": 0.25,
+      "ppg_if_hit": 13.8,
+      "ppg_avg": 6.8
+     },
+     {
+      "year": 3,
+      "n": 44,
+      "hit_rate": 0.295,
+      "ppg_if_hit": 12.1,
+      "ppg_avg": 5.4
+     },
+     {
+      "year": 4,
+      "n": 40,
+      "hit_rate": 0.225,
+      "ppg_if_hit": 13.9,
+      "ppg_avg": 5.0
+     },
+     {
+      "year": 5,
+      "n": 36,
+      "hit_rate": 0.222,
+      "ppg_if_hit": 13.4,
+      "ppg_avg": 4.6
+     }
+    ]
+   },
+   {
+    "slots": [
+     25,
+     28
+    ],
+    "hit_in_first_3_years": 0.341,
+    "classes": 44,
+    "years": [
+     {
+      "year": 1,
+      "n": 52,
+      "hit_rate": 0.115,
+      "ppg_if_hit": 11.7,
+      "ppg_avg": 5.2
+     },
+     {
+      "year": 2,
+      "n": 48,
+      "hit_rate": 0.167,
+      "ppg_if_hit": 12.5,
+      "ppg_avg": 5.1
+     },
+     {
+      "year": 3,
+      "n": 44,
+      "hit_rate": 0.205,
+      "ppg_if_hit": 12.3,
+      "ppg_avg": 4.8
+     },
+     {
+      "year": 4,
+      "n": 40,
+      "hit_rate": 0.025,
+      "ppg_if_hit": 11.2,
+      "ppg_avg": 3.1
+     },
+     {
+      "year": 5,
+      "n": 36,
+      "hit_rate": 0.083,
+      "ppg_if_hit": 9.1,
+      "ppg_avg": 2.9
+     }
+    ]
+   },
+   {
+    "slots": [
+     29,
+     32
+    ],
+    "hit_in_first_3_years": 0.205,
+    "classes": 44,
+    "years": [
+     {
+      "year": 1,
+      "n": 52,
+      "hit_rate": 0.058,
+      "ppg_if_hit": 13.1,
+      "ppg_avg": 3.7
+     },
+     {
+      "year": 2,
+      "n": 48,
+      "hit_rate": 0.146,
+      "ppg_if_hit": 12.6,
+      "ppg_avg": 4.4
+     },
+     {
+      "year": 3,
+      "n": 44,
+      "hit_rate": 0.182,
+      "ppg_if_hit": 11.7,
+      "ppg_avg": 4.4
+     },
+     {
+      "year": 4,
+      "n": 40,
+      "hit_rate": 0.175,
+      "ppg_if_hit": 11.7,
+      "ppg_avg": 3.8
+     },
+     {
+      "year": 5,
+      "n": 36,
+      "hit_rate": 0.111,
+      "ppg_if_hit": 13.3,
+      "ppg_avg": 3.2
+     }
+    ]
+   },
+   {
+    "slots": [
+     33,
+     36
+    ],
+    "hit_in_first_3_years": 0.182,
+    "classes": 44,
+    "years": [
+     {
+      "year": 1,
+      "n": 52,
+      "hit_rate": 0.019,
+      "ppg_if_hit": 13.0,
+      "ppg_avg": 3.3
+     },
+     {
+      "year": 2,
+      "n": 48,
+      "hit_rate": 0.104,
+      "ppg_if_hit": 14.6,
+      "ppg_avg": 3.7
+     },
+     {
+      "year": 3,
+      "n": 44,
+      "hit_rate": 0.136,
+      "ppg_if_hit": 13.3,
+      "ppg_avg": 3.9
+     },
+     {
+      "year": 4,
+      "n": 40,
+      "hit_rate": 0.1,
+      "ppg_if_hit": 14.6,
+      "ppg_avg": 3.7
+     },
+     {
+      "year": 5,
+      "n": 36,
+      "hit_rate": 0.056,
+      "ppg_if_hit": 17.1,
+      "ppg_avg": 2.4
+     }
+    ]
+   },
+   {
+    "slots": [
+     37,
+     40
+    ],
+    "hit_in_first_3_years": 0.205,
+    "classes": 44,
+    "years": [
+     {
+      "year": 1,
+      "n": 52,
+      "hit_rate": 0.077,
+      "ppg_if_hit": 11.2,
+      "ppg_avg": 3.6
+     },
+     {
+      "year": 2,
+      "n": 48,
+      "hit_rate": 0.104,
+      "ppg_if_hit": 12.4,
+      "ppg_avg": 3.8
+     },
+     {
+      "year": 3,
+      "n": 44,
+      "hit_rate": 0.136,
+      "ppg_if_hit": 11.8,
+      "ppg_avg": 4.0
+     },
+     {
+      "year": 4,
+      "n": 40,
+      "hit_rate": 0.125,
+      "ppg_if_hit": 12.0,
+      "ppg_avg": 3.8
+     },
+     {
+      "year": 5,
+      "n": 36,
+      "hit_rate": 0.083,
+      "ppg_if_hit": 14.1,
+      "ppg_avg": 3.5
+     }
+    ]
+   },
+   {
+    "slots": [
+     41,
+     44
+    ],
+    "hit_in_first_3_years": 0.205,
+    "classes": 44,
+    "years": [
+     {
+      "year": 1,
+      "n": 52,
+      "hit_rate": 0.038,
+      "ppg_if_hit": 10.5,
+      "ppg_avg": 2.5
+     },
+     {
+      "year": 2,
+      "n": 48,
+      "hit_rate": 0.125,
+      "ppg_if_hit": 11.0,
+      "ppg_avg": 3.4
+     },
+     {
+      "year": 3,
+      "n": 44,
+      "hit_rate": 0.068,
+      "ppg_if_hit": 12.8,
+      "ppg_avg": 2.8
+     },
+     {
+      "year": 4,
+      "n": 40,
+      "hit_rate": 0.025,
+      "ppg_if_hit": 13.5,
+      "ppg_avg": 2.4
+     },
+     {
+      "year": 5,
+      "n": 36,
+      "hit_rate": 0.056,
+      "ppg_if_hit": 12.7,
+      "ppg_avg": 2.5
+     }
+    ]
+   },
+   {
+    "slots": [
+     45,
+     48
+    ],
+    "hit_in_first_3_years": 0.114,
+    "classes": 44,
+    "years": [
+     {
+      "year": 1,
+      "n": 52,
+      "hit_rate": 0.038,
+      "ppg_if_hit": 12.1,
+      "ppg_avg": 2.8
+     },
+     {
+      "year": 2,
+      "n": 48,
+      "hit_rate": 0.083,
+      "ppg_if_hit": 14.0,
+      "ppg_avg": 3.8
+     },
+     {
+      "year": 3,
+      "n": 44,
+      "hit_rate": 0.068,
+      "ppg_if_hit": 15.0,
+      "ppg_avg": 2.6
+     },
+     {
+      "year": 4,
+      "n": 40,
+      "hit_rate": 0.05,
+      "ppg_if_hit": 11.5,
+      "ppg_avg": 2.5
+     },
+     {
+      "year": 5,
+      "n": 36,
+      "hit_rate": 0.028,
+      "ppg_if_hit": 11.6,
+      "ppg_avg": 1.5
+     }
+    ]
+   }
+  ],
+  "sf": [
+   {
+    "slots": [
+     1,
+     4
+    ],
+    "hit_in_first_3_years": 0.773,
+    "classes": 44,
+    "years": [
+     {
+      "year": 1,
+      "n": 52,
+      "hit_rate": 0.462,
+      "ppg_if_hit": 15.8,
+      "ppg_avg": 12.7
+     },
+     {
+      "year": 2,
+      "n": 48,
+      "hit_rate": 0.625,
+      "ppg_if_hit": 16.6,
+      "ppg_avg": 14.4
+     },
+     {
+      "year": 3,
+      "n": 44,
+      "hit_rate": 0.523,
+      "ppg_if_hit": 16.4,
+      "ppg_avg": 12.8
+     },
+     {
+      "year": 4,
+      "n": 40,
+      "hit_rate": 0.5,
+      "ppg_if_hit": 15.4,
+      "ppg_avg": 11.9
+     },
+     {
+      "year": 5,
+      "n": 36,
+      "hit_rate": 0.583,
+      "ppg_if_hit": 16.5,
+      "ppg_avg": 11.9
+     }
+    ]
+   },
+   {
+    "slots": [
+     5,
+     8
+    ],
+    "hit_in_first_3_years": 0.636,
+    "classes": 44,
+    "years": [
+     {
+      "year": 1,
+      "n": 52,
+      "hit_rate": 0.365,
+      "ppg_if_hit": 12.8,
+      "ppg_avg": 8.9
+     },
+     {
+      "year": 2,
+      "n": 48,
+      "hit_rate": 0.479,
+      "ppg_if_hit": 14.0,
+      "ppg_avg": 10.8
+     },
+     {
+      "year": 3,
+      "n": 44,
+      "hit_rate": 0.568,
+      "ppg_if_hit": 14.3,
+      "ppg_avg": 9.7
+     },
+     {
+      "year": 4,
+      "n": 40,
+      "hit_rate": 0.35,
+      "ppg_if_hit": 15.8,
+      "ppg_avg": 8.9
+     },
+     {
+      "year": 5,
+      "n": 36,
+      "hit_rate": 0.444,
+      "ppg_if_hit": 13.2,
+      "ppg_avg": 8.2
+     }
+    ]
+   },
+   {
+    "slots": [
+     9,
+     12
+    ],
+    "hit_in_first_3_years": 0.659,
+    "classes": 44,
+    "years": [
+     {
+      "year": 1,
+      "n": 52,
+      "hit_rate": 0.462,
+      "ppg_if_hit": 12.0,
+      "ppg_avg": 8.7
+     },
+     {
+      "year": 2,
+      "n": 48,
+      "hit_rate": 0.458,
+      "ppg_if_hit": 13.0,
+      "ppg_avg": 9.0
+     },
+     {
+      "year": 3,
+      "n": 44,
+      "hit_rate": 0.523,
+      "ppg_if_hit": 13.3,
+      "ppg_avg": 8.8
+     },
+     {
+      "year": 4,
+      "n": 40,
+      "hit_rate": 0.525,
+      "ppg_if_hit": 13.5,
+      "ppg_avg": 9.7
+     },
+     {
+      "year": 5,
+      "n": 36,
+      "hit_rate": 0.389,
+      "ppg_if_hit": 13.9,
+      "ppg_avg": 8.6
+     }
+    ]
+   },
+   {
+    "slots": [
+     13,
+     16
+    ],
+    "hit_in_first_3_years": 0.477,
+    "classes": 44,
+    "years": [
+     {
+      "year": 1,
+      "n": 52,
+      "hit_rate": 0.231,
+      "ppg_if_hit": 12.0,
+      "ppg_avg": 6.9
+     },
+     {
+      "year": 2,
+      "n": 48,
+      "hit_rate": 0.292,
+      "ppg_if_hit": 12.2,
+      "ppg_avg": 7.2
+     },
+     {
+      "year": 3,
+      "n": 44,
+      "hit_rate": 0.341,
+      "ppg_if_hit": 11.6,
+      "ppg_avg": 6.1
+     },
+     {
+      "year": 4,
+      "n": 40,
+      "hit_rate": 0.3,
+      "ppg_if_hit": 13.2,
+      "ppg_avg": 7.1
+     },
+     {
+      "year": 5,
+      "n": 36,
+      "hit_rate": 0.25,
+      "ppg_if_hit": 14.3,
+      "ppg_avg": 5.3
+     }
+    ]
+   },
+   {
+    "slots": [
+     17,
+     20
+    ],
+    "hit_in_first_3_years": 0.318,
+    "classes": 44,
+    "years": [
+     {
+      "year": 1,
+      "n": 52,
+      "hit_rate": 0.154,
+      "ppg_if_hit": 11.7,
+      "ppg_avg": 4.7
+     },
+     {
+      "year": 2,
+      "n": 48,
+      "hit_rate": 0.229,
+      "ppg_if_hit": 12.0,
+      "ppg_avg": 5.5
+     },
+     {
+      "year": 3,
+      "n": 44,
+      "hit_rate": 0.227,
+      "ppg_if_hit": 12.8,
+      "ppg_avg": 5.6
+     },
+     {
+      "year": 4,
+      "n": 40,
+      "hit_rate": 0.225,
+      "ppg_if_hit": 12.6,
+      "ppg_avg": 4.8
+     },
+     {
+      "year": 5,
+      "n": 36,
+      "hit_rate": 0.111,
+      "ppg_if_hit": 11.4,
+      "ppg_avg": 3.8
+     }
+    ]
+   },
+   {
+    "slots": [
+     21,
+     24
+    ],
+    "hit_in_first_3_years": 0.432,
+    "classes": 44,
+    "years": [
+     {
+      "year": 1,
+      "n": 52,
+      "hit_rate": 0.212,
+      "ppg_if_hit": 11.2,
+      "ppg_avg": 5.5
+     },
+     {
+      "year": 2,
+      "n": 48,
+      "hit_rate": 0.25,
+      "ppg_if_hit": 14.3,
+      "ppg_avg": 7.3
+     },
+     {
+      "year": 3,
+      "n": 44,
+      "hit_rate": 0.341,
+      "ppg_if_hit": 11.3,
+      "ppg_avg": 6.1
+     },
+     {
+      "year": 4,
+      "n": 40,
+      "hit_rate": 0.275,
+      "ppg_if_hit": 12.1,
+      "ppg_avg": 5.9
+     },
+     {
+      "year": 5,
+      "n": 36,
+      "hit_rate": 0.222,
+      "ppg_if_hit": 13.7,
+      "ppg_avg": 6.0
+     }
+    ]
+   },
+   {
+    "slots": [
+     25,
+     28
+    ],
+    "hit_in_first_3_years": 0.364,
+    "classes": 44,
+    "years": [
+     {
+      "year": 1,
+      "n": 52,
+      "hit_rate": 0.077,
+      "ppg_if_hit": 13.0,
+      "ppg_avg": 3.6
+     },
+     {
+      "year": 2,
+      "n": 48,
+      "hit_rate": 0.229,
+      "ppg_if_hit": 11.9,
+      "ppg_avg": 5.3
+     },
+     {
+      "year": 3,
+      "n": 44,
+      "hit_rate": 0.25,
+      "ppg_if_hit": 11.2,
+      "ppg_avg": 4.8
+     },
+     {
+      "year": 4,
+      "n": 40,
+      "hit_rate": 0.125,
+      "ppg_if_hit": 12.5,
+      "ppg_avg": 3.8
+     },
+     {
+      "year": 5,
+      "n": 36,
+      "hit_rate": 0.139,
+      "ppg_if_hit": 12.3,
+      "ppg_avg": 2.8
+     }
+    ]
+   },
+   {
+    "slots": [
+     29,
+     32
+    ],
+    "hit_in_first_3_years": 0.227,
+    "classes": 44,
+    "years": [
+     {
+      "year": 1,
+      "n": 52,
+      "hit_rate": 0.077,
+      "ppg_if_hit": 10.2,
+      "ppg_avg": 4.1
+     },
+     {
+      "year": 2,
+      "n": 48,
+      "hit_rate": 0.083,
+      "ppg_if_hit": 10.8,
+      "ppg_avg": 3.8
+     },
+     {
+      "year": 3,
+      "n": 44,
+      "hit_rate": 0.114,
+      "ppg_if_hit": 11.4,
+      "ppg_avg": 3.0
+     },
+     {
+      "year": 4,
+      "n": 40,
+      "hit_rate": 0.05,
+      "ppg_if_hit": 11.2,
+      "ppg_avg": 3.1
+     },
+     {
+      "year": 5,
+      "n": 36,
+      "hit_rate": 0.083,
+      "ppg_if_hit": 9.1,
+      "ppg_avg": 3.3
+     }
+    ]
+   },
+   {
+    "slots": [
+     33,
+     36
+    ],
+    "hit_in_first_3_years": 0.182,
+    "classes": 44,
+    "years": [
+     {
+      "year": 1,
+      "n": 52,
+      "hit_rate": 0.077,
+      "ppg_if_hit": 13.6,
+      "ppg_avg": 4.2
+     },
+     {
+      "year": 2,
+      "n": 48,
+      "hit_rate": 0.167,
+      "ppg_if_hit": 15.1,
+      "ppg_avg": 4.9
+     },
+     {
+      "year": 3,
+      "n": 44,
+      "hit_rate": 0.159,
+      "ppg_if_hit": 13.6,
+      "ppg_avg": 4.6
+     },
+     {
+      "year": 4,
+      "n": 40,
+      "hit_rate": 0.125,
+      "ppg_if_hit": 12.8,
+      "ppg_avg": 3.8
+     },
+     {
+      "year": 5,
+      "n": 36,
+      "hit_rate": 0.111,
+      "ppg_if_hit": 13.3,
+      "ppg_avg": 3.1
+     }
+    ]
+   },
+   {
+    "slots": [
+     37,
+     40
+    ],
+    "hit_in_first_3_years": 0.136,
+    "classes": 44,
+    "years": [
+     {
+      "year": 1,
+      "n": 52,
+      "hit_rate": 0.0,
+      "ppg_if_hit": null,
+      "ppg_avg": 3.1
+     },
+     {
+      "year": 2,
+      "n": 48,
+      "hit_rate": 0.062,
+      "ppg_if_hit": 9.9,
+      "ppg_avg": 3.2
+     },
+     {
+      "year": 3,
+      "n": 44,
+      "hit_rate": 0.091,
+      "ppg_if_hit": 10.4,
+      "ppg_avg": 2.8
+     },
+     {
+      "year": 4,
+      "n": 40,
+      "hit_rate": 0.075,
+      "ppg_if_hit": 10.8,
+      "ppg_avg": 3.1
+     },
+     {
+      "year": 5,
+      "n": 36,
+      "hit_rate": 0.0,
+      "ppg_if_hit": null,
+      "ppg_avg": 1.7
+     }
+    ]
+   },
+   {
+    "slots": [
+     41,
+     44
+    ],
+    "hit_in_first_3_years": 0.182,
+    "classes": 44,
+    "years": [
+     {
+      "year": 1,
+      "n": 52,
+      "hit_rate": 0.077,
+      "ppg_if_hit": 11.8,
+      "ppg_avg": 3.1
+     },
+     {
+      "year": 2,
+      "n": 48,
+      "hit_rate": 0.083,
+      "ppg_if_hit": 12.4,
+      "ppg_avg": 3.5
+     },
+     {
+      "year": 3,
+      "n": 44,
+      "hit_rate": 0.114,
+      "ppg_if_hit": 10.1,
+      "ppg_avg": 3.9
+     },
+     {
+      "year": 4,
+      "n": 40,
+      "hit_rate": 0.125,
+      "ppg_if_hit": 11.5,
+      "ppg_avg": 3.8
+     },
+     {
+      "year": 5,
+      "n": 36,
+      "hit_rate": 0.111,
+      "ppg_if_hit": 11.8,
+      "ppg_avg": 2.8
+     }
+    ]
+   },
+   {
+    "slots": [
+     45,
+     48
+    ],
+    "hit_in_first_3_years": 0.227,
+    "classes": 44,
+    "years": [
+     {
+      "year": 1,
+      "n": 52,
+      "hit_rate": 0.038,
+      "ppg_if_hit": 11.1,
+      "ppg_avg": 2.5
+     },
+     {
+      "year": 2,
+      "n": 48,
+      "hit_rate": 0.146,
+      "ppg_if_hit": 10.9,
+      "ppg_avg": 2.9
+     },
+     {
+      "year": 3,
+      "n": 44,
+      "hit_rate": 0.114,
+      "ppg_if_hit": 12.7,
+      "ppg_avg": 2.9
+     },
+     {
+      "year": 4,
+      "n": 40,
+      "hit_rate": 0.05,
+      "ppg_if_hit": 13.4,
+      "ppg_avg": 2.2
+     },
+     {
+      "year": 5,
+      "n": 36,
+      "hit_rate": 0.028,
+      "ppg_if_hit": 19.0,
+      "ppg_avg": 2.1
+     }
+    ]
+   }
+  ]
+ }
+}
