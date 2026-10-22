@@ -1,13 +1,18 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { ChevronDown } from 'lucide-react';
 import { useRoster } from '../context/RosterContext';
 import { PlayerRow } from '../components/PlayerRow';
 import { fmt, fmtShort, labelFor, pickName } from '../lib/leagueStats';
 import type { LeagueTeamSummary } from '../types';
+import { ManagerProfileNote } from '../components/ManagerProfile';
 
 export const LeagueScreen: React.FC = () => {
-  const { evaluation, setActiveView, setPartnerId } = useRoster();
+  const { evaluation, setActiveView, setPartnerId, history, loadHistory, isDemo } = useRoster();
   const [open, setOpen] = useState<string | null>(null);
+  // Fetch trade history in the background once a team is opened.
+  useEffect(() => {
+    if (open && !isDemo) loadHistory();
+  }, [open, isDemo]);
   if (!evaluation) return null;
 
   const me = evaluation.roster.franchise_id;
@@ -79,6 +84,7 @@ export const LeagueScreen: React.FC = () => {
                     </span>
                   </div>
                   <p className="text-[14px] text-muted">{t.stance_description}</p>
+                  <ManagerProfileNote profile={history?.profiles.find((p) => p.team_id === t.franchise_id)} />
                   <div>
                     <div className="text-[13px] font-semibold">Core players</div>
                     <div className="divide-y divide-line">

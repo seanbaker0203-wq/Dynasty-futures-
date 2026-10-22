@@ -7,6 +7,8 @@ import { LeagueScreen } from './screens/LeagueScreen';
 import { CompareScreen } from './screens/CompareScreen';
 import { FreeAgentsScreen } from './screens/FreeAgentsScreen';
 import { TradeScreen } from './screens/TradeScreen';
+import { TradesScreen } from './screens/TradesScreen';
+import { IdeasScreen } from './screens/IdeasScreen';
 import { ValuesScreen } from './screens/ValuesScreen';
 import { MoversScreen } from './screens/MoversScreen';
 import { PlanScreen } from './screens/PlanScreen';
@@ -17,9 +19,9 @@ type Destination = 'team' | 'league' | 'values' | 'trade' | 'connect';
 
 const DESTINATIONS: { id: Destination; label: string; icon: React.FC<{ className?: string }>; views: DashboardViewMode[] }[] = [
   { id: 'team', label: 'My team', icon: Shield, views: ['single', 'plan', 'optimization'] },
-  { id: 'league', label: 'League', icon: Trophy, views: ['league', 'compare', 'freeagents'] },
+  { id: 'league', label: 'League', icon: Trophy, views: ['league', 'compare', 'trades', 'freeagents'] },
   { id: 'values', label: 'Values', icon: LineChart, views: ['values', 'movers'] },
-  { id: 'trade', label: 'Trade', icon: ArrowLeftRight, views: ['trade'] },
+  { id: 'trade', label: 'Trade', icon: ArrowLeftRight, views: ['trade', 'ideas'] },
   { id: 'connect', label: 'Connect', icon: Link2, views: ['ingest'] },
 ];
 
@@ -126,9 +128,11 @@ const AppContent: React.FC = () => {
               options={[
                 { view: 'league', label: 'Rankings' },
                 { view: 'compare', label: 'Compare' },
+                { view: 'trades', label: 'Trades' },
                 { view: 'freeagents', label: 'Free agents' },
               ]}
             />
+            {activeView === 'trades' && <TradesScreen />}
             {activeView === 'league' && <LeagueScreen />}
             {activeView === 'compare' && <CompareScreen />}
             {activeView === 'freeagents' && <FreeAgentsScreen />}
@@ -147,7 +151,17 @@ const AppContent: React.FC = () => {
           </>
         )}
 
-        {current === 'trade' && <TradeScreen />}
+        {current === 'trade' && (
+          <>
+            <SubTabs
+              options={[
+                { view: 'trade', label: 'Builder' },
+                { view: 'ideas', label: 'Ideas' },
+              ]}
+            />
+            {activeView === 'ideas' ? <IdeasScreen /> : <TradeScreen />}
+          </>
+        )}
       </main>
 
       <footer className="hidden md:block border-t border-line py-6 text-sm text-muted">

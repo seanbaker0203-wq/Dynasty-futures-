@@ -541,3 +541,46 @@ export interface AITradeRequest {
 }
 
 
+
+// ---- League trade history, report cards and manager profiles -----------------------------------
+export interface TradeItem {
+  kind: 'player' | 'pick';
+  id: string; // player id, or pick key
+  label: string; // "Ja'Marr Chase" / "2027 1st (from Team X)"
+  position?: string;
+  value: number; // Futures Value today (used picks: an equivalent pick today)
+  age_then?: number | null;
+}
+
+export interface TradeReport {
+  id: string;
+  date: string; // YYYY-MM-DD
+  season: number;
+  sides: { team_id: string; team_name: string; received: TradeItem[]; value_now: number }[];
+  winner_team_id: string | null; // null = within 10%
+  margin: number; // value difference today
+  margin_pct: number; // margin / larger side
+}
+
+export interface ManagerProfile {
+  team_id: string;
+  team_name: string;
+  trades: number; // up to the last 3 seasons
+  trades_last_12m: number;
+  partners: { team_id: string; team_name: string; count: number }[];
+  picks_net: number; // picks received minus sent
+  firsts_net: number;
+  avg_age_received: number | null;
+  avg_age_sent: number | null;
+  value_net: number; // today's value received minus sent, all trades
+  record: { won: number; lost: number; even: number };
+  positions_bought: Record<string, number>;
+  tags: string[];
+  summary: string;
+}
+
+export interface LeagueHistory {
+  trades: TradeReport[];
+  profiles: ManagerProfile[];
+  seasons: number[];
+}

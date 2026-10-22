@@ -91,8 +91,10 @@ before charging.
 - Do-not-trade / trade-at-premium tags on players.
 
 ### Phase 3 — The differentiator
-- **Manager profiles** from each league's transaction history (who sells picks, who buys vets, who's inactive).
-- AI trade pitches that use those profiles — "who to call, what to offer, draft the message".
+- ✅ **Manager profiles** from three seasons of league trades (Sleeper + MFL): activity, partners, picks gained/spent, age of players bought vs sold, positions targeted, record on today's values. Tags: Trades a lot, Collects/Spends picks, Buys veterans/youth, Usually wins trades, Often overpays, Hasn't traded in a year. (`server/leagues/history.ts`, `server/model/managers.ts`, `POST /api/league/history`)
+- ✅ **Trade report cards** (League → Trades): every trade graded on today's Futures Values, plus a "who wins their trades" leaderboard. Used picks are valued as a same-round pick in the next draft.
+- ✅ **Trade finder** (Trade → Ideas, `src/lib/tradeFinder.ts`): value-fair 1-for-1 and 2-for-1 deals (2-for-1 asks ~10%+ premium) that raise your five-season outlook, ranked by both teams' outlook change, the partner's direction and trading profile; salary-cap safe; "Open in trade builder".
+- Next: draft the trade message for the user to send.
 - Contention-window forecast built on the existing 3-season simulation, fed by real values.
 
 ### Phase 4 — Launch

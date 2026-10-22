@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Plus, Search, X } from 'lucide-react';
 import { useRoster } from '../context/RosterContext';
 import { RosterDNAMathEngine } from '../lib/rosterMath';
@@ -153,9 +153,27 @@ const AssetColumn: React.FC<{
 };
 
 export const TradeScreen: React.FC = () => {
-  const { evaluation, partnerId, setPartnerId } = useRoster();
+  const { evaluation, partnerId, setPartnerId, tradeDraft, clearTradeDraft } = useRoster();
   const [give, setGive] = useState<Asset[]>([]);
   const [get, setGet] = useState<Asset[]>([]);
+
+  // A trade opened from Ideas (or elsewhere): fill both sides once.
+  useEffect(() => {
+    if (!tradeDraft || !evaluation) return;
+    const partnerTeam = evaluation.league_teams?.find((t) => t.franchise_id === tradeDraft.partnerId);
+    if (!partnerTeam) return clearTradeDraft();
+    const mine: Asset[] = [
+      ...evaluation.players.map((p) => ({ kind: 'player' as const, item: p })),
+      ...(evaluation.draft_picks || []).map((p) => ({ kind: 'pick' as const, item: p })),
+    ];
+    const theirs: Asset[] = [
+      ...[...partnerTeam.starters, ...partnerTeam.bench, ...(partnerTeam.reserves || [])].map((p) => ({ kind: 'player' as const, item: p })),
+      ...partnerTeam.draft_picks.map((p) => ({ kind: 'pick' as const, item: p })),
+    ];
+    setGive(mine.filter((a) => tradeDraft.give.includes(assetId(a))));
+    setGet(theirs.filter((a) => tradeDraft.get.includes(assetId(a))));
+    clearTradeDraft();
+  }, [tradeDraft, evaluation]);
 
   const ctx = useMemo(() => {
     if (!evaluation) return null;

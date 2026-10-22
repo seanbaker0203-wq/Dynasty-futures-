@@ -14,6 +14,9 @@ import { LeagueSyncError } from './server/leagues/types';
 import { evaluateLeague } from './server/evaluate';
 import { getBoard, WEIGHTS } from './server/model/futures';
 import { aiTradeRouter } from './server/aiTrade';
+import { fetchMflNames, fetchTrades } from './server/leagues/history';
+import { buildHistory } from './server/model/managers';
+import type { NormalizedLeague } from './server/leagues/types';
 import { SEASON } from './src/lib/season';
 
 const app = express();
@@ -71,6 +74,7 @@ app.post(
     const { league_id, username, franchise_id } = req.body || {};
     if (!league_id) throw new LeagueSyncError('Enter your Sleeper league ID.');
     const league = await fetchSleeperLeague(String(league_id), username);
+    rememberLeague(league);
     res.json(await evaluateLeague(league, franchise_id));
   })
 );
@@ -87,7 +91,46 @@ app.post(
       password,
       year: year ? Number(year) : undefined,
     });
+    rememberLeague(league);
     res.json(await evaluateLeague(league, franchise_id));
+  })
+);
+
+// Leagues synced recently, so the (slower) trade-history call doesn't have to log in again.
+const recentLeagues = new Map<string, { league: NormalizedLeague; at: number }>();
+function rememberLeague(league: NormalizedLeague) {
+  recentLeagues.set(`${league.platform}:${league.league_id}`, { league, at: Date.now() });
+  for (const [k, v] of recentLeagues) if (Date.now() - v.at > 2 * 3600_000) recentLeagues.delete(k);
+}
+const historyCache = new Map<string, { at: number; data: unknown }>();
+
+app.post(
+  '/api/league/history',
+  asyncRoute(async (req, res) => {
+    const { platform, league_id, mfl_api_key } = req.body || {};
+    if (!league_id || !['sleeper', 'mfl'].includes(platform)) throw new LeagueSyncError('Sync your league first.');
+    const key = `${platform}:${league_id}`;
+    const hit = historyCache.get(key);
+    if (hit && Date.now() - hit.at < 30 * 60_000) return void res.json(hit.data);
+    let league = recentLeagues.get(key)?.league;
+    if (!league) {
+      league =
+        platform === 'sleeper'
+          ? await fetchSleeperLeague(String(league_id))
+          : await fetchMflLeague(String(league_id), { apiKey: mfl_api_key });
+      rememberLeague(league);
+    }
+    const [raw, board] = await Promise.all([fetchTrades(league, { apiKey: mfl_api_key }), getBoard(league.settings)]);
+    let names = new Map<string, { name: string; position: string }>();
+    if (league.platform === 'mfl') {
+      const missing = new Set<string>();
+      for (const t of raw) for (const s of t.sides) for (const a of s.received)
+        if (a.kind === 'player' && !board.byMfl.has(a.id) && !league.players.get(a.id)?.name) missing.add(a.id);
+      names = await fetchMflNames([...missing]);
+    }
+    const data = buildHistory(raw, league, board, names);
+    historyCache.set(key, { at: Date.now(), data });
+    res.json(data);
   })
 );
 

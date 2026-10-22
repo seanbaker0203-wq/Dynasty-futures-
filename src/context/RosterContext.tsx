@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
-import { RosterEvaluationResult, SyncRequest, Platform } from '../types';
+import { RosterEvaluationResult, SyncRequest, Platform, LeagueHistory } from '../types';
 import { SEED_PLAYERS } from '../data/seedPlayers';
 import { DEMO_ROSTERS } from '../data/demoRosters';
 import { RosterDNAMathEngine } from '../lib/rosterMath';
@@ -15,7 +15,16 @@ export type DashboardViewMode =
   | 'league'
   | 'compare'
   | 'freeagents'
-  | 'trade';
+  | 'trades'
+  | 'trade'
+  | 'ideas';
+
+/** A trade to open in the builder (asset ids like "player:123" / "pick:2027-1-0004"). */
+export interface TradeDraft {
+  partnerId: string;
+  give: string[];
+  get: string[];
+}
 
 interface RosterContextType {
   evaluation: RosterEvaluationResult | null;
@@ -44,6 +53,14 @@ interface RosterContextType {
   /** Team picked as trade partner / comparison from the league screens */
   partnerId: string | null;
   setPartnerId: (id: string | null) => void;
+  /** League trade history, report cards and manager profiles (loaded on demand) */
+  history: LeagueHistory | null;
+  historyLoading: boolean;
+  historyError: string | null;
+  loadHistory: () => void;
+  tradeDraft: TradeDraft | null;
+  openTrade: (draft: TradeDraft) => void;
+  clearTradeDraft: () => void;
 }
 
 const RosterContext = createContext<RosterContextType | undefined>(undefined);
@@ -89,6 +106,37 @@ export const RosterProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   const [partnerId, setPartnerId] = useState<string | null>(null);
   // Last successful request, kept in memory only (may hold an MFL password or API key).
   const lastSync = useRef<SyncRequest | null>(null);
+  const [history, setHistory] = useState<LeagueHistory | null>(null);
+  const [historyLoading, setHistoryLoading] = useState(false);
+  const [historyError, setHistoryError] = useState<string | null>(null);
+  const historyFor = useRef<string | null>(null);
+  const [tradeDraft, setTradeDraft] = useState<TradeDraft | null>(null);
+
+  const loadHistory = () => {
+    const req = lastSync.current;
+    if (!req) return;
+    const key = `${req.platform}:${req.league_id}`;
+    if (historyFor.current === key) return; // loaded or loading
+    historyFor.current = key;
+    setHistoryLoading(true);
+    setHistoryError(null);
+    fetch('/api/league/history', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ platform: req.platform, league_id: req.league_id, mfl_api_key: req.mfl_api_key }),
+    })
+      .then(async (r) => {
+        const data = await r.json().catch(() => ({}));
+        if (!r.ok) throw new Error(data.error || `Couldn't load trade history (${r.status}).`);
+        if (historyFor.current === key) setHistory(data as LeagueHistory);
+      })
+      .catch((e) => {
+        if (historyFor.current !== key) return;
+        historyFor.current = null;
+        setHistoryError(e.message || "Couldn't load trade history.");
+      })
+      .finally(() => setHistoryLoading(false));
+  };
 
   useEffect(() => {
     try {
@@ -118,6 +166,10 @@ export const RosterProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     try {
       const result = await postSync(req);
       const myTeamId = result.roster.franchise_id;
+      if (!lastSync.current || lastSync.current.league_id !== req.league_id || lastSync.current.platform !== req.platform) {
+        historyFor.current = null;
+        setHistory(null);
+      }
       lastSync.current = { ...req, franchise_id: myTeamId };
       setActivePlatform(req.platform);
       setIsDemo(false);
@@ -171,6 +223,8 @@ export const RosterProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
   const loadDemoRoster = (type: 'juggernaut' | 'contender' | 'rebuild') => {
     lastSync.current = null;
+    historyFor.current = null;
+    setHistory(null);
     setError(null);
     setIsDemo(true);
     setActivePlatform(DEMO_ROSTERS[type].platform);
@@ -217,6 +271,17 @@ export const RosterProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         syncHistory,
         partnerId,
         setPartnerId,
+        history,
+        historyLoading,
+        historyError,
+        loadHistory,
+        tradeDraft,
+        openTrade: (draft) => {
+          setTradeDraft(draft);
+          setPartnerId(draft.partnerId);
+          setActiveView('trade');
+        },
+        clearTradeDraft: () => setTradeDraft(null),
       }}
     >
       {children}
