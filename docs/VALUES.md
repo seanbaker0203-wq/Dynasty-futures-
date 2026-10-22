@@ -85,7 +85,7 @@ appreciation isn't measured yet; storing our own daily snapshots will let us mea
 ## Limits and next steps
 
 - Injuries and depth-chart changes only show up through the market and experts until they hit the stat line.
-- Aging curves are v1 assumptions; calibrate against historical player-seasons.
+- Aging curves are measured (see above) but samples are thin past age 33; the 50% research blend keeps those ages stable.
 - FantasyCalc has no published API terms; confirm permission before charging for the product. Same for DynastyProcess
   (GPL-3 repo, FantasyPros-derived data).
 - KeepTradeCut can't be pulled in (no API, scraping not permitted); we link to each player's KTC page instead.
