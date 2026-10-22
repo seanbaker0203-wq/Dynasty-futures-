@@ -37,6 +37,52 @@ export interface MasterPlayer {
   points?: number;
   projected_points?: number;
   adp?: number;
+  /** Futures Value breakdown; market_value above is the Futures Value itself */
+  futures?: FuturesInfo;
+}
+
+export type ProjectionTier = 'Starter' | 'Flex' | 'Depth' | 'Fading';
+export type ValueSignal = 'BUY_LOW' | 'SELL_HIGH' | 'BUY' | 'SELL' | 'HOLD';
+
+export interface SeasonProjection {
+  season: number;
+  ppg: number;
+  tier: ProjectionTier;
+}
+
+export interface FuturesInfo {
+  value: number;
+  market: number | null; // FantasyCalc trade market, on the shared scale
+  experts: number | null; // FantasyPros-based (DynastyProcess), mapped to the shared scale
+  model: number | null; // our production + age model, mapped to the shared scale
+  edge: number | null; // (value - market) / market
+  signal: ValueSignal;
+  market_trend_30d: number | null; // fraction, e.g. -0.08
+  expert_trend_4w: number | null; // fraction
+  ppg: number | null; // recent points per game under league scoring
+  games: number | null;
+  projection: SeasonProjection[];
+  falloff_season: number | null; // first season projected below starter/flex after being one
+  rank: number;
+  position_rank: number;
+  ktc_url: string | null;
+}
+
+export interface BoardPlayer extends FuturesInfo {
+  id: string; // sleeper id when known
+  sleeper_id: string | null;
+  mfl_id: string | null;
+  name: string;
+  position: string;
+  team: string | null;
+  age: number | null;
+  expert_history: { date: string; value: number }[];
+}
+
+export interface SeasonOutlook {
+  season: number;
+  points: number; // projected starting-lineup points per week
+  rank: number; // within the league
 }
 
 export interface HistoricalValuePoint {
@@ -256,6 +302,8 @@ export interface LeagueTeamSummary {
   bench: MasterPlayer[];
   /** Taxi squad and IR players (not counted in starter/bench value) */
   reserves?: MasterPlayer[];
+  /** Projected starting-lineup points per week for this and the next seasons */
+  season_outlook?: SeasonOutlook[];
   draft_picks: DraftPick[];
   target_assets_for_user: string[];
 }
@@ -317,6 +365,7 @@ export interface RosterEvaluationResult {
   warnings?: string[];
   unmatched_names?: string[];
   values_meta?: ValuesMeta;
+  season_outlook?: SeasonOutlook[];
   /** All teams in the league, for switching "my team" without re-syncing */
   league_franchises?: { franchise_id: string; franchise_name: string; owner_name?: string }[];
 }

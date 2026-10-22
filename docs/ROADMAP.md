@@ -56,6 +56,19 @@ Caveats: values are derived from FantasyPros expert rankings; repo is GPL-3. Fin
    **Removed from the UI for now** (code is in git history before the design-pass commit): AI Trade Architect, trade history log, 3-season projection chart, market heatmap. AI trade ideas come back in Phase 3 built on manager profiles; the `/api/trade/ai-suggest` endpoint still exists.
 9. The "prime years left" model gives RBs a 26.5 age cliff, so swapping a 30-year-old RB for a 24-year-old RB can show little change. Revisit age curves (per-position value curves rather than a single cliff).
 
+## Futures Value release — 22 Oct 2026
+
+- **Futures Value** (our own value, `docs/VALUES.md`): 40% projection model, 30% FantasyCalc trade market, 30% FantasyPros
+  experts, tuned per league format. Replaces raw DynastyProcess values everywhere (rosters, picks, trades, rankings).
+- **Values page**: our rankings with market / experts / model side by side, edge vs market, owner in your league,
+  5-season projected role, KTC link. **Movers**: buy low, sell high, 30-day market risers/fallers, 4-week expert movers.
+- **Plan page** (My team): projected lineup and league rank for each of the next 5 seasons, moves to plan by
+  season (sell before fall-off, positional holes with buy-low targets, picks to restock), roster timeline grid.
+- Expert value history: 26 weeks bundled (`scripts/build-expert-history.mjs`), extended from GitHub at runtime.
+
+**Next for values:** calibrate aging curves on historical seasons; add rookie draft picks to the season outlook;
+store our own daily Futures Value snapshots for longer history; injury/depth-chart awareness; FantasyCalc permission.
+
 ## Roadmap
 
 ### Phase 1 — Make the numbers true ✅

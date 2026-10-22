@@ -12,6 +12,7 @@ import { fetchSleeperLeague } from './server/leagues/sleeper';
 import { fetchMflLeague } from './server/leagues/mfl';
 import { LeagueSyncError } from './server/leagues/types';
 import { evaluateLeague } from './server/evaluate';
+import { getBoard, WEIGHTS } from './server/model/futures';
 import { aiTradeRouter } from './server/aiTrade';
 import { SEASON } from './src/lib/season';
 
@@ -37,6 +38,24 @@ app.get('/api/health', (_req, res) => {
   });
 });
 
+/** Futures Value board for a league format: our rankings with market, experts, model, trends and projections. */
+app.post(
+  '/api/values/board',
+  asyncRoute(async (req, res) => {
+    const s = req.body?.settings;
+    if (!s?.slots) throw new LeagueSyncError('League settings are required.');
+    const board = await getBoard(s);
+    res.json({
+      built_at: board.built_at,
+      season: board.season,
+      weights: WEIGHTS,
+      sources: board.sources,
+      thresholds: board.thresholds,
+      players: board.players,
+    });
+  })
+);
+
 /** Pick values on the league's scale, for the trade builder. */
 app.get('/api/values/pick', (req, res) => {
   const year = Number(req.query.year) || SEASON.upcomingDraftYear;
@@ -52,7 +71,7 @@ app.post(
     const { league_id, username, franchise_id } = req.body || {};
     if (!league_id) throw new LeagueSyncError('Enter your Sleeper league ID.');
     const league = await fetchSleeperLeague(String(league_id), username);
-    res.json(evaluateLeague(league, franchise_id));
+    res.json(await evaluateLeague(league, franchise_id));
   })
 );
 
@@ -68,7 +87,7 @@ app.post(
       password,
       year: year ? Number(year) : undefined,
     });
-    res.json(evaluateLeague(league, franchise_id));
+    res.json(await evaluateLeague(league, franchise_id));
   })
 );
 

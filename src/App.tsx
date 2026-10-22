@@ -7,14 +7,18 @@ import { LeagueScreen } from './screens/LeagueScreen';
 import { CompareScreen } from './screens/CompareScreen';
 import { FreeAgentsScreen } from './screens/FreeAgentsScreen';
 import { TradeScreen } from './screens/TradeScreen';
+import { ValuesScreen } from './screens/ValuesScreen';
+import { MoversScreen } from './screens/MoversScreen';
+import { PlanScreen } from './screens/PlanScreen';
 import { LeagueBar } from './components/LeagueBar';
-import { ArrowLeftRight, Link2, Shield, Trophy } from 'lucide-react';
+import { ArrowLeftRight, LineChart, Link2, Shield, Trophy } from 'lucide-react';
 
-type Destination = 'team' | 'league' | 'trade' | 'connect';
+type Destination = 'team' | 'league' | 'values' | 'trade' | 'connect';
 
 const DESTINATIONS: { id: Destination; label: string; icon: React.FC<{ className?: string }>; views: DashboardViewMode[] }[] = [
-  { id: 'team', label: 'My team', icon: Shield, views: ['single', 'optimization'] },
+  { id: 'team', label: 'My team', icon: Shield, views: ['single', 'plan', 'optimization'] },
   { id: 'league', label: 'League', icon: Trophy, views: ['league', 'compare', 'freeagents'] },
+  { id: 'values', label: 'Values', icon: LineChart, views: ['values', 'movers'] },
   { id: 'trade', label: 'Trade', icon: ArrowLeftRight, views: ['trade'] },
   { id: 'connect', label: 'Connect', icon: Link2, views: ['ingest'] },
 ];
@@ -70,7 +74,7 @@ const AppContent: React.FC = () => {
             ? `px-3 py-2 flex items-center gap-2 font-semibold border-b-2 transition-colors disabled:opacity-35 ${
                 active ? 'border-gold text-ink' : 'border-transparent text-muted hover:text-ink'
               }`
-            : `flex-1 flex flex-col items-center gap-0.5 pt-2.5 pb-2 text-[12px] font-semibold transition-colors disabled:opacity-35 ${
+            : `flex-1 min-w-0 flex flex-col items-center gap-0.5 pt-2.5 pb-2 text-[11px] font-semibold transition-colors disabled:opacity-35 ${
                 active ? 'text-ink' : 'text-muted'
               }`
         }
@@ -81,7 +85,7 @@ const AppContent: React.FC = () => {
     );
   };
 
-  const wide = current === 'trade' || current === 'league';
+  const wide = current === 'trade' || current === 'league' || current === 'values' || activeView === 'plan';
 
   return (
     <div className="min-h-screen flex flex-col overflow-x-clip">
@@ -106,10 +110,13 @@ const AppContent: React.FC = () => {
             <SubTabs
               options={[
                 { view: 'single', label: 'Overview' },
+                { view: 'plan', label: 'Plan' },
                 { view: 'optimization', label: 'Moves', count: evaluation?.remediations?.length },
               ]}
             />
-            {activeView === 'single' ? <TeamScreen /> : <MovesScreen />}
+            {activeView === 'single' && <TeamScreen />}
+            {activeView === 'plan' && <PlanScreen />}
+            {activeView === 'optimization' && <MovesScreen />}
           </>
         )}
 
@@ -128,6 +135,18 @@ const AppContent: React.FC = () => {
           </>
         )}
 
+        {current === 'values' && (
+          <>
+            <SubTabs
+              options={[
+                { view: 'values', label: 'Rankings' },
+                { view: 'movers', label: 'Movers' },
+              ]}
+            />
+            {activeView === 'values' ? <ValuesScreen /> : <MoversScreen />}
+          </>
+        )}
+
         {current === 'trade' && <TradeScreen />}
       </main>
 
@@ -135,7 +154,11 @@ const AppContent: React.FC = () => {
         <div className="max-w-5xl mx-auto px-6 flex items-center justify-between gap-2">
           <span>Dynasty Futures</span>
           <span>
-            Market values from{' '}
+            Futures Value blends our projections with{' '}
+            <a href="https://fantasycalc.com" target="_blank" rel="noreferrer" className="underline underline-offset-2 hover:text-ink">
+              FantasyCalc
+            </a>{' '}
+            and{' '}
             <a href="https://github.com/dynastyprocess/data" target="_blank" rel="noreferrer" className="underline underline-offset-2 hover:text-ink">
               DynastyProcess
             </a>

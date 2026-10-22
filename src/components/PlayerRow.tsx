@@ -1,6 +1,7 @@
 import React from 'react';
 import type { MasterPlayer } from '../types';
 import { fmt } from '../lib/leagueStats';
+import { SignalTag } from './ValueBits';
 
 export const PlayerRow: React.FC<{
   player: MasterPlayer;
@@ -30,6 +31,7 @@ export const PlayerRow: React.FC<{
           {p.nfl_team && p.nfl_team !== 'FA' ? p.nfl_team : 'Free agent'}
           {p.age ? `, age ${Math.floor(p.age)}` : ''}
           {tag && <span className={`ml-2 ${tag === 'Starter' ? 'text-ink font-medium' : ''}`}>{tag}</span>}
+          <SignalTag signal={p.futures?.signal} className="ml-2" />
         </span>
       </span>
       {right ?? (

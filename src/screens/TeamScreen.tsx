@@ -74,7 +74,15 @@ export const TeamScreen: React.FC = () => {
   ];
 
   const moves = evaluation.remediations || [];
-  const window = evaluation.championship_window;
+  const outlook = evaluation.season_outlook || [];
+  const top3 = outlook.filter((o) => o.rank <= 3).map((o) => o.season);
+  const titleWindow = !outlook.length
+    ? null
+    : top3.length === 0
+      ? 'Not in the next 5 years'
+      : top3[0] === outlook[0].season
+        ? `Through ${top3.filter((s, i) => s === outlook[0].season + i).pop()}`
+        : `Opens ${top3[0]}`;
 
   const positionGroups = groupByPosition(active);
   const roomRank = (pos: string) => (mine ? rankBy(teams, me, (t) => roomValue(t, pos)) : 0);
@@ -117,14 +125,14 @@ export const TeamScreen: React.FC = () => {
             </div>
           </div>
         ))}
-        {window && (
-          <div className="px-4 py-3.5 flex items-baseline justify-between gap-4">
+        {titleWindow && (
+          <button type="button" onClick={() => setActiveView('plan')} className="w-full px-4 py-3.5 flex items-baseline justify-between gap-4 text-left">
             <div>
               <div className="font-semibold">Title window</div>
-              <div className="text-[13px] text-muted">From roster age and strength.</div>
+              <div className="text-[13px] text-muted">Seasons your projected lineup ranks top 3. See the plan.</div>
             </div>
-            <div className="text-right font-semibold text-ink">Through {window.peak_end_year}</div>
-          </div>
+            <div className="text-right font-semibold text-ink">{titleWindow}</div>
+          </button>
         )}
       </section>
 

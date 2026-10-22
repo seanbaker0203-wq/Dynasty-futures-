@@ -8,6 +8,9 @@ import { generateDemoLeagueTeams } from '../lib/demoLeague';
 export type DashboardViewMode =
   | 'ingest'
   | 'single'
+  | 'plan'
+  | 'values'
+  | 'movers'
   | 'optimization'
   | 'league'
   | 'compare'

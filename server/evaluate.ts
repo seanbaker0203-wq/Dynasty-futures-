@@ -1,9 +1,10 @@
 /**
  * Turns a platform-neutral league into Roster DNA evaluations for every team.
  *
- * - Player values come from the ValueStore on the right scale for the league (1QB vs Superflex).
+ * - Player and pick values are Futures Values (server/model/futures.ts) for this league's format.
  * - Gross Liquidity is measured against THIS league's median starting lineup, so 100 = league median.
- * - Players without a market value count as 0 and are reported, never guessed.
+ * - Players without any value count as 0 and are reported, never guessed.
+ * - Each team also gets a season-by-season outlook: projected starting-lineup points per week.
  */
 import { RosterDNAMathEngine } from '../src/lib/rosterMath';
 import { DraftPickEngine } from '../src/lib/draftPicks';
@@ -16,13 +17,12 @@ import type {
   Position,
   RosterEvaluationResult,
   RosterRecord,
+  SeasonOutlook,
 } from '../src/types';
+import { getBoard, WEIGHTS, type Board } from './model/futures';
 import { valueStore } from './values';
 import { gradeLeague } from './classify';
 import type { NormalizedLeague } from './leagues/types';
-
-/** Applied to TE values in leagues that pay a TE reception bonus. Market feeds are not TEP-adjusted. */
-export const TE_PREMIUM_MULTIPLIER = 1.15;
 
 const normalizePosition = (pos: string): Position => {
   const p = (pos || '').toUpperCase();
@@ -31,30 +31,34 @@ const normalizePosition = (pos: string): Position => {
   return (['QB', 'RB', 'WR', 'TE', 'K'].includes(p) ? p : p || 'WR') as Position;
 };
 
-export function buildPlayerPool(league: NormalizedLeague): Map<string, MasterPlayer> {
-  const sf = !!league.settings.superflex;
+/** Board entry -> the per-player Futures breakdown we attach to MasterPlayer. */
+function futuresOf(bp: Board['players'][number]) {
+  const { id, sleeper_id, mfl_id, name, position, team, age, expert_history, ...info } = bp;
+  return info;
+}
+
+export function buildPlayerPool(league: NormalizedLeague, board: Board): Map<string, MasterPlayer> {
   const pool = new Map<string, MasterPlayer>();
   for (const lp of league.players.values()) {
-    const valued = lp.value_key ? valueStore.byValueKey(lp.value_key) : undefined;
-    const position = normalizePosition(lp.position || valued?.position || '');
-    let value = valued ? (sf ? valued.value_sf : valued.value_1qb) : 0;
-    if (position === 'TE' && league.settings.te_premium) value = Math.round(value * TE_PREMIUM_MULTIPLIER);
+    const bp = league.platform === 'mfl' ? board.byMfl.get(lp.id) : board.bySleeper.get(lp.id);
+    const position = normalizePosition(lp.position || bp?.position || '');
     pool.set(lp.id, {
       id: lp.id,
       full_name: lp.name,
       position,
-      nfl_team: lp.team || 'FA',
-      age: lp.age ?? valued?.age ?? 0,
-      consensus_rank: Math.round((sf ? valued?.ecr_sf : valued?.ecr_1qb) ?? 999),
-      market_value: value,
+      nfl_team: lp.team || bp?.team || 'FA',
+      age: lp.age ?? bp?.age ?? 0,
+      consensus_rank: bp?.rank ?? 999,
+      market_value: bp?.value ?? 0,
+      futures: bp ? futuresOf(bp) : undefined,
     });
   }
   return pool;
 }
 
-export function evaluateLeague(league: NormalizedLeague, requestedTeamId?: string | null) {
-  const sf = !!league.settings.superflex;
-  const pool = buildPlayerPool(league);
+export async function evaluateLeague(league: NormalizedLeague, requestedTeamId?: string | null) {
+  const board = await getBoard(league.settings);
+  const pool = buildPlayerPool(league, board);
   const teamById = new Map(league.teams.map((t) => [t.team_id, t]));
   const userTeamId =
     (requestedTeamId && teamById.has(requestedTeamId) ? requestedTeamId : null) ||
@@ -110,7 +114,7 @@ export function evaluateLeague(league: NormalizedLeague, requestedTeamId?: strin
         original_owner_name: origName,
         current_owner_id: teamId,
         description: `${p.year} Round ${p.round}${tier ? ` (${tier})` : ''}${own ? '' : ` via ${origName}`}`,
-        market_value: valueStore.pickValue(upcomingDraftYear + offset, p.round, sf, tier),
+        market_value: board.pickValue(upcomingDraftYear + offset, p.round, tier),
         is_priority_class: offset === 0,
         years_out: offset,
       };
@@ -218,23 +222,44 @@ export function evaluateLeague(league: NormalizedLeague, requestedTeamId?: strin
   const power = (t: LeagueTeamSummary) => t.starter_value * 0.55 + t.bench_value * 0.3 + t.draft_capital_value * 0.15;
   leagueTeams.sort((a, b) => power(b) - power(a)).forEach((t, i) => (t.power_rank = i + 1));
 
+  // Season outlook: best projected lineup (points per week) for each of the next seasons, ranked in the league.
+  // Everyone on the roster counts (taxi and IR players are back in future years); future rookies are not included.
+  const seasons = board.players[0]?.projection.map((p) => p.season) ?? [];
+  const outlook = new Map<string, SeasonOutlook[]>();
+  for (const t of league.teams) {
+    const players = rosterPlayers(t.team_id);
+    outlook.set(
+      t.team_id,
+      seasons.map((season, i) => {
+        const asPoints = players.map((p) => ({ ...p, roster_designation: 'ACTIVE' as const, market_value: p.futures?.projection[i]?.ppg ?? 0 }));
+        const { starters } = RosterDNAMathEngine.splitStartersAndBench(asPoints, [], league.settings);
+        return { season, points: Math.round(starters.reduce((s, p) => s + p.market_value, 0) * 10) / 10, rank: 0 };
+      })
+    );
+  }
+  seasons.forEach((_, i) => {
+    [...outlook.entries()]
+      .sort((a, b) => b[1][i].points - a[1][i].points)
+      .forEach(([, o], r) => (o[i].rank = r + 1));
+  });
+  for (const lt of leagueTeams) lt.season_outlook = outlook.get(lt.franchise_id);
+
   // Free agents: valued players nobody in this league rosters.
   const rostered = new Set(league.teams.flatMap((t) => t.player_ids));
   const idKey = league.platform === 'mfl' ? 'mfl_id' : 'sleeper_id';
-  const freeAgents: MasterPlayer[] = valueStore.allPlayers
-    .filter((v) => v[idKey] && !rostered.has(v[idKey]!))
-    .map((v) => ({
-      id: v[idKey]!,
-      full_name: v.name,
-      position: normalizePosition(v.position),
-      nfl_team: v.team || 'FA',
-      age: v.age ?? 0,
-      consensus_rank: Math.round((sf ? v.ecr_sf : v.ecr_1qb) ?? 999),
-      market_value: Math.round((sf ? v.value_sf : v.value_1qb) * (v.position === 'TE' && league.settings.te_premium ? TE_PREMIUM_MULTIPLIER : 1)),
-    }))
-    .filter((p) => p.market_value > 0)
-    .sort((a, b) => b.market_value - a.market_value)
-    .slice(0, 50);
+  const freeAgents: MasterPlayer[] = board.players
+    .filter((bp) => bp[idKey] && !rostered.has(bp[idKey]!) && bp.value > 0)
+    .slice(0, 60)
+    .map((bp) => ({
+      id: bp[idKey]!,
+      full_name: bp.name,
+      position: normalizePosition(bp.position),
+      nfl_team: bp.team || 'FA',
+      age: bp.age ?? 0,
+      consensus_rank: bp.rank,
+      market_value: bp.value,
+      futures: futuresOf(bp),
+    }));
 
   const unvalued = userEval.players.filter((p) => p.market_value === 0 && !['K', 'DEF'].includes(p.position));
   const warnings = [...(userEval.warnings || [])];
@@ -253,7 +278,12 @@ export function evaluateLeague(league: NormalizedLeague, requestedTeamId?: strin
     draft_picks: userEval.draft_picks,
     league_teams: leagueTeams,
     free_agents: freeAgents,
-    values_meta: valueStore.meta,
+    values_meta: {
+      source: `Futures Value: ${WEIGHTS.model * 100}% our projection model, ${WEIGHTS.market * 100}% FantasyCalc trade market, ${WEIGHTS.experts * 100}% FantasyPros experts (via DynastyProcess)`,
+      scrape_date: valueStore.meta.scrape_date,
+      player_count: board.players.length,
+    },
+    season_outlook: outlook.get(userTeamId),
     league_franchises: league.teams.map((t) => ({ franchise_id: t.team_id, franchise_name: t.name, owner_name: t.owner_name })),
   } satisfies RosterEvaluationResult;
 }
