@@ -94,6 +94,9 @@ before charging.
 - ✅ **Manager profiles** from three seasons of league trades (Sleeper + MFL): activity, partners, picks gained/spent, age of players bought vs sold, positions targeted, record on today's values. Tags: Trades a lot, Collects/Spends picks, Buys veterans/youth, Usually wins trades, Often overpays, Hasn't traded in a year. (`server/leagues/history.ts`, `server/model/managers.ts`, `POST /api/league/history`)
 - ✅ **Trade report cards** (League → Trades): every trade graded on today's Futures Values, plus a "who wins their trades" leaderboard. Used picks are valued as a same-round pick in the next draft.
 - ✅ **Trade finder** (Trade → Ideas, `src/lib/tradeFinder.ts`): value-fair 1-for-1 and 2-for-1 deals (2-for-1 asks ~10%+ premium) that raise your five-season outlook, ranked by both teams' outlook change, the partner's direction and trading profile; salary-cap safe; "Open in trade builder".
+- ✅ **Targeted search** in Ideas: pick one of your players or picks to trade away and/or the positions you want back;
+  the finder builds fair 1-for-1, 2-for-1 (you add a pick or player) and 1-for-2 (they add a pick or smaller piece)
+  deals, ranked by your five-season change minus any overpay. Small lineup losses are allowed when you chose the move.
 - Next: draft the trade message for the user to send.
 - Contention-window forecast built on the existing 3-season simulation, fed by real values.
 

@@ -22,6 +22,9 @@ const assetLine = (a: FinderAsset, ownerId: string) => (
 export const IdeasScreen: React.FC = () => {
   const { evaluation, history, loadHistory, isDemo, openTrade } = useRoster();
   const [ideas, setIdeas] = useState<TradeIdea[] | null>(null);
+  const [sellId, setSellId] = useState<string>('');
+  const [want, setWant] = useState<string[]>([]);
+  const filtered = !!sellId || want.length > 0;
   const { adjustments } = useAccount();
   const personal = useMemo(
     () =>
@@ -62,11 +65,13 @@ export const IdeasScreen: React.FC = () => {
                 ...(evaluation.league_teams || []).filter((t) => t.cap).map((t) => [t.franchise_id, t.cap!.hit]),
               ])
             : undefined,
+          sellId: sellId || null,
+          wantPositions: want,
         })
       );
     }, 30);
     return () => window.clearTimeout(id);
-  }, [evaluation, history]);
+  }, [evaluation, history, sellId, want]);
 
   const byPartner = useMemo(() => {
     const m = new Map<string, TradeIdea[]>();
@@ -77,23 +82,71 @@ export const IdeasScreen: React.FC = () => {
   if (!evaluation) return null;
   if (!evaluation.season_outlook?.length)
     return <p className="text-muted">Trade ideas need season projections. Connect a real league to see them.</p>;
-  if (!ideas)
-    return (
-      <p className="flex items-center gap-2 text-muted py-8">
-        <Loader2 className="w-4 h-4 animate-spin" /> Looking for trades that help you
-      </p>
-    );
 
   const me = evaluation.roster.franchise_id;
   const seasons = evaluation.season_outlook.map((o) => o.season);
+  const myAssets = [
+    ...[...evaluation.players].filter((p) => p.market_value >= 300).sort((a, b) => b.market_value - a.market_value).map((p) => ({ id: `player:${p.id}`, label: `${p.position} ${p.full_name} (${fmt(p.market_value)})` })),
+    ...[...(evaluation.draft_picks || [])].filter((p) => p.market_value >= 300).sort((a, b) => a.year - b.year || a.round - b.round).map((p) => ({ id: `pick:${p.id}`, label: `${pickName(p, me)} (${fmt(p.market_value)})` })),
+  ];
+  const positions = ['QB', 'RB', 'WR', 'TE'];
+  const sellName = myAssets.find((a) => a.id === sellId)?.label.replace(/ \(.*\)$/, '').replace(/^(QB|RB|WR|TE|K|DEF) /, '');
 
   return (
     <div className="space-y-6">
+      <section className="rounded-xl bg-card border border-line p-4 space-y-3" aria-label="Trade search">
+        <label className="block">
+          <span className="text-[13px] font-semibold text-muted">Trade away</span>
+          <select value={sellId} onChange={(e) => setSellId(e.target.value)} className="field mt-1">
+            <option value="">Anyone (best fits)</option>
+            {myAssets.map((a) => (
+              <option key={a.id} value={a.id}>
+                {a.label}
+              </option>
+            ))}
+          </select>
+        </label>
+        <div>
+          <span className="text-[13px] font-semibold text-muted">Looking for</span>
+          <div className="flex flex-wrap gap-1.5 mt-1">
+            {[null, ...positions].map((pos) => {
+              const on = pos ? want.includes(pos) : want.length === 0;
+              return (
+                <button
+                  key={pos ?? 'any'}
+                  type="button"
+                  aria-pressed={on}
+                  onClick={() => setWant(pos ? (want.includes(pos) ? want.filter((w) => w !== pos) : [...want, pos]) : [])}
+                  className={`rounded-full px-3.5 py-1.5 text-[14px] font-semibold border ${on ? 'bg-ink text-paper border-ink' : 'border-line text-muted'}`}
+                >
+                  {pos ?? 'Any position'}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+        {filtered && (
+          <button type="button" className="text-[13px] underline underline-offset-2 text-muted" onClick={() => { setSellId(''); setWant([]); }}>
+            Clear search
+          </button>
+        )}
+      </section>
+
       <p className="text-[14px] text-muted">
-        Deals that are fair on value, so the other side could say yes, but make your lineup better over the next five seasons.
-        Best calls first. {history ? 'Ranked using how each manager actually trades.' : ''}
+        {filtered
+          ? `Fair-value deals${sellName ? ` that move ${sellName}` : ''}${want.length ? ` for a ${want.join(' or ')}` : ''}, best for your next five seasons first. Picks or a second player are added to even out value when needed.`
+          : 'Deals that are fair on value, so the other side could say yes, but make your lineup better over the next five seasons. Best calls first.'}{' '}
+        {history ? 'Ranked using how each manager actually trades.' : ''}
       </p>
-      {personal.length > 0 && (
+      {!ideas && (
+        <p className="flex items-center gap-2 text-muted py-8">
+          <Loader2 className="w-4 h-4 animate-spin" /> Looking for trades
+        </p>
+      )}
+      {ideas && filtered && ideas.length === 0 && (
+        <p className="text-muted">No fair deals found for that search. Try another position, or let the finder add a pick by choosing “Anyone”.</p>
+      )}
+      {!filtered && personal.length > 0 && (
         <section className="space-y-3 rounded-xl border border-gold/50 p-4">
           <div>
             <h2 className="display text-[24px] text-ink flex items-center gap-2">
@@ -140,7 +193,7 @@ export const IdeasScreen: React.FC = () => {
           </ul>
         </section>
       )}
-      {byPartner.length === 0 && <p className="text-muted">No clear improvements right now. Your roster is already well balanced for its value.</p>}
+      {ideas && !filtered && byPartner.length === 0 && <p className="text-muted">No clear improvements right now. Your roster is already well balanced for its value.</p>}
       {byPartner.map((list) => {
         const first = list[0];
         const profile = history?.profiles.find((p) => p.team_id === first.partner_id);
