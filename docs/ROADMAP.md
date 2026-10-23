@@ -106,3 +106,12 @@ before charging.
 - `npm install`, then `npm run dev` → http://localhost:3000. Optional `GEMINI_API_KEY` for AI trade ideas.
 - Production: `npm run build` then `NODE_ENV=production npm start` (Render/Railway). Server needs outbound access to `api.sleeper.app`, `*.myfantasyleague.com`, `raw.githubusercontent.com`.
 - In the Claude workspace only: start with `NODE_USE_ENV_PROXY=1` so the server's fetches use the sandbox proxy.
+
+## Private notebook + personal values — 22 Oct 2026
+- **My team → Rules** (`src/screens/RulesScreen.tsx`): private notes (pin, tags, edit). Signed in = Supabase `user_rules`
+  (owner-only row security); signed out = this device only, moved to the account on first sign-in.
+- **Personal value adjustments** (`src/lib/personalValues.ts`, stored in `user_settings`): premium/discount on picks by
+  drafts away (with a "match the market's time discount" shortcut from the league's own pick prices), and a discount on
+  your players who aren't in your best projected lineup. Shown only to that user: "On your values" in the trade builder
+  and a "From your rules" section in Trade → Ideas. Never changes league/market values.
+- Accounts: Supabase email sign-in link (`src/context/AccountContext.tsx`); keys served by `/api/config` from env.

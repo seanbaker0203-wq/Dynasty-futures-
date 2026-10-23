@@ -9,6 +9,7 @@ export type DashboardViewMode =
   | 'ingest'
   | 'single'
   | 'plan'
+  | 'rules'
   | 'values'
   | 'movers'
   | 'optimization'

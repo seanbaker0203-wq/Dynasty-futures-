@@ -5,6 +5,8 @@ import { RosterDNAMathEngine } from '../lib/rosterMath';
 import { fmt, fmtShort, ordinal, pickName } from '../lib/leagueStats';
 import { projectOutlook } from '../lib/outlook';
 import { PlayerRow } from '../components/PlayerRow';
+import { useAccount } from '../context/AccountContext';
+import { benchIds, myAssetValue } from '../lib/personalValues';
 import type { DraftPick, LeagueSettings, MasterPlayer } from '../types';
 
 type Asset = { kind: 'player'; item: MasterPlayer } | { kind: 'pick'; item: DraftPick };
@@ -156,6 +158,11 @@ export const TradeScreen: React.FC = () => {
   const { evaluation, partnerId, setPartnerId, tradeDraft, clearTradeDraft } = useRoster();
   const [give, setGive] = useState<Asset[]>([]);
   const [get, setGet] = useState<Asset[]>([]);
+  const { adjustments } = useAccount();
+  const bench = useMemo(
+    () => (evaluation && adjustments.enabled ? benchIds(evaluation.players, evaluation.settings, adjustments.bench_seasons) : new Set<string>()),
+    [evaluation, adjustments.enabled, adjustments.bench_seasons]
+  );
 
   // A trade opened from Ideas (or elsewhere): fill both sides once.
   useEffect(() => {
@@ -285,6 +292,20 @@ export const TradeScreen: React.FC = () => {
                 <span className="text-[16px] text-muted font-sans font-medium"> value for you</span>
               </div>
               <p>{verdict}</p>
+              {adjustments.enabled && (() => {
+                const mine = get.reduce((t, a) => t + myAssetValue(a, false, bench, adjustments), 0) - give.reduce((t, a) => t + myAssetValue(a, true, bench, adjustments), 0);
+                if (Math.round(mine) === Math.round(diff)) return null;
+                return (
+                  <p className="mt-1 text-[14px]">
+                    <span className="font-semibold">On your values: </span>
+                    <span className={mine >= 0 ? 'text-up font-semibold' : 'text-down font-semibold'}>
+                      {mine >= 0 ? '+' : '−'}
+                      {fmt(Math.abs(mine))}
+                    </span>
+                    <span className="text-muted"> (your private adjustments)</span>
+                  </p>
+                );
+              })()}
             </div>
           )}
 

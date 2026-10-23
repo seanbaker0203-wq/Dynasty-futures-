@@ -584,3 +584,35 @@ export interface LeagueHistory {
   profiles: ManagerProfile[];
   seasons: number[];
 }
+
+// ---- Private notebook and personal value adjustments ----------------------------------------------
+export interface DynastyRule {
+  id: string;
+  title: string;
+  body: string;
+  tags: string[];
+  pinned: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+/** The signed-in user's own valuation tweaks. Never shared, never applied to anyone else's numbers. */
+export interface ValueAdjustments {
+  enabled: boolean;
+  /** Extra value on draft picks by years until that draft (index 0 = next draft). 0.3 = +30%. */
+  pick_premium: number[];
+  /** Discount on your own players who aren't projected to start for you. 0.2 = value them 20% lower. */
+  bench_discount: number;
+  /** "Won't start" = not in your best lineup in any of the next N seasons. */
+  bench_seasons: number;
+  /** Ideas: only suggest picks at least this many drafts away. */
+  ideas_min_years_out: number;
+}
+
+export const DEFAULT_ADJUSTMENTS: ValueAdjustments = {
+  enabled: false,
+  pick_premium: [0, 0, 0, 0, 0, 0],
+  bench_discount: 0,
+  bench_seasons: 2,
+  ideas_min_years_out: 3,
+};

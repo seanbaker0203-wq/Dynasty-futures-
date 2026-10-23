@@ -12,13 +12,15 @@ import { IdeasScreen } from './screens/IdeasScreen';
 import { ValuesScreen } from './screens/ValuesScreen';
 import { MoversScreen } from './screens/MoversScreen';
 import { PlanScreen } from './screens/PlanScreen';
+import { RulesScreen } from './screens/RulesScreen';
+import { AccountProvider } from './context/AccountContext';
 import { LeagueBar } from './components/LeagueBar';
 import { ArrowLeftRight, LineChart, Link2, Shield, Trophy } from 'lucide-react';
 
 type Destination = 'team' | 'league' | 'values' | 'trade' | 'connect';
 
 const DESTINATIONS: { id: Destination; label: string; icon: React.FC<{ className?: string }>; views: DashboardViewMode[] }[] = [
-  { id: 'team', label: 'My team', icon: Shield, views: ['single', 'plan', 'optimization'] },
+  { id: 'team', label: 'My team', icon: Shield, views: ['single', 'plan', 'optimization', 'rules'] },
   { id: 'league', label: 'League', icon: Trophy, views: ['league', 'compare', 'trades', 'freeagents'] },
   { id: 'values', label: 'Values', icon: LineChart, views: ['values', 'movers'] },
   { id: 'trade', label: 'Trade', icon: ArrowLeftRight, views: ['trade', 'ideas'] },
@@ -114,8 +116,10 @@ const AppContent: React.FC = () => {
                 { view: 'single', label: 'Overview' },
                 { view: 'plan', label: 'Plan' },
                 { view: 'optimization', label: 'Moves', count: evaluation?.remediations?.length },
+                { view: 'rules', label: 'Rules' },
               ]}
             />
+            {activeView === 'rules' && <RulesScreen />}
             {activeView === 'single' && <TeamScreen />}
             {activeView === 'plan' && <PlanScreen />}
             {activeView === 'optimization' && <MovesScreen />}
@@ -192,8 +196,10 @@ const AppContent: React.FC = () => {
 
 export default function App() {
   return (
-    <RosterProvider>
-      <AppContent />
-    </RosterProvider>
+    <AccountProvider>
+      <RosterProvider>
+        <AppContent />
+      </RosterProvider>
+    </AccountProvider>
   );
 }

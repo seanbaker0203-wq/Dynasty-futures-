@@ -99,6 +99,25 @@ create table if not exists public.draft_ledger (
 );
 create index if not exists draft_ledger_league on public.draft_ledger (user_id, platform, league_id, year);
 
+-- Private notebook and personal value adjustments (owner-only).
+create table if not exists public.user_rules (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references auth.users (id) on delete cascade,
+  title text not null,
+  body text,
+  tags text[] not null default '{}',
+  pinned boolean not null default false,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+create index if not exists user_rules_user on public.user_rules (user_id, updated_at desc);
+
+create table if not exists public.user_settings (
+  user_id uuid primary key references auth.users (id) on delete cascade,
+  value_adjustments jsonb,
+  updated_at timestamptz not null default now()
+);
+
 -- ---------- Row-level security ----------
 alter table public.value_snapshots enable row level security;
 alter table public.pick_snapshots  enable row level security;
@@ -108,6 +127,8 @@ alter table public.player_tags     enable row level security;
 alter table public.alerts          enable row level security;
 alter table public.alert_rules     enable row level security;
 alter table public.draft_ledger    enable row level security;
+alter table public.user_rules      enable row level security;
+alter table public.user_settings   enable row level security;
 
 do $$
 begin
@@ -133,6 +154,12 @@ begin
   end if;
   if not exists (select 1 from pg_policies where policyname = 'own draft_ledger') then
     create policy "own draft_ledger" on public.draft_ledger for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
+  end if;
+  if not exists (select 1 from pg_policies where policyname = 'own user_rules') then
+    create policy "own user_rules" on public.user_rules for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
+  end if;
+  if not exists (select 1 from pg_policies where policyname = 'own user_settings') then
+    create policy "own user_settings" on public.user_settings for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
   end if;
 end $$;
 -- league_trades has no public policy: only the server reads/writes it.

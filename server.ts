@@ -41,6 +41,14 @@ app.get('/api/health', (_req, res) => {
   });
 });
 
+/** Public client config (Supabase URL + publishable key are safe to expose; the secret key never leaves the server). */
+app.get('/api/config', (_req, res) => {
+  res.json({
+    supabase_url: process.env.SUPABASE_URL || null,
+    supabase_anon_key: process.env.SUPABASE_ANON_KEY || process.env.SUPABASE_PUBLISHABLE_KEY || null,
+  });
+});
+
 /** Futures Value board for a league format: our rankings with market, experts, model, trends and projections. */
 app.post(
   '/api/values/board',

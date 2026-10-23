@@ -4,6 +4,9 @@ import { useRoster } from '../context/RosterContext';
 import { fmt, pickName } from '../lib/leagueStats';
 import { findTrades, finderAssetId, type FinderAsset, type TradeIdea } from '../lib/tradeFinder';
 import { ManagerProfileNote } from '../components/ManagerProfile';
+import { useAccount } from '../context/AccountContext';
+import { findPersonalIdeas } from '../lib/personalValues';
+import { Lock } from 'lucide-react';
 
 const assetLine = (a: FinderAsset, ownerId: string) => (
   <li key={finderAssetId(a)} className="flex items-baseline justify-between gap-2">
@@ -19,6 +22,22 @@ const assetLine = (a: FinderAsset, ownerId: string) => (
 export const IdeasScreen: React.FC = () => {
   const { evaluation, history, loadHistory, isDemo, openTrade } = useRoster();
   const [ideas, setIdeas] = useState<TradeIdea[] | null>(null);
+  const { adjustments } = useAccount();
+  const personal = useMemo(
+    () =>
+      evaluation && adjustments.enabled
+        ? findPersonalIdeas({
+            me: evaluation.roster.franchise_id,
+            players: evaluation.players,
+            picks: evaluation.draft_picks || [],
+            teams: evaluation.league_teams || [],
+            settings: evaluation.settings,
+            seasons: (evaluation.season_outlook || []).map((o) => o.season),
+            adj: adjustments,
+          })
+        : [],
+    [evaluation, adjustments]
+  );
 
   useEffect(() => {
     if (!isDemo) loadHistory();
@@ -74,6 +93,53 @@ export const IdeasScreen: React.FC = () => {
         Deals that are fair on value, so the other side could say yes, but make your lineup better over the next five seasons.
         Best calls first. {history ? 'Ranked using how each manager actually trades.' : ''}
       </p>
+      {personal.length > 0 && (
+        <section className="space-y-3 rounded-xl border border-gold/50 p-4">
+          <div>
+            <h2 className="display text-[24px] text-ink flex items-center gap-2">
+              From your rules <Lock className="w-4 h-4 text-muted" aria-label="Private" />
+            </h2>
+            <p className="text-[14px] text-muted">
+              Players who won’t start for you, for picks {adjustments.ideas_min_years_out}+ drafts away. Fair on market value; better on your values.
+            </p>
+          </div>
+          <ul className="space-y-3">
+            {personal.slice(0, 6).map((idea) => (
+              <li key={idea.give.map(finderAssetId).join() + finderAssetId(idea.get[0])} className="rounded-lg bg-card border border-line p-3 space-y-2">
+                <div className="grid grid-cols-2 gap-3 text-[14px]">
+                  <div>
+                    <div className="text-[12px] font-semibold text-muted mb-1">You give · {fmt(idea.market_give)}</div>
+                    <ul className="space-y-0.5">{idea.give.map((a) => assetLine(a, me))}</ul>
+                  </div>
+                  <div>
+                    <div className="text-[12px] font-semibold text-muted mb-1">You get · {fmt(idea.market_get)}</div>
+                    <ul className="space-y-0.5">{idea.get.map((a) => assetLine(a, idea.partner_id))}</ul>
+                  </div>
+                </div>
+                <p className="text-[14px]">
+                  <span className="font-semibold">On your values: </span>
+                  <span className="text-up font-semibold">+{fmt(idea.gain)}</span>
+                  <span className="text-muted">
+                    {' '}
+                    ({fmt(idea.mine_give)} → {fmt(idea.mine_get)}).{' '}
+                    {idea.lineup_change === 0 ? 'No change to your lineup.' : `Lineup ${idea.lineup_change > 0 ? '+' : '−'}${Math.abs(idea.lineup_change)} pts/wk this season.`}
+                  </span>
+                </p>
+                <p className="text-[13px] text-muted">
+                  Teams with this pick: {[idea.partner_name, ...idea.also.map((a) => a.partner_name)].join(', ')}.
+                </p>
+                <button
+                  type="button"
+                  className="btn-quiet"
+                  onClick={() => openTrade({ partnerId: idea.partner_id, give: idea.give.map(finderAssetId), get: idea.get.map(finderAssetId) })}
+                >
+                  Open in trade builder
+                </button>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
       {byPartner.length === 0 && <p className="text-muted">No clear improvements right now. Your roster is already well balanced for its value.</p>}
       {byPartner.map((list) => {
         const first = list[0];
