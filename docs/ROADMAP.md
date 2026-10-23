@@ -115,3 +115,9 @@ before charging.
   your players who aren't in your best projected lineup. Shown only to that user: "On your values" in the trade builder
   and a "From your rules" section in Trade → Ideas. Never changes league/market values.
 - Accounts: Supabase email sign-in link (`src/context/AccountContext.tsx`); keys served by `/api/config` from env.
+
+## Start/sit — 22 Oct 2026
+- **My team → This week** (`src/screens/WeekScreen.tsx`, `server/sources/weekly.ts`, `POST /api/projections/week`):
+  Sleeper's weekly projections (Rotowire), scored for the league (std / half / PPR, +0.5 per TE catch with TE premium),
+  MFL ids mapped through the DynastyProcess crosswalk and team codes for defenses. Best legal lineup by slot, close calls
+  within 1.5 pts, backups for questionable starters, bench with byes. Weeks: this week plus the next two.

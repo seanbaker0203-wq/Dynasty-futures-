@@ -13,6 +13,7 @@ import { ValuesScreen } from './screens/ValuesScreen';
 import { MoversScreen } from './screens/MoversScreen';
 import { PlanScreen } from './screens/PlanScreen';
 import { RulesScreen } from './screens/RulesScreen';
+import { WeekScreen } from './screens/WeekScreen';
 import { AccountProvider } from './context/AccountContext';
 import { LeagueBar } from './components/LeagueBar';
 import { ArrowLeftRight, LineChart, Link2, Shield, Trophy } from 'lucide-react';
@@ -20,7 +21,7 @@ import { ArrowLeftRight, LineChart, Link2, Shield, Trophy } from 'lucide-react';
 type Destination = 'team' | 'league' | 'values' | 'trade' | 'connect';
 
 const DESTINATIONS: { id: Destination; label: string; icon: React.FC<{ className?: string }>; views: DashboardViewMode[] }[] = [
-  { id: 'team', label: 'My team', icon: Shield, views: ['single', 'plan', 'optimization', 'rules'] },
+  { id: 'team', label: 'My team', icon: Shield, views: ['single', 'week', 'plan', 'optimization', 'rules'] },
   { id: 'league', label: 'League', icon: Trophy, views: ['league', 'compare', 'trades', 'freeagents'] },
   { id: 'values', label: 'Values', icon: LineChart, views: ['values', 'movers'] },
   { id: 'trade', label: 'Trade', icon: ArrowLeftRight, views: ['trade', 'ideas'] },
@@ -34,7 +35,7 @@ const destinationOf = (view: DashboardViewMode): Destination =>
 const SubTabs: React.FC<{ options: { view: DashboardViewMode; label: string; count?: number }[] }> = ({ options }) => {
   const { activeView, setActiveView } = useRoster();
   return (
-    <div role="tablist" className="flex gap-6 border-b border-line">
+    <div role="tablist" className="flex gap-5 sm:gap-6 border-b border-line overflow-x-auto [scrollbar-width:none] -mx-4 px-4 sm:mx-0 sm:px-0">
       {options.map((o) => {
         const active = activeView === o.view;
         return (
@@ -44,7 +45,7 @@ const SubTabs: React.FC<{ options: { view: DashboardViewMode; label: string; cou
             type="button"
             aria-selected={active}
             onClick={() => setActiveView(o.view)}
-            className={`-mb-px pb-2.5 pt-1 border-b-2 font-semibold transition-colors ${
+            className={`shrink-0 whitespace-nowrap -mb-px pb-2.5 pt-1 border-b-2 font-semibold transition-colors ${
               active ? 'border-gold text-ink' : 'border-transparent text-muted hover:text-text'
             }`}
           >
@@ -114,12 +115,14 @@ const AppContent: React.FC = () => {
             <SubTabs
               options={[
                 { view: 'single', label: 'Overview' },
+                { view: 'week', label: 'This week' },
                 { view: 'plan', label: 'Plan' },
                 { view: 'optimization', label: 'Moves', count: evaluation?.remediations?.length },
                 { view: 'rules', label: 'Rules' },
               ]}
             />
             {activeView === 'rules' && <RulesScreen />}
+            {activeView === 'week' && <WeekScreen />}
             {activeView === 'single' && <TeamScreen />}
             {activeView === 'plan' && <PlanScreen />}
             {activeView === 'optimization' && <MovesScreen />}

@@ -16,6 +16,7 @@ import { getBoard, WEIGHTS } from './server/model/futures';
 import { aiTradeRouter } from './server/aiTrade';
 import { fetchMflNames, fetchTrades } from './server/leagues/history';
 import { buildHistory } from './server/model/managers';
+import { nflState, sleeperIdFor, weeklyProjections } from './server/sources/weekly';
 import type { NormalizedLeague } from './server/leagues/types';
 import { SEASON } from './src/lib/season';
 
@@ -139,6 +140,37 @@ app.post(
     const data = buildHistory(raw, league, board, names);
     historyCache.set(key, { at: Date.now(), data });
     res.json(data);
+  })
+);
+
+/** This week's projected points for a roster, scored for the league (start/sit). */
+app.post(
+  '/api/projections/week',
+  asyncRoute(async (req, res) => {
+    const { platform, players, week: reqWeek, scoring_type, te_premium } = req.body || {};
+    if (!Array.isArray(players)) throw new LeagueSyncError('Players are required.');
+    const state = await nflState();
+    const week = Math.min(18, Math.max(1, Number(reqWeek) || state.week));
+    const proj = await weeklyProjections(state.season, week);
+    const recPts = /^ppr$/i.test(scoring_type || '') ? 1 : /half/i.test(scoring_type || '') ? 0.5 : 0;
+    const out: Record<string, unknown> = {};
+    for (const p of players.slice(0, 80)) {
+      const sid = sleeperIdFor(String(platform), { id: String(p.id), position: String(p.position), team: p.team });
+      const pr = sid ? proj.get(sid) : undefined;
+      if (!pr) {
+        out[p.id] = { points: null, opponent: null, injury_status: null, matched: !!sid };
+        continue;
+      }
+      const tePts = te_premium && p.position === 'TE' ? 0.5 * pr.rec : 0;
+      out[p.id] = {
+        points: Math.round((pr.pts_std + recPts * pr.rec + tePts) * 10) / 10,
+        opponent: pr.opponent,
+        injury_status: pr.injury_status,
+        game_date: pr.game_date,
+        matched: true,
+      };
+    }
+    res.json({ season: state.season, week, current_week: state.week, source: 'Sleeper (Rotowire projections)', projections: out });
   })
 );
 

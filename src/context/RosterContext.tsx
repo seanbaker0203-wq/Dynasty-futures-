@@ -10,6 +10,7 @@ export type DashboardViewMode =
   | 'single'
   | 'plan'
   | 'rules'
+  | 'week'
   | 'values'
   | 'movers'
   | 'optimization'
