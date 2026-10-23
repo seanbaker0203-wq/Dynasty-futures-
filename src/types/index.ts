@@ -269,6 +269,8 @@ export interface DraftPick {
   current_owner_id: string;
   description: string;
   market_value: number;
+  /** Trade-market and expert values for this pick (Futures Value blends them) */
+  sources?: { market: number | null; experts: number | null };
   tier?: 'Early' | 'Mid' | 'Late';
   /** Chance of a starter-level season, rookie year first (measured from past drafts at this slot) */
   hit_rates?: number[];

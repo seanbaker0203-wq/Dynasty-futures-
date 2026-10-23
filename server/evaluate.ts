@@ -175,6 +175,7 @@ export async function evaluateLeague(league: NormalizedLeague, requestedTeamId?:
         current_owner_id: teamId,
         description: `${p.year} Round ${p.round}${tier ? ` (${tier})` : ''}${own ? '' : ` via ${origName}`}`,
         market_value: board.pickValue(upcomingDraftYear + offset, p.round, tier),
+        sources: board.pickSources(upcomingDraftYear + offset, p.round, tier),
         ...pickOdds(p.round, tier),
         is_priority_class: offset === 0,
         years_out: offset,

@@ -115,8 +115,10 @@ create index if not exists user_rules_user on public.user_rules (user_id, update
 create table if not exists public.user_settings (
   user_id uuid primary key references auth.users (id) on delete cascade,
   value_adjustments jsonb,
+  reference_values jsonb,             -- which values your league uses; any list you imported (private)
   updated_at timestamptz not null default now()
 );
+alter table public.user_settings add column if not exists reference_values jsonb;
 
 -- ---------- Row-level security ----------
 alter table public.value_snapshots enable row level security;

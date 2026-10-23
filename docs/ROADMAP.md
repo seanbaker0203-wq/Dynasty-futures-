@@ -97,6 +97,14 @@ before charging.
 - ✅ **Targeted search** in Ideas: pick one of your players or picks to trade away and/or the positions you want back;
   the finder builds fair 1-for-1, 2-for-1 (you add a pick or player) and 1-for-2 (they add a pick or smaller piece)
   deals, ranked by your five-season change minus any overpay. Small lineup losses are allowed when you chose the move.
+- ✅ **Multi-asset search**: choose several of your players/picks; the finder mixes them (up to three at once, plus a small
+  add-on of at most half their value; never K/DEF).
+- ✅ **Value gaps** (Trade → Value gaps, `src/lib/referenceValues.ts`): pick the values your league mates use —
+  FantasyCalc market, FantasyPros experts, or a privately imported list (paste the KTC rankings page; parsed by name,
+  mapped onto our scale by rank; saved in `user_settings.reference_values`). Lists: sell (they value yours higher),
+  buy (cheaper on their values), hold (they'd lowball you). Trade builder shows the deal on their values; Ideas can
+  require "looks fair on their values" and rank by how much you gain on ours.
+  KTC is never fetched automatically: no public API; get permission before any automated use.
 - Next: draft the trade message for the user to send.
 - Contention-window forecast built on the existing 3-season simulation, fed by real values.
 

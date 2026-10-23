@@ -7,6 +7,7 @@ import { ManagerProfileNote } from '../components/ManagerProfile';
 import { useAccount } from '../context/AccountContext';
 import { findPersonalIdeas } from '../lib/personalValues';
 import { Lock } from 'lucide-react';
+import { useReference } from '../lib/useReference';
 
 const assetLine = (a: FinderAsset, ownerId: string) => (
   <li key={finderAssetId(a)} className="flex items-baseline justify-between gap-2">
@@ -22,9 +23,11 @@ const assetLine = (a: FinderAsset, ownerId: string) => (
 export const IdeasScreen: React.FC = () => {
   const { evaluation, history, loadHistory, isDemo, openTrade } = useRoster();
   const [ideas, setIdeas] = useState<TradeIdea[] | null>(null);
-  const [sellId, setSellId] = useState<string>('');
+  const [sellIds, setSellIds] = useState<string[]>([]);
+  const [fairOn, setFairOn] = useState<'ours' | 'theirs'>('ours');
+  const ref = useReference();
   const [want, setWant] = useState<string[]>([]);
-  const filtered = !!sellId || want.length > 0;
+  const filtered = sellIds.length > 0 || want.length > 0;
   const { adjustments } = useAccount();
   const personal = useMemo(
     () =>
@@ -65,13 +68,14 @@ export const IdeasScreen: React.FC = () => {
                 ...(evaluation.league_teams || []).filter((t) => t.cap).map((t) => [t.franchise_id, t.cap!.hit]),
               ])
             : undefined,
-          sellId: sellId || null,
+          sellIds,
+          fairValue: fairOn === 'theirs' && ref ? ref.asset : undefined,
           wantPositions: want,
         })
       );
     }, 30);
     return () => window.clearTimeout(id);
-  }, [evaluation, history, sellId, want]);
+  }, [evaluation, history, sellIds, want, fairOn, ref]);
 
   const byPartner = useMemo(() => {
     const m = new Map<string, TradeIdea[]>();
@@ -90,22 +94,45 @@ export const IdeasScreen: React.FC = () => {
     ...[...(evaluation.draft_picks || [])].filter((p) => p.market_value >= 300).sort((a, b) => a.year - b.year || a.round - b.round).map((p) => ({ id: `pick:${p.id}`, label: `${pickName(p, me)} (${fmt(p.market_value)})` })),
   ];
   const positions = ['QB', 'RB', 'WR', 'TE'];
-  const sellName = myAssets.find((a) => a.id === sellId)?.label.replace(/ \(.*\)$/, '').replace(/^(QB|RB|WR|TE|K|DEF) /, '');
+  const shortName = (id: string) => myAssets.find((a) => a.id === id)?.label.replace(/ \(.*\)$/, '').replace(/^(QB|RB|WR|TE|K|DEF) /, '') ?? '';
+  const sellName = sellIds.length === 1 ? shortName(sellIds[0]) : sellIds.length > 1 ? `any mix of ${sellIds.map(shortName).join(', ')}` : '';
 
   return (
     <div className="space-y-6">
       <section className="rounded-xl bg-card border border-line p-4 space-y-3" aria-label="Trade search">
-        <label className="block">
-          <span className="text-[13px] font-semibold text-muted">Trade away</span>
-          <select value={sellId} onChange={(e) => setSellId(e.target.value)} className="field mt-1">
-            <option value="">Anyone (best fits)</option>
-            {myAssets.map((a) => (
-              <option key={a.id} value={a.id}>
-                {a.label}
-              </option>
-            ))}
+        <div>
+          <span className="text-[13px] font-semibold text-muted">Trade away {sellIds.length > 1 ? '(mixed and matched, up to three at once)' : ''}</span>
+          {sellIds.length > 0 && (
+            <div className="flex flex-wrap gap-1.5 mt-1">
+              {sellIds.map((id) => (
+                <button
+                  key={id}
+                  type="button"
+                  onClick={() => setSellIds(sellIds.filter((x) => x !== id))}
+                  className="rounded-full pl-3 pr-2 py-1 text-[13px] font-semibold bg-ink text-paper flex items-center gap-1"
+                  aria-label={`Remove ${shortName(id)}`}
+                >
+                  {shortName(id)} <span aria-hidden>×</span>
+                </button>
+              ))}
+            </div>
+          )}
+          <select
+            value=""
+            onChange={(e) => e.target.value && setSellIds([...sellIds, e.target.value])}
+            className="field mt-1.5"
+            aria-label="Add a player or pick to trade away"
+          >
+            <option value="">{sellIds.length ? 'Add another…' : 'Anyone (best fits), or pick players…'}</option>
+            {myAssets
+              .filter((a) => !sellIds.includes(a.id))
+              .map((a) => (
+                <option key={a.id} value={a.id}>
+                  {a.label}
+                </option>
+              ))}
           </select>
-        </label>
+        </div>
         <div>
           <span className="text-[13px] font-semibold text-muted">Looking for</span>
           <div className="flex flex-wrap gap-1.5 mt-1">
@@ -125,8 +152,26 @@ export const IdeasScreen: React.FC = () => {
             })}
           </div>
         </div>
+        <div>
+          <span className="text-[13px] font-semibold text-muted">Looks fair on</span>
+          <div className="flex flex-wrap gap-1.5 mt-1">
+            {(['ours', 'theirs'] as const).map((k) => (
+              <button
+                key={k}
+                type="button"
+                aria-pressed={fairOn === k}
+                disabled={k === 'theirs' && !ref}
+                onClick={() => setFairOn(k)}
+                className={`rounded-full px-3.5 py-1.5 text-[14px] font-semibold border disabled:opacity-40 ${fairOn === k ? 'bg-ink text-paper border-ink' : 'border-line text-muted'}`}
+              >
+                {k === 'ours' ? 'Futures Value' : ref ? `Their values (${ref.label.replace(/ \(.*\)$/, '')})` : 'Their values'}
+              </button>
+            ))}
+          </div>
+          {fairOn === 'theirs' && <p className="text-[12px] text-muted mt-1">Deals that look even on the values your league uses, ranked by how much you gain on ours. Change the source in Value gaps.</p>}
+        </div>
         {filtered && (
-          <button type="button" className="text-[13px] underline underline-offset-2 text-muted" onClick={() => { setSellId(''); setWant([]); }}>
+          <button type="button" className="text-[13px] underline underline-offset-2 text-muted" onClick={() => { setSellIds([]); setWant([]); }}>
             Clear search
           </button>
         )}
@@ -216,6 +261,16 @@ export const IdeasScreen: React.FC = () => {
                       <ul className="space-y-0.5">{idea.get.map((a) => assetLine(a, idea.partner_id))}</ul>
                     </div>
                   </div>
+                  {idea.fair_give != null && idea.fair_get != null && ref && (
+                    <p className="text-[13px] text-muted">
+                      On {ref.label.replace(/ \(.*\)$/, '')}: you give {fmt(idea.fair_give)}, get {fmt(idea.fair_get)}
+                      {' · '}on ours:{' '}
+                      <span className={idea.value_get - idea.value_give >= 0 ? 'text-up font-semibold' : 'text-down font-semibold'}>
+                        {idea.value_get - idea.value_give >= 0 ? '+' : '−'}
+                        {fmt(Math.abs(idea.value_get - idea.value_give))}
+                      </span>
+                    </p>
+                  )}
                   <div className="overflow-x-auto">
                     <table className="w-full text-[13px]">
                       <thead>

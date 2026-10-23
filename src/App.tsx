@@ -9,6 +9,7 @@ import { FreeAgentsScreen } from './screens/FreeAgentsScreen';
 import { TradeScreen } from './screens/TradeScreen';
 import { TradesScreen } from './screens/TradesScreen';
 import { IdeasScreen } from './screens/IdeasScreen';
+import { GapsScreen } from './screens/GapsScreen';
 import { ValuesScreen } from './screens/ValuesScreen';
 import { MoversScreen } from './screens/MoversScreen';
 import { PlanScreen } from './screens/PlanScreen';
@@ -24,7 +25,7 @@ const DESTINATIONS: { id: Destination; label: string; icon: React.FC<{ className
   { id: 'team', label: 'My team', icon: Shield, views: ['single', 'week', 'plan', 'optimization', 'rules'] },
   { id: 'league', label: 'League', icon: Trophy, views: ['league', 'compare', 'trades', 'freeagents'] },
   { id: 'values', label: 'Values', icon: LineChart, views: ['values', 'movers'] },
-  { id: 'trade', label: 'Trade', icon: ArrowLeftRight, views: ['trade', 'ideas'] },
+  { id: 'trade', label: 'Trade', icon: ArrowLeftRight, views: ['trade', 'ideas', 'gaps'] },
   { id: 'connect', label: 'Connect', icon: Link2, views: ['ingest'] },
 ];
 
@@ -164,9 +165,10 @@ const AppContent: React.FC = () => {
               options={[
                 { view: 'trade', label: 'Builder' },
                 { view: 'ideas', label: 'Ideas' },
+                { view: 'gaps', label: 'Value gaps' },
               ]}
             />
-            {activeView === 'ideas' ? <IdeasScreen /> : <TradeScreen />}
+            {activeView === 'ideas' ? <IdeasScreen /> : activeView === 'gaps' ? <GapsScreen /> : <TradeScreen />}
           </>
         )}
       </main>

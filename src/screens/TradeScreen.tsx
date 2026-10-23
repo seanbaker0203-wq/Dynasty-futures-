@@ -7,6 +7,7 @@ import { projectOutlook } from '../lib/outlook';
 import { PlayerRow } from '../components/PlayerRow';
 import { useAccount } from '../context/AccountContext';
 import { benchIds, myAssetValue } from '../lib/personalValues';
+import { useReference } from '../lib/useReference';
 import type { DraftPick, LeagueSettings, MasterPlayer } from '../types';
 
 type Asset = { kind: 'player'; item: MasterPlayer } | { kind: 'pick'; item: DraftPick };
@@ -159,6 +160,7 @@ export const TradeScreen: React.FC = () => {
   const [give, setGive] = useState<Asset[]>([]);
   const [get, setGet] = useState<Asset[]>([]);
   const { adjustments } = useAccount();
+  const ref = useReference();
   const bench = useMemo(
     () => (evaluation && adjustments.enabled ? benchIds(evaluation.players, evaluation.settings, adjustments.bench_seasons) : new Set<string>()),
     [evaluation, adjustments.enabled, adjustments.bench_seasons]
@@ -292,6 +294,18 @@ export const TradeScreen: React.FC = () => {
                 <span className="text-[16px] text-muted font-sans font-medium"> value for you</span>
               </div>
               <p>{verdict}</p>
+              {ref && (() => {
+                const theirs = get.reduce((t, a) => t + ref.asset(a), 0) - give.reduce((t, a) => t + ref.asset(a), 0);
+                return (
+                  <p className="mt-1 text-[14px]">
+                    <span className="font-semibold">On {ref.label.replace(/ \(.*\)$/, '')}: </span>
+                    <span className={Math.abs(theirs) < Math.max(giveTotal, getTotal) * 0.05 ? 'font-semibold' : theirs > 0 ? 'text-up font-semibold' : 'text-down font-semibold'}>
+                      {Math.abs(theirs) < Math.max(giveTotal, getTotal) * 0.05 ? 'about even' : `${theirs > 0 ? '+' : '−'}${fmt(Math.abs(theirs))} for you`}
+                    </span>
+                    <span className="text-muted"> (what your league mates will likely see)</span>
+                  </p>
+                );
+              })()}
               {adjustments.enabled && (() => {
                 const mine = get.reduce((t, a) => t + myAssetValue(a, false, bench, adjustments), 0) - give.reduce((t, a) => t + myAssetValue(a, true, bench, adjustments), 0);
                 if (Math.round(mine) === Math.round(diff)) return null;

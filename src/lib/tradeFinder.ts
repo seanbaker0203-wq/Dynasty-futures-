@@ -17,6 +17,9 @@ export interface TradeIdea {
   get: FinderAsset[];
   value_give: number;
   value_get: number;
+  /** Totals on the value source used to judge fairness (when not Futures Value) */
+  fair_give?: number;
+  fair_get?: number;
   /** Change in your projected points per week, per season */
   my_change: number[];
   their_change: number[];
@@ -65,13 +68,16 @@ export function findTrades(opts: {
   perPartner?: number;
   /** Current cap hit by team id (salary-cap leagues): ideas that push either team over the cap are dropped. */
   capHits?: Record<string, number>;
-  /** Only deals that include this asset of yours (e.g. "player:123"). */
-  sellId?: string | null;
+  /** Only deals built from these assets of yours (any mix of them, e.g. "player:123"). */
+  sellIds?: string[];
+  /** Judge "fair for them" on another value source (e.g. the values your league uses); default Futures Value. */
+  fairValue?: (a: FinderAsset) => number;
   /** Only deals where the main piece you get plays one of these positions. */
   wantPositions?: string[];
 }): TradeIdea[] {
-  const { me, mine, teams, settings, seasons, profiles = [], capHits, sellId = null, wantPositions = [] } = opts;
-  const filtered = !!sellId || wantPositions.length > 0;
+  const { me, mine, teams, settings, seasons, profiles = [], capHits, sellIds = [], wantPositions = [] } = opts;
+  const fv = opts.fairValue ?? value;
+  const filtered = sellIds.length > 0 || wantPositions.length > 0;
   const perPartner = opts.perPartner ?? (filtered ? 4 : 3);
   const cap = settings?.salary_cap?.cap;
   const salary = (list: FinderAsset[]) => list.reduce((s, a) => s + (a.kind === 'player' ? a.item.contract?.salary ?? 0 : 0), 0);
@@ -81,8 +87,12 @@ export function findTrades(opts: {
 
   // What each of my assets is worth to *me* (five-season loss if it left). Cheap-to-me assets are the ones to sell.
   const myAssets: FinderAsset[] = [
-    ...mine.players.filter((p) => p.market_value >= 300).map((p) => ({ kind: 'player' as const, item: p })),
+    ...mine.players.filter((p) => p.market_value >= 300 && p.position !== 'K' && p.position !== 'DEF').map((p) => ({ kind: 'player' as const, item: p })),
     ...mine.picks.filter((p) => p.market_value >= 300).map((p) => ({ kind: 'pick' as const, item: p })),
+  ];
+  const allMine: FinderAsset[] = [
+    ...mine.players.map((p) => ({ kind: 'player' as const, item: p })),
+    ...mine.picks.map((p) => ({ kind: 'pick' as const, item: p })),
   ];
   const costToMe = new Map<string, number>();
   for (const a of myAssets) costToMe.set(finderAssetId(a), myBaseW - weighted(totals(swap(mine, [a], []), settings, seasons)));
@@ -97,15 +107,29 @@ export function findTrades(opts: {
     const tags = new Set(profile?.tags || []);
 
     // Their players that would most improve my outlook (only real assets).
-    const sellAsset = sellId ? myAssets.find((a) => finderAssetId(a) === sellId) ?? null : null;
-    if (sellId && !sellAsset) return [];
-    const sellValue = sellAsset ? value(sellAsset) : 0;
+    const sellAssets = allMine.filter((a) => sellIds.includes(finderAssetId(a)));
+    if (sellIds.length && !sellAssets.length) return [];
+    // Sets of your chosen assets (any mix, up to three at once).
+    const sellSets: FinderAsset[][] = [];
+    const maxSize = sellAssets.length > 7 ? 2 : 3;
+    const build = (start: number, cur: FinderAsset[]) => {
+      if (cur.length) sellSets.push(cur);
+      if (cur.length >= maxSize) return;
+      for (let i = start; i < sellAssets.length; i++) build(i + 1, [...cur, sellAssets[i]]);
+    };
+    build(0, []);
+    const sellMin = sellSets.length ? Math.min(...sellSets.map((g) => g.reduce((x, a) => x + fv(a), 0))) : 0;
+    const sellMax = sellSets.length ? Math.max(...sellSets.map((g) => g.reduce((x, a) => x + fv(a), 0))) : 0;
+    const inSellRange = (p: MasterPlayer) => {
+      const v = fv({ kind: 'player', item: p });
+      return v >= sellMin * 0.4 && v <= sellMax * 1.6;
+    };
     const targets = theirs.players
       .filter((p) =>
         wantPositions.length
-          ? wantPositions.includes(p.position) && p.market_value >= 300 && (!sellAsset || (p.market_value >= sellValue * 0.4 && p.market_value <= sellValue * 1.6))
-          : sellAsset
-            ? p.market_value >= sellValue * 0.4 && p.market_value <= sellValue * 1.6
+          ? wantPositions.includes(p.position) && p.market_value >= 300 && (!sellSets.length || inSellRange(p))
+          : sellSets.length
+            ? inSellRange(p)
             : p.market_value >= 1000
       )
       .map((p) => {
@@ -130,36 +154,47 @@ export function findTrades(opts: {
         ...theirs.picks.filter((p) => p.market_value >= 150).map((p) => ({ kind: 'pick' as const, item: p })),
         ...theirs.players.filter((p) => p.market_value >= 150).map((p) => ({ kind: 'player' as const, item: p })),
       ];
-      const myGiveSets: FinderAsset[][] = sellAsset
-        ? [[sellAsset], ...myAssets.filter((a) => a !== sellAsset).map((b) => [sellAsset, b])]
+      const sellKeys = new Set(sellAssets.map(finderAssetId));
+      const others = myAssets.filter((a) => !sellKeys.has(finderAssetId(a)));
+      const myGiveSets: FinderAsset[][] = sellSets.length
+        ? [
+            ...sellSets,
+            // A small add-on to your chosen players (at most half their value), never the centrepiece.
+            ...sellSets
+              .filter((g) => g.length < 3)
+              .flatMap((g) => {
+                const gv = g.reduce((x, a) => x + fv(a), 0);
+                return others.filter((b) => fv(b) <= gv * 0.5).map((b) => [...g, b]);
+              }),
+          ]
         : [...myAssets.map((a) => [a]), ...myAssets.flatMap((a, i) => myAssets.slice(i + 1).map((b) => [a, b]))];
       for (const t of targets) {
         for (const give of myGiveSets) {
-          const gv = give.reduce((x, a) => x + value(a), 0);
-          if (fair(gv, value(t.a), 1, give.length)) candidates.push({ give, get: [t.a], approx: t.gain - cost(give) });
+          const gv = give.reduce((x, a) => x + fv(a), 0);
+          if (fair(gv, fv(t.a), 1, give.length)) candidates.push({ give, get: [t.a], approx: t.gain - cost(give) });
           // My side is worth more: ask for something extra back (one-for-two).
-          if (give.length === 1 && gv > value(t.a) * 1.15) {
+          if (give.length <= 2 && gv > fv(t.a) * 1.15) {
             for (const x of theirExtras) {
               if (finderAssetId(x) === finderAssetId(t.a)) continue;
               if (value(x) > value(t.a)) continue; // the player you asked for stays the main piece
-              if (fair(gv, value(t.a) + value(x), 2, 1)) candidates.push({ give, get: [t.a, x], approx: t.gain - cost(give) + value(x) / 2000 });
+              if (fair(gv, fv(t.a) + fv(x), 2, give.length)) candidates.push({ give, get: [t.a, x], approx: t.gain - cost(give) + value(x) / 2000 });
             }
           }
         }
       }
     }
     for (const t of filtered ? [] : targets) {
-      const v = value(t.a);
+      const v = fv(t.a);
       // They should get at least as much value back, but not wildly more.
       // In a 2-for-1 the side getting the best player pays a premium, so ask for ~10%+ more value back.
       const fits = (total: number, n: number) => (n === 1 ? total >= v * 0.97 && total <= v * 1.2 : total >= v * 1.1 && total <= v * 1.35);
-      const pool = myAssets.filter((a) => value(a) <= v * 1.35);
+      const pool = myAssets.filter((a) => fv(a) <= v * 1.35);
       for (let i = 0; i < pool.length; i++) {
         const a = pool[i];
-        if (fits(value(a), 1)) candidates.push({ give: [a], get: [t.a], approx: t.gain - (costToMe.get(finderAssetId(a)) ?? 0) });
+        if (fits(fv(a), 1)) candidates.push({ give: [a], get: [t.a], approx: t.gain - (costToMe.get(finderAssetId(a)) ?? 0) });
         for (let j = i + 1; j < pool.length; j++) {
           const b = pool[j];
-          if (!fits(value(a) + value(b), 2)) continue;
+          if (!fits(fv(a) + fv(b), 2)) continue;
           candidates.push({
             give: [a, b],
             get: [t.a],
@@ -188,7 +223,9 @@ export function findTrades(opts: {
       // Filtered searches can include small lineup losses (you chose to move that player); keep the score positive.
       // ...and prefer deals that don't give away more value than needed (about 1 pt/wk per 300 of overpay).
       const overpay = c.give.reduce((x, a) => x + value(a), 0) - c.get.reduce((x, a) => x + value(a), 0);
-      let score = filtered ? my_gain + 20 - Math.max(0, overpay) / 300 : my_gain;
+      // When fairness is judged on another source, reward deals that are fair to them but cheaper on our values.
+      let score = (filtered ? my_gain + 20 : my_gain) - (opts.fairValue ? overpay / 300 : filtered ? Math.max(0, overpay) / 300 : 0);
+      if (opts.fairValue && overpay < -150) reasons.push(`Even on their values, but you gain about ${Math.round(-overpay)} on ours.`);
       if (filtered && my_gain < 0) reasons.push(`Costs you about ${Math.abs(Math.round(my_gain * 10) / 10)} pts/wk (weighted), but it’s the move you asked for.`);
       if (their_gain > 0) {
         score *= 1.25;
@@ -222,6 +259,8 @@ export function findTrades(opts: {
         get: c.get,
         value_give: c.give.reduce((s, a) => s + value(a), 0),
         value_get: c.get.reduce((s, a) => s + value(a), 0),
+        fair_give: opts.fairValue ? c.give.reduce((s, a) => s + fv(a), 0) : undefined,
+        fair_get: opts.fairValue ? c.get.reduce((s, a) => s + fv(a), 0) : undefined,
         my_change,
         their_change,
         my_gain: Math.round(my_gain * 10) / 10,
@@ -239,7 +278,7 @@ export function findTrades(opts: {
       if (kept >= perPartner) break;
       const g = finderAssetId(idea.get[0]);
       const main = finderAssetId([...idea.give].sort((a, b) => value(b) - value(a))[0]);
-      if (usedGet.has(g) || (!sellId && usedGive.has(main))) continue;
+      if (usedGet.has(g) || (!sellIds.length && usedGive.has(main))) continue;
       usedGet.add(g);
       usedGive.add(main);
       ideas.push(idea);

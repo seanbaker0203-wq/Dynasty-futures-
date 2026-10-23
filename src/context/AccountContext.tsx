@@ -6,9 +6,17 @@ import React, { createContext, useCallback, useContext, useEffect, useState } fr
 import type { Session, SupabaseClient } from '@supabase/supabase-js';
 import { getSupabase } from '../lib/supabase';
 import { DEFAULT_ADJUSTMENTS, type DynastyRule, type ValueAdjustments } from '../types';
+import type { ImportedValues, ReferenceSource } from '../lib/referenceValues';
+
+export interface ReferenceSettings {
+  source: ReferenceSource;
+  imported: ImportedValues | null;
+}
+const DEFAULT_REFERENCE: ReferenceSettings = { source: 'market', imported: null };
 
 const LOCAL_RULES = 'df_private_rules';
 const LOCAL_ADJ = 'df_private_adjustments';
+const LOCAL_REF = 'df_private_reference';
 
 const readLocal = <T,>(key: string, fallback: T): T => {
   try {
@@ -51,6 +59,9 @@ interface AccountContextType {
   deleteRule: (id: string) => Promise<void>;
   adjustments: ValueAdjustments;
   saveAdjustments: (a: ValueAdjustments) => Promise<void>;
+  /** Which values your league mates use (for value gaps and "looks fair to them") */
+  reference: ReferenceSettings;
+  saveReference: (r: ReferenceSettings) => Promise<void>;
   storage: 'cloud' | 'device';
   error: string | null;
 }
@@ -68,6 +79,7 @@ export const AccountProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const [rules, setRules] = useState<DynastyRule[]>(() => readLocal<DynastyRule[]>(LOCAL_RULES, []));
   const [adjustments, setAdjustments] = useState<ValueAdjustments>(() => normalizeAdj(readLocal(LOCAL_ADJ, null)));
   const [error, setError] = useState<string | null>(null);
+  const [reference, setReference] = useState<ReferenceSettings>(() => ({ ...DEFAULT_REFERENCE, ...readLocal(LOCAL_REF, {}) }));
 
   useEffect(() => {
     let unsub: (() => void) | undefined;
@@ -100,7 +112,7 @@ export const AccountProvider: React.FC<{ children: React.ReactNode }> = ({ child
       if (e1) throw e1;
       setRules((rows || []) as DynastyRule[]);
 
-      const { data: st, error: e2 } = await sb.from('user_settings').select('value_adjustments').eq('user_id', userId).maybeSingle();
+      const { data: st, error: e2 } = await sb.from('user_settings').select('value_adjustments, reference_values').eq('user_id', userId).maybeSingle();
       if (e2) throw e2;
       const localAdj = readLocal<ValueAdjustments | null>(LOCAL_ADJ, null);
       if (st?.value_adjustments) setAdjustments(normalizeAdj(st.value_adjustments));
@@ -109,6 +121,13 @@ export const AccountProvider: React.FC<{ children: React.ReactNode }> = ({ child
         setAdjustments(normalizeAdj(localAdj));
       }
       dropLocal(LOCAL_ADJ);
+      const localRef = readLocal<ReferenceSettings | null>(LOCAL_REF, null);
+      if (st?.reference_values) setReference({ ...DEFAULT_REFERENCE, ...st.reference_values });
+      else if (localRef) {
+        await sb.from('user_settings').upsert({ user_id: userId, reference_values: localRef, updated_at: new Date().toISOString() });
+        setReference({ ...DEFAULT_REFERENCE, ...localRef });
+      }
+      dropLocal(LOCAL_REF);
     } catch (e: any) {
       setError(missingTables(e?.message || 'Couldn’t load your saved data.'));
     }
@@ -119,6 +138,7 @@ export const AccountProvider: React.FC<{ children: React.ReactNode }> = ({ child
     else {
       setRules(readLocal<DynastyRule[]>(LOCAL_RULES, []));
       setAdjustments(normalizeAdj(readLocal(LOCAL_ADJ, null)));
+      setReference({ ...DEFAULT_REFERENCE, ...readLocal(LOCAL_REF, {}) });
     }
   }, [userId, load]);
 
@@ -171,6 +191,15 @@ export const AccountProvider: React.FC<{ children: React.ReactNode }> = ({ child
     } else writeLocal(LOCAL_ADJ, a);
   };
 
+  const saveReference = async (r: ReferenceSettings) => {
+    setError(null);
+    setReference(r);
+    if (sb && userId) {
+      const { error: e } = await sb.from('user_settings').upsert({ user_id: userId, reference_values: r, updated_at: new Date().toISOString() });
+      if (e) setError(missingTables(e.message));
+    } else writeLocal(LOCAL_REF, r);
+  };
+
   const signIn = async (email: string) => {
     if (!sb) throw new Error('Accounts aren’t set up on this server yet.');
     const { error: e } = await sb.auth.signInWithOtp({ email: email.trim(), options: { emailRedirectTo: window.location.origin } });
@@ -194,6 +223,8 @@ export const AccountProvider: React.FC<{ children: React.ReactNode }> = ({ child
         deleteRule,
         adjustments,
         saveAdjustments,
+        reference,
+        saveReference,
         storage: userId ? 'cloud' : 'device',
         error,
       }}

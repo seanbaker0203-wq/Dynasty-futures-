@@ -37,6 +37,8 @@ export interface Board {
   byMfl: Map<string, BoardPlayer>;
   /** Pick value on the shared scale */
   pickValue: (year: number, round: number, tier?: 'Early' | 'Mid' | 'Late') => number;
+  /** The same pick by source (trade market / experts), both on the shared scale. */
+  pickSources: (year: number, round: number, tier?: 'Early' | 'Mid' | 'Late') => { market: number | null; experts: number | null };
   thresholds: Record<string, { starter: number; replacement: number }>;
   sources: { market: boolean; experts: boolean; production_season: number | null };
 }
@@ -321,7 +323,7 @@ async function buildBoard(settings: LeagueSettings, key: string): Promise<Board>
     const exact = market.picks.find((p) => p.name === `${year} ${ord(round)}${tier ? ` (${tier})` : ''}`) || market.picks.find((p) => p.name === `${year} ${ord(round)}`);
     return exact ? exact.value : null;
   };
-  const pickValue: Board['pickValue'] = (year, round, tier) => {
+  const pickSources: Board['pickSources'] = (year, round, tier) => {
     const e = expertOnScale(valueStore.pickValue(year, round, sf, tier ?? 'Mid'));
     let m = marketPick(year, round, tier);
     if (m == null && market?.picks.length) {
@@ -334,6 +336,10 @@ async function buildBoard(settings: LeagueSettings, key: string): Promise<Board>
         m = Math.round(latest.p.value * Math.pow(0.9, Math.max(0, year - Number(latest.mm![1]))));
       }
     }
+    return { market: m != null && m > 0 ? m : null, experts: e != null && e > 0 ? Math.round(e) : null };
+  };
+  const pickValue: Board['pickValue'] = (year, round, tier) => {
+    const { market: m, experts: e } = pickSources(year, round, tier);
     const vals = [m, e].filter((v): v is number => v != null && v > 0);
     return vals.length ? Math.round(vals.reduce((a, b) => a + b, 0) / vals.length) : 0;
   };
@@ -346,6 +352,7 @@ async function buildBoard(settings: LeagueSettings, key: string): Promise<Board>
     bySleeper: new Map(out.filter((p) => p.sleeper_id).map((p) => [p.sleeper_id!, p])),
     byMfl: new Map(out.filter((p) => p.mfl_id).map((p) => [p.mfl_id!, p])),
     pickValue,
+    pickSources,
     thresholds,
     sources: { market: !!market, experts: valueStore.allPlayers.length > 0, production_season: currentMature ? seasonYear : seasonYear - 1 },
   };

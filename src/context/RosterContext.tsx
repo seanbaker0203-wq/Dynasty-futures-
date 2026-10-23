@@ -19,7 +19,8 @@ export type DashboardViewMode =
   | 'freeagents'
   | 'trades'
   | 'trade'
-  | 'ideas';
+  | 'ideas'
+  | 'gaps';
 
 /** A trade to open in the builder (asset ids like "player:123" / "pick:2027-1-0004"). */
 export interface TradeDraft {
