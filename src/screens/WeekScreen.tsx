@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Loader2 } from 'lucide-react';
 import { useRoster } from '../context/RosterContext';
+import { apiPost } from '../lib/api';
 import type { MasterPlayer } from '../types';
 
 interface Proj {
@@ -55,21 +56,15 @@ export const WeekScreen: React.FC = () => {
     let cancelled = false;
     setLoading(true);
     setError(null);
-    fetch('/api/projections/week', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        platform: activePlatform,
-        week,
-        scoring_type: evaluation.settings?.scoring_type,
-        te_premium: evaluation.settings?.te_premium,
-        players: evaluation.players.map((p) => ({ id: p.id, position: p.position, team: p.nfl_team })),
-      }),
+    apiPost<WeekData>('/api/projections/week', {
+      platform: activePlatform,
+      week,
+      scoring_type: evaluation.settings?.scoring_type,
+      te_premium: evaluation.settings?.te_premium,
+      players: evaluation.players.map((p) => ({ id: p.id, position: p.position, team: p.nfl_team })),
     })
-      .then(async (r) => {
-        const d = await r.json().catch(() => ({}));
-        if (!r.ok) throw new Error(d.error || `Couldn’t load projections (${r.status}).`);
-        if (!cancelled) setData(d as WeekData);
+      .then((d) => {
+        if (!cancelled) setData(d);
       })
       .catch((e) => !cancelled && setError(e.message))
       .finally(() => !cancelled && setLoading(false));

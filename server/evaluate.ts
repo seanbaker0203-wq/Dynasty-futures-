@@ -22,7 +22,7 @@ import type {
 } from '../src/types';
 import { getBoard, WEIGHTS, type Board } from './model/futures';
 import { pickOutlook } from './model/rookies';
-import { projectOutlook, rankOutlooks } from '../src/lib/outlook';
+import { projectOutlook, rankOutlooks } from './model/outlook';
 import { valueStore } from './values';
 import { gradeLeague } from './classify';
 import type { NormalizedLeague } from './leagues/types';
@@ -284,7 +284,7 @@ export async function evaluateLeague(league: NormalizedLeague, requestedTeamId?:
   const power = (t: LeagueTeamSummary) => t.starter_value * 0.55 + t.bench_value * 0.3 + t.draft_capital_value * 0.15;
   leagueTeams.sort((a, b) => power(b) - power(a)).forEach((t, i) => (t.power_rank = i + 1));
 
-  // Season outlook (src/lib/outlook.ts): projected lineup points per week by season, plus expected points from picks.
+  // Season outlook (server/model/outlook.ts): projected lineup points per week by season, plus expected points from picks.
   const seasons = board.players[0]?.projection.map((p) => p.season) ?? [];
   const outlook = new Map<string, SeasonOutlook[]>();
   const pickPlans = new Map<string, PickPlan[]>();

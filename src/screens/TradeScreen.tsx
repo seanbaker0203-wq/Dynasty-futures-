@@ -3,7 +3,8 @@ import { Plus, Search, X } from 'lucide-react';
 import { useRoster } from '../context/RosterContext';
 import { RosterDNAMathEngine } from '../lib/rosterMath';
 import { fmt, fmtShort, ordinal, pickName } from '../lib/leagueStats';
-import { projectOutlook } from '../lib/outlook';
+import { apiPost } from '../lib/api';
+import type { TradeImpactRow } from '../lib/assets';
 import { PlayerRow } from '../components/PlayerRow';
 import { useAccount } from '../context/AccountContext';
 import { benchIds, myAssetValue } from '../lib/personalValues';
@@ -156,7 +157,8 @@ const AssetColumn: React.FC<{
 };
 
 export const TradeScreen: React.FC = () => {
-  const { evaluation, partnerId, setPartnerId, tradeDraft, clearTradeDraft } = useRoster();
+  const { evaluation, partnerId, setPartnerId, tradeDraft, clearTradeDraft, leagueRequest } = useRoster();
+  const [fiveYear, setFiveYear] = useState<TradeImpactRow[]>([]);
   const [give, setGive] = useState<Asset[]>([]);
   const [get, setGet] = useState<Asset[]>([]);
   const { adjustments } = useAccount();
@@ -183,6 +185,33 @@ export const TradeScreen: React.FC = () => {
     setGet(theirs.filter((a) => tradeDraft.get.includes(assetId(a))));
     clearTradeDraft();
   }, [tradeDraft, evaluation]);
+
+  // Five-season view (computed on the server): each team's projected lineup and league rank, before and after.
+  const lr = leagueRequest();
+  const impactPartner =
+    partnerId ||
+    [...(evaluation?.league_teams || [])].sort((a, b) => a.power_rank - b.power_rank).find((t) => t.franchise_id !== evaluation?.roster.franchise_id)
+      ?.franchise_id ||
+    '';
+  const giveKey = give.map(assetId).join();
+  const getKey = get.map(assetId).join();
+  useEffect(() => {
+    if (!lr || !impactPartner || (!give.length && !get.length)) return setFiveYear([]);
+    const ctl = new AbortController();
+    const t = window.setTimeout(() => {
+      apiPost<{ rows: TradeImpactRow[] }>(
+        '/api/trade/impact',
+        { ...lr, partner_id: impactPartner, give: give.map(assetId), get: get.map(assetId) },
+        ctl.signal
+      )
+        .then((d) => setFiveYear(d.rows))
+        .catch(() => setFiveYear([]));
+    }, 250);
+    return () => {
+      ctl.abort();
+      window.clearTimeout(t);
+    };
+  }, [lr?.league_id, lr?.franchise_id, impactPartner, giveKey, getKey]);
 
   const ctx = useMemo(() => {
     if (!evaluation) return null;
@@ -231,25 +260,6 @@ export const TradeScreen: React.FC = () => {
   const themBefore = measure(theirSide, settings, baseline);
   const themAfter = measure(applyTrade(theirSide, get, give), settings, baseline);
   const hasTrade = give.length > 0 || get.length > 0;
-
-  // Five-season view: each team's projected lineup (with picks) and league rank, before and after.
-  const seasons = (evaluation.season_outlook || []).map((o) => o.season);
-  const rest = teams.filter((t) => t.franchise_id !== me && t.franchise_id !== partner.franchise_id);
-  const mineAfterSide = applyTrade(mySide, give, get);
-  const theirsAfterSide = applyTrade(theirSide, get, give);
-  const outMeBefore = projectOutlook(mySide.players, mySide.picks, settings, seasons);
-  const outMeAfter = projectOutlook(mineAfterSide.players, mineAfterSide.picks, settings, seasons);
-  const outThemBefore = projectOutlook(theirSide.players, theirSide.picks, settings, seasons);
-  const outThemAfter = projectOutlook(theirsAfterSide.players, theirsAfterSide.picks, settings, seasons);
-  const rankAmong = (i: number, total: number, other: number) =>
-    1 + rest.filter((t) => (t.season_outlook?.[i]?.total ?? 0) > total).length + (other > total ? 1 : 0);
-  const fiveYear = seasons.map((season, i) => ({
-    season,
-    me: { before: outMeBefore[i].total, after: outMeAfter[i].total },
-    them: { before: outThemBefore[i].total, after: outThemAfter[i].total },
-    meRank: { before: rankAmong(i, outMeBefore[i].total, outThemBefore[i].total), after: rankAmong(i, outMeAfter[i].total, outThemAfter[i].total) },
-    themRank: { before: rankAmong(i, outThemBefore[i].total, outMeBefore[i].total), after: rankAmong(i, outThemAfter[i].total, outMeAfter[i].total) },
-  }));
 
   const impactRows = (b: typeof meBefore, a: typeof meAfter) => [
     { name: 'Lineup strength', b: b.lineup, a: a.lineup, show: (v: number) => `${Math.round(v)}` },

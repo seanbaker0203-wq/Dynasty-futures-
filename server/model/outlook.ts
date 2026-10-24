@@ -2,8 +2,8 @@
  * Season outlook, shared by server and browser: best projected starting lineup (points per week) for each of the
  * next seasons, plus the expected contribution of draft picks. Used for the Plan page and for re-scoring trades.
  */
-import { RosterDNAMathEngine } from './rosterMath';
-import type { DraftPick, LeagueSettings, MasterPlayer, SeasonOutlook } from '../types';
+import { RosterDNAMathEngine } from '../../src/lib/rosterMath';
+import type { DraftPick, LeagueSettings, MasterPlayer, SeasonOutlook } from '../../src/types';
 
 const SKILL = ['QB', 'RB', 'WR', 'TE'];
 

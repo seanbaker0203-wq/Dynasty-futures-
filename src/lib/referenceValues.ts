@@ -5,7 +5,7 @@
  * onto our scale by rank, so different number scales compare fairly.
  */
 import type { DraftPick, MasterPlayer } from '../types';
-import type { FinderAsset } from './tradeFinder';
+import type { FinderAsset } from './assets';
 
 export type ReferenceSource = 'market' | 'experts' | 'imported';
 

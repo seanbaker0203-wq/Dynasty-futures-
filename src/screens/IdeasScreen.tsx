@@ -2,10 +2,10 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { Loader2 } from 'lucide-react';
 import { useRoster } from '../context/RosterContext';
 import { fmt, pickName } from '../lib/leagueStats';
-import { findTrades, finderAssetId, type FinderAsset, type TradeIdea } from '../lib/tradeFinder';
+import { finderAssetId, type FinderAsset, type PersonalIdea, type TradeIdea } from '../lib/assets';
+import { apiPost } from '../lib/api';
 import { ManagerProfileNote } from '../components/ManagerProfile';
 import { useAccount } from '../context/AccountContext';
-import { findPersonalIdeas } from '../lib/personalValues';
 import { Lock } from 'lucide-react';
 import { useReference } from '../lib/useReference';
 
@@ -21,61 +21,57 @@ const assetLine = (a: FinderAsset, ownerId: string) => (
 
 /** Trade → Ideas: who to call and with what. */
 export const IdeasScreen: React.FC = () => {
-  const { evaluation, history, loadHistory, isDemo, openTrade } = useRoster();
+  const { evaluation, history, loadHistory, isDemo, openTrade, leagueRequest } = useRoster();
   const [ideas, setIdeas] = useState<TradeIdea[] | null>(null);
+  const [ideasError, setIdeasError] = useState<string | null>(null);
   const [sellIds, setSellIds] = useState<string[]>([]);
   const [fairOn, setFairOn] = useState<'ours' | 'theirs'>('ours');
   const ref = useReference();
   const [want, setWant] = useState<string[]>([]);
   const filtered = sellIds.length > 0 || want.length > 0;
-  const { adjustments } = useAccount();
-  const personal = useMemo(
-    () =>
-      evaluation && adjustments.enabled
-        ? findPersonalIdeas({
-            me: evaluation.roster.franchise_id,
-            players: evaluation.players,
-            picks: evaluation.draft_picks || [],
-            teams: evaluation.league_teams || [],
-            settings: evaluation.settings,
-            seasons: (evaluation.season_outlook || []).map((o) => o.season),
-            adj: adjustments,
-          })
-        : [],
-    [evaluation, adjustments]
-  );
+  const { adjustments, reference } = useAccount();
+  const [personal, setPersonal] = useState<PersonalIdea[]>([]);
+  const lr = leagueRequest();
+  const lrKey = lr ? `${lr.platform}:${lr.league_id}:${lr.franchise_id}` : '';
 
   useEffect(() => {
     if (!isDemo) loadHistory();
   }, [isDemo]);
 
-  // Run after first paint so the spinner shows; recompute when profiles arrive.
+  // Ideas are built on the server. Re-ask when the search changes or manager profiles arrive.
   useEffect(() => {
-    if (!evaluation) return;
+    if (!lr) return;
+    const ctl = new AbortController();
     setIdeas(null);
-    const id = window.setTimeout(() => {
-      setIdeas(
-        findTrades({
-          me: evaluation.roster.franchise_id,
-          mine: { players: evaluation.players, picks: evaluation.draft_picks || [] },
-          teams: evaluation.league_teams || [],
-          settings: evaluation.settings,
-          seasons: (evaluation.season_outlook || []).map((o) => o.season),
-          profiles: history?.profiles,
-          capHits: evaluation.settings?.salary_cap
-            ? Object.fromEntries([
-                [evaluation.roster.franchise_id, evaluation.cap?.hit ?? 0],
-                ...(evaluation.league_teams || []).filter((t) => t.cap).map((t) => [t.franchise_id, t.cap!.hit]),
-              ])
-            : undefined,
-          sellIds,
-          fairValue: fairOn === 'theirs' && ref ? ref.asset : undefined,
-          wantPositions: want,
-        })
-      );
-    }, 30);
-    return () => window.clearTimeout(id);
-  }, [evaluation, history, sellIds, want, fairOn, ref]);
+    setIdeasError(null);
+    const t = window.setTimeout(() => {
+      apiPost<{ ideas: TradeIdea[] }>(
+        '/api/trade/ideas',
+        {
+          ...lr,
+          sell_ids: sellIds,
+          want_positions: want,
+          fair: fairOn === 'theirs' && ref ? { source: reference.source, imported: reference.source === 'imported' ? reference.imported : null } : null,
+        },
+        ctl.signal
+      )
+        .then((d) => setIdeas(d.ideas))
+        .catch((e) => e?.name !== 'AbortError' && setIdeasError(e.message));
+    }, 150);
+    return () => {
+      ctl.abort();
+      window.clearTimeout(t);
+    };
+  }, [lrKey, !!history, sellIds.join(), want.join(), fairOn, ref?.label, reference.source]);
+
+  useEffect(() => {
+    if (!lr || !adjustments.enabled) return setPersonal([]);
+    const ctl = new AbortController();
+    apiPost<{ ideas: PersonalIdea[] }>('/api/trade/personal-ideas', { ...lr, adjustments }, ctl.signal)
+      .then((d) => setPersonal(d.ideas))
+      .catch(() => setPersonal([]));
+    return () => ctl.abort();
+  }, [lrKey, JSON.stringify(adjustments)]);
 
   const byPartner = useMemo(() => {
     const m = new Map<string, TradeIdea[]>();
@@ -84,6 +80,7 @@ export const IdeasScreen: React.FC = () => {
   }, [ideas]);
 
   if (!evaluation) return null;
+  if (isDemo || !lr) return <p className="text-muted">Trade ideas need a real league. Connect yours to see them.</p>;
   if (!evaluation.season_outlook?.length)
     return <p className="text-muted">Trade ideas need season projections. Connect a real league to see them.</p>;
 
@@ -183,7 +180,12 @@ export const IdeasScreen: React.FC = () => {
           : 'Deals that are fair on value, so the other side could say yes, but make your lineup better over the next five seasons. Best calls first.'}{' '}
         {history ? 'Ranked using how each manager actually trades.' : ''}
       </p>
-      {!ideas && (
+      {ideasError && (
+        <p role="alert" className="text-down">
+          {ideasError}
+        </p>
+      )}
+      {!ideas && !ideasError && (
         <p className="flex items-center gap-2 text-muted py-8">
           <Loader2 className="w-4 h-4 animate-spin" /> Looking for trades
         </p>

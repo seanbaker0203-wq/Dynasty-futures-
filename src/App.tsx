@@ -11,6 +11,23 @@ import { TradesScreen } from './screens/TradesScreen';
 import { PicksBoardScreen } from './screens/PicksBoardScreen';
 import { IdeasScreen } from './screens/IdeasScreen';
 import { GapsScreen } from './screens/GapsScreen';
+import { PrivacyScreen, TermsScreen } from './screens/LegalScreen';
+
+/** Small, always-available links to the legal pages. */
+const LegalLinks: React.FC = () => {
+  const { setActiveView } = useRoster();
+  return (
+    <p className="pt-6 text-[12px] text-muted flex gap-3">
+      <span>© 2026 Dynasty Futures</span>
+      <button type="button" className="underline underline-offset-2" onClick={() => setActiveView('terms')}>
+        Terms
+      </button>
+      <button type="button" className="underline underline-offset-2" onClick={() => setActiveView('privacy')}>
+        Privacy
+      </button>
+    </p>
+  );
+};
 import { ValuesScreen } from './screens/ValuesScreen';
 import { MoversScreen } from './screens/MoversScreen';
 import { PlanScreen } from './screens/PlanScreen';
@@ -27,7 +44,7 @@ const DESTINATIONS: { id: Destination; label: string; icon: React.FC<{ className
   { id: 'league', label: 'League', icon: Trophy, views: ['league', 'compare', 'trades', 'picks', 'freeagents'] },
   { id: 'values', label: 'Values', icon: LineChart, views: ['values', 'movers'] },
   { id: 'trade', label: 'Trade', icon: ArrowLeftRight, views: ['trade', 'ideas', 'gaps'] },
-  { id: 'connect', label: 'Connect', icon: Link2, views: ['ingest'] },
+  { id: 'connect', label: 'Connect', icon: Link2, views: ['ingest', 'terms', 'privacy'] },
 ];
 
 const destinationOf = (view: DashboardViewMode): Destination =>
@@ -110,7 +127,15 @@ const AppContent: React.FC = () => {
       <main className={`flex-1 w-full mx-auto px-4 sm:px-6 py-4 sm:py-6 pb-28 md:pb-10 space-y-5 ${wide ? 'max-w-5xl' : 'max-w-3xl'}`}>
         {evaluation && current !== 'connect' && <LeagueBar />}
 
-        {current === 'connect' && <ConnectScreen onDone={() => go('team')} />}
+        {current === 'connect' && activeView === 'ingest' && <ConnectScreen onDone={() => go('team')} />}
+        {(activeView === 'terms' || activeView === 'privacy') && (
+          <>
+            <button type="button" className="text-[14px] font-semibold text-muted underline underline-offset-2" onClick={() => go(evaluation ? 'team' : 'connect')}>
+              ← Back
+            </button>
+            {activeView === 'terms' ? <TermsScreen /> : <PrivacyScreen />}
+          </>
+        )}
 
         {current === 'team' && (
           <>
@@ -174,6 +199,7 @@ const AppContent: React.FC = () => {
             {activeView === 'ideas' ? <IdeasScreen /> : activeView === 'gaps' ? <GapsScreen /> : <TradeScreen />}
           </>
         )}
+        <LegalLinks />
       </main>
 
       <footer className="hidden md:block border-t border-line py-6 text-sm text-muted">

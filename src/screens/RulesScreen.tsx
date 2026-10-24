@@ -43,7 +43,7 @@ const AccountBox: React.FC = () => {
       }}
     >
       <p className="text-[13px] text-muted">
-        {storage === 'device' ? 'Saved on this device only. ' : ''}Sign in to keep your rules private and on every device. We’ll email you a sign-in link.
+        {storage === 'device' ? 'Saved on this device only. ' : ''}Sign in to keep your rules private and on every device. We’ll email you a sign-in link. By signing in you agree to the Terms and Privacy Policy (links at the bottom of every page).
       </p>
       {sent ? (
         <p className="text-[14px] font-semibold text-up">Check your email for the sign-in link.</p>

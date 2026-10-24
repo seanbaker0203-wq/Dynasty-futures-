@@ -1,0 +1,16 @@
+Copyright (c) 2026 Sean Baker. All rights reserved.
+
+Dynasty Futures, including its source code, data models, valuation methods, age curves, rookie pick models,
+trade-finding methods, designs, text and compiled output (the "Software"), is proprietary and confidential.
+
+No license or right is granted to any person to use, copy, modify, merge, publish, distribute, sublicense, sell,
+reverse engineer, decompile, or create derivative works of the Software, in whole or in part, without the prior
+written permission of the copyright holder.
+
+Access to this repository or to any copy of the Software does not grant any rights in it. Anyone with access to the
+Software must keep it confidential and use it only as expressly authorized in writing by the copyright holder.
+
+Third-party components are licensed under their own terms (see each package in node_modules). Data obtained from
+third-party sources remains subject to those sources' terms.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED.

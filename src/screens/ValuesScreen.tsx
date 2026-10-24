@@ -160,6 +160,11 @@ export const ValuesScreen: React.FC = () => {
         {w.experts * 100}% expert rankings (FantasyPros). Tuned to {s?.league_size} teams, {s?.superflex ? 'Superflex' : '1QB'},{' '}
         {s?.scoring_type?.toLowerCase()}. "vs market" is how far we sit above or below what the player trades for.
       </p>
+      {data.limited && (
+        <p className="text-[14px] rounded-lg bg-ink-soft px-3 py-2">
+          Showing the top 150 and everyone in your league. <span className="font-semibold">Sign in</span> (My team → Rules) to see the full rankings.
+        </p>
+      )}
 
       <div className="flex flex-col sm:flex-row gap-2">
         <div className="relative flex-1">

@@ -148,3 +148,19 @@ before charging.
   id map or feed (player → article URLs, rankings); store it per partner and key by Sleeper/MFL id.
 - Later: move the list to a Supabase `content_partners` table so partners can be added without a deploy; track clicks
   per partner for revenue reporting; disclose partner links in the app.
+
+## Protecting the product — 24 Oct 2026
+- Repo is **private**. `LICENSE`: proprietary, all rights reserved; `package.json` license `UNLICENSED`.
+- **Terms of Service** and **Privacy Policy** in the app (`src/screens/LegalScreen.tsx`, links at the bottom of every page,
+  consent lines on Connect and sign-in). Drafts: fill in `LEGAL` (state, contact) and have a lawyer review before charging.
+- **Server-only logic**: trade finder (`server/model/tradeFinder.ts`), "from your rules" ideas
+  (`server/model/personalIdeas.ts`) and the season outlook (`server/model/outlook.ts`) no longer ship to the browser.
+  New endpoints: `POST /api/trade/ideas`, `/api/trade/personal-ideas`, `/api/trade/impact`. The server keeps each synced
+  league's evaluation for 3 hours (re-syncs if needed).
+- **Identity + limits** (`server/security.ts`): Supabase access token → user; otherwise IP. Sliding 10-minute limits per
+  route (signed out / signed in): all API 600/2000, sync 20/80, board 30/150, history 10/40, projections 60/240,
+  ideas 40/300, impact 200/1200, AI 5/30.
+- **Full rankings need sign-in** when accounts are on (Supabase env set): signed-out callers get the top 150 plus
+  players in the league they synced.
+- Open question for a lawyer: DynastyProcess data is GPL-3 licensed; confirm how it can be used in a paid, closed product
+  (or replace it with licensed data) before charging.

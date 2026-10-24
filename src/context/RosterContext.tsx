@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
 import { RosterEvaluationResult, SyncRequest, Platform, LeagueHistory } from '../types';
+import { apiPost } from '../lib/api';
 import { SEED_PLAYERS } from '../data/seedPlayers';
 import { DEMO_ROSTERS } from '../data/demoRosters';
 import { RosterDNAMathEngine } from '../lib/rosterMath';
@@ -21,7 +22,9 @@ export type DashboardViewMode =
   | 'picks'
   | 'trade'
   | 'ideas'
-  | 'gaps';
+  | 'gaps'
+  | 'terms'
+  | 'privacy';
 
 /** A trade to open in the builder (asset ids like "player:123" / "pick:2027-1-0004"). */
 export interface TradeDraft {
@@ -63,6 +66,8 @@ interface RosterContextType {
   historyError: string | null;
   loadHistory: () => void;
   tradeDraft: TradeDraft | null;
+  /** Identifies the synced league + team for server-side tools (null for sample data) */
+  leagueRequest: () => { platform: Platform; league_id: string; franchise_id: string; mfl_api_key?: string } | null;
   openTrade: (draft: TradeDraft) => void;
   clearTradeDraft: () => void;
 }
@@ -81,19 +86,7 @@ const toHistoryEntry = (req: SyncRequest): SyncRequest => ({
 
 async function postSync(req: SyncRequest): Promise<RosterEvaluationResult> {
   const endpoint = req.platform === 'sleeper' ? '/api/sync/sleeper' : '/api/sync/mfl';
-  let response: Response;
-  try {
-    response = await fetch(endpoint, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(req),
-    });
-  } catch {
-    throw new Error("Couldn't reach the server. Check your connection and try again.");
-  }
-  const data = await response.json().catch(() => ({}));
-  if (!response.ok) throw new Error(data.error || `Sync failed (${response.status}).`);
-  return data as RosterEvaluationResult;
+  return apiPost<RosterEvaluationResult>(endpoint, req);
 }
 
 export const RosterProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -124,15 +117,9 @@ export const RosterProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     historyFor.current = key;
     setHistoryLoading(true);
     setHistoryError(null);
-    fetch('/api/league/history', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ platform: req.platform, league_id: req.league_id, mfl_api_key: req.mfl_api_key }),
-    })
-      .then(async (r) => {
-        const data = await r.json().catch(() => ({}));
-        if (!r.ok) throw new Error(data.error || `Couldn't load trade history (${r.status}).`);
-        if (historyFor.current === key) setHistory(data as LeagueHistory);
+    apiPost<LeagueHistory>('/api/league/history', { platform: req.platform, league_id: req.league_id, mfl_api_key: req.mfl_api_key })
+      .then((data) => {
+        if (historyFor.current === key) setHistory(data);
       })
       .catch((e) => {
         if (historyFor.current !== key) return;
@@ -280,6 +267,11 @@ export const RosterProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         historyError,
         loadHistory,
         tradeDraft,
+        leagueRequest: () => {
+          const r = lastSync.current;
+          if (!r || !evaluation) return null;
+          return { platform: r.platform, league_id: r.league_id, franchise_id: evaluation.roster.franchise_id, mfl_api_key: r.mfl_api_key };
+        },
         openTrade: (draft) => {
           setTradeDraft(draft);
           setPartnerId(draft.partnerId);

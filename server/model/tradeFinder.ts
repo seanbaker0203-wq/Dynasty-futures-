@@ -4,31 +4,12 @@
  * with the same season outlook the Plan page uses. Each partner's real trading history nudges the ranking.
  */
 import { projectOutlook } from './outlook';
-import { pickName } from './leagueStats';
-import type { DraftPick, LeagueSettings, LeagueTeamSummary, ManagerProfile, MasterPlayer } from '../types';
+import { pickName } from '../../src/lib/leagueStats';
+import type { DraftPick, LeagueSettings, LeagueTeamSummary, ManagerProfile, MasterPlayer } from '../../src/types';
+import { finderAssetId, type FinderAsset, type TradeIdea } from '../../src/lib/assets';
+export { finderAssetId, type FinderAsset, type TradeIdea };
 
-export type FinderAsset = { kind: 'player'; item: MasterPlayer } | { kind: 'pick'; item: DraftPick };
-export const finderAssetId = (a: FinderAsset) => `${a.kind}:${a.item.id}`;
 
-export interface TradeIdea {
-  partner_id: string;
-  partner_name: string;
-  give: FinderAsset[];
-  get: FinderAsset[];
-  value_give: number;
-  value_get: number;
-  /** Totals on the value source used to judge fairness (when not Futures Value) */
-  fair_give?: number;
-  fair_get?: number;
-  /** Change in your projected points per week, per season */
-  my_change: number[];
-  their_change: number[];
-  /** Weighted five-season gain for you (pts/wk) */
-  my_gain: number;
-  their_gain: number;
-  score: number;
-  reasons: string[];
-}
 
 interface Side {
   players: MasterPlayer[];

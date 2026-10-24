@@ -161,6 +161,7 @@ export const ConnectScreen: React.FC<{ onDone?: () => void }> = ({ onDone }) => 
           {isLoading && <Loader2 className="w-4 h-4 animate-spin" />}
           {isLoading ? 'Loading your league' : 'Load my league'}
         </button>
+        <p className="text-[12px] text-muted text-center">By loading a league you agree to the Terms of Service and Privacy Policy.</p>
       </form>
 
       <p className="text-[14px] text-muted">
