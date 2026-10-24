@@ -1,10 +1,11 @@
 import React, { useMemo, useState } from 'react';
-import { ChevronDown, ExternalLink, Loader2, Search } from 'lucide-react';
+import { ChevronDown, Loader2, Search } from 'lucide-react';
 import { useRoster } from '../context/RosterContext';
 import { useBoard } from '../lib/useBoard';
 import { fmt } from '../lib/leagueStats';
 import { Change, SignalTag, Sparkline, TIER_STYLE } from '../components/ValueBits';
 import type { BoardPlayer } from '../types';
+import { PlayerLinks } from '../components/PlayerLinks';
 
 const POSITIONS = ['All', 'QB', 'RB', 'WR', 'TE'];
 type Scope = 'all' | 'league' | 'mine' | 'available';
@@ -108,11 +109,7 @@ export const ValueRow: React.FC<{ p: BoardPlayer; owner?: string; mine?: boolean
             </div>
           )}
 
-          {p.ktc_url && (
-            <a href={p.ktc_url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 text-[14px] font-semibold text-ink underline underline-offset-4">
-              Compare on KeepTradeCut <ExternalLink className="w-3.5 h-3.5" />
-            </a>
-          )}
+          <PlayerLinks player={{ name: p.name, position: p.position, team: p.team, ktc_url: p.ktc_url }} />
         </div>
       )}
     </li>

@@ -132,3 +132,19 @@ before charging.
   Sleeper's weekly projections (Rotowire), scored for the league (std / half / PPR, +0.5 per TE catch with TE premium),
   MFL ids mapped through the DynastyProcess crosswalk and team codes for defenses. Best legal lineup by slot, close calls
   within 1.5 pts, backups for questionable starters, bench with byes. Weeks: this week plus the next two.
+
+## Pick board + player links — 24 Oct 2026
+- **League → Picks** (`src/screens/PicksBoardScreen.tsx`): the pick spreadsheet as a grid. One year at a time: rows =
+  original team, columns = rounds, cell = current owner's initials (yours gold, one highlighted team dark, picks still
+  with their original team grey). **Totals**: picks per team per year (green/red = more/fewer than rounds), firsts, and
+  pick value with a small bar. Team initials editable (saved on the device).
+- **Read & watch** on each player (Values → tap a player; `src/data/contentSources.ts`): Footballguys (subscriber;
+  site search until we have their player-id map), FantasyPros, KTC, YouTube, Pro Football Reference.
+
+### Content partners (business plan)
+- Every source is one entry in `CONTENT_SOURCES`; `partner: true` sorts it first and labels it "Partner"; `ref` adds a
+  referral/affiliate code to every link; links carry `rel="sponsored"`.
+- Deep links to subscriber articles need the partner's player ids (e.g. Footballguys `ChasJa00`). Ask partners for an
+  id map or feed (player → article URLs, rankings); store it per partner and key by Sleeper/MFL id.
+- Later: move the list to a Supabase `content_partners` table so partners can be added without a deploy; track clicks
+  per partner for revenue reporting; disclose partner links in the app.

@@ -18,6 +18,7 @@ export type DashboardViewMode =
   | 'compare'
   | 'freeagents'
   | 'trades'
+  | 'picks'
   | 'trade'
   | 'ideas'
   | 'gaps';

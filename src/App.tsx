@@ -8,6 +8,7 @@ import { CompareScreen } from './screens/CompareScreen';
 import { FreeAgentsScreen } from './screens/FreeAgentsScreen';
 import { TradeScreen } from './screens/TradeScreen';
 import { TradesScreen } from './screens/TradesScreen';
+import { PicksBoardScreen } from './screens/PicksBoardScreen';
 import { IdeasScreen } from './screens/IdeasScreen';
 import { GapsScreen } from './screens/GapsScreen';
 import { ValuesScreen } from './screens/ValuesScreen';
@@ -23,7 +24,7 @@ type Destination = 'team' | 'league' | 'values' | 'trade' | 'connect';
 
 const DESTINATIONS: { id: Destination; label: string; icon: React.FC<{ className?: string }>; views: DashboardViewMode[] }[] = [
   { id: 'team', label: 'My team', icon: Shield, views: ['single', 'week', 'plan', 'optimization', 'rules'] },
-  { id: 'league', label: 'League', icon: Trophy, views: ['league', 'compare', 'trades', 'freeagents'] },
+  { id: 'league', label: 'League', icon: Trophy, views: ['league', 'compare', 'trades', 'picks', 'freeagents'] },
   { id: 'values', label: 'Values', icon: LineChart, views: ['values', 'movers'] },
   { id: 'trade', label: 'Trade', icon: ArrowLeftRight, views: ['trade', 'ideas', 'gaps'] },
   { id: 'connect', label: 'Connect', icon: Link2, views: ['ingest'] },
@@ -137,10 +138,12 @@ const AppContent: React.FC = () => {
                 { view: 'league', label: 'Rankings' },
                 { view: 'compare', label: 'Compare' },
                 { view: 'trades', label: 'Trades' },
+                { view: 'picks', label: 'Picks' },
                 { view: 'freeagents', label: 'Free agents' },
               ]}
             />
             {activeView === 'trades' && <TradesScreen />}
+            {activeView === 'picks' && <PicksBoardScreen />}
             {activeView === 'league' && <LeagueScreen />}
             {activeView === 'compare' && <CompareScreen />}
             {activeView === 'freeagents' && <FreeAgentsScreen />}
