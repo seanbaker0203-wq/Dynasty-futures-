@@ -1,5 +1,6 @@
 import React from 'react';
-import type { ContractValue, ProjectionTier, ValueSignal } from '../types';
+import type { ContractValue, NflContract, ProjectionTier, ValueSignal } from '../types';
+import { SEASON } from '../lib/season';
 
 export const SIGNAL_LABEL: Record<ValueSignal, string> = {
   BUY_LOW: 'Buy low',
@@ -67,5 +68,81 @@ export const ContractNote: React.FC<{ c: ContractValue }> = ({ c }) => {
         </span>
       )}
     </span>
+  );
+};
+
+/** The next NFL contract milestone within two seasons: "FA 2027" or "Cut risk 2028". Quiet, outline only. */
+export const NflChip: React.FC<{ c?: NflContract | null; className?: string }> = ({ c, className = '' }) => {
+  const next = c?.events?.find((e) => e.season <= SEASON.seasonYear + 2);
+  if (!next) return null;
+  return (
+    <span
+      className={`inline-block rounded border border-line px-1.5 py-px text-[12px] font-semibold text-muted ${className}`}
+      title={next.kind === 'free_agent' ? 'NFL contract ends: may change teams' : 'Team can cut him and save most of his cap hit'}
+    >
+      {next.kind === 'free_agent' ? `FA ${next.season}` : `Cut risk ${next.season}`}
+    </span>
+  );
+};
+
+/** Plain-language NFL contract summary with the cut / dead-money schedule. */
+export const NflContractDetail: React.FC<{ c?: NflContract | null }> = ({ c }) => {
+  if (!c) return null;
+  const outRow = c.by_season.find((r) => r.season === c.out_year);
+  return (
+    <div className="space-y-1.5">
+      <div className="text-[13px] font-semibold">NFL contract</div>
+      <p className="text-[14px]">
+        {c.type === 'Drafted' ? 'Rookie deal' : c.type === 'Franchise' ? 'Franchise tag / tag-and-extend' : c.type === 'Extension' ? 'Extension' : 'Free-agent deal'}
+        {c.team ? ` with the ${c.team}` : ''}, signed {c.signed}: {c.years} yr{c.years === 1 ? '' : 's'}, ${c.apy}M a year, ${c.guaranteed}M guaranteed.
+        {' '}Runs through {c.through}
+        {c.option_year ? ` (team option for ${c.option_year})` : ''}.
+        {c.out_year && outRow
+          ? ` From ${c.out_year} the team can cut him and save $${outRow.savings_if_cut}M (dead money $${outRow.dead_if_cut}M).`
+          : c.by_season.length
+            ? ' Guaranteed money makes him expensive to cut before the deal ends.'
+            : ''}
+        {' '}Free agent in {c.free_agent_year}.
+      </p>
+      {c.by_season.length > 0 && (
+        <table className="w-full text-[13px] tabular-nums">
+          <thead>
+            <tr className="text-muted">
+              <th className="text-left font-semibold">If cut before</th>
+              {c.by_season.map((r) => (
+                <th key={r.season} className="text-right font-semibold">
+                  {r.season}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td className="text-muted">Dead money</td>
+              {c.by_season.map((r) => (
+                <td key={r.season} className="text-right">${r.dead_if_cut}M</td>
+              ))}
+            </tr>
+            <tr>
+              <td className="text-muted">Cap saved</td>
+              {c.by_season.map((r) => (
+                <td key={r.season} className={`text-right ${r.savings_if_cut >= 0.5 * r.cap ? 'text-down font-semibold' : ''}`}>
+                  {r.savings_if_cut < 0 ? '−' : ''}${Math.abs(r.savings_if_cut)}M
+                </td>
+              ))}
+            </tr>
+          </tbody>
+        </table>
+      )}
+      {c.events.length > 0 && (
+        <p className="text-[13px] text-muted">
+          In projections:{' '}
+          {c.events
+            .map((e) => `${Math.round(e.probability * 100)}% chance he ${e.kind === 'free_agent' ? 'changes teams in free agency' : 'is cut'} before ${e.season}`)
+            .join('; ')}
+          . Based on what happened to similar players since 2012.
+        </p>
+      )}
+    </div>
   );
 };

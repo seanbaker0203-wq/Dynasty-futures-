@@ -89,3 +89,31 @@ appreciation isn't measured yet; storing our own daily snapshots will let us mea
 - FantasyCalc has no published API terms; confirm permission before charging for the product. Same for DynastyProcess
   (GPL-3 repo, FantasyPros-derived data).
 - KeepTradeCut can't be pulled in (no API, scraping not permitted); we link to each player's KTC page instead.
+
+## NFL contracts (added 28 Oct 2026)
+Source: OverTheCap contract data via nflverse (`historical_contracts.parquet`, updated daily) plus nflverse rosters for
+team by season. Built by `scripts/analysis/nfl_contracts.py` into `data/nfl-contracts.json` and
+`data/contract-effects.json`; re-run weekly in season and after free agency opens.
+
+Per player (current deal): type (rookie deal, free-agent deal, extension, tag), years, $/yr, guarantees, the year-by-year
+**dead money and cap saved if cut**, the **cut-risk year** (first season the team saves at least half his cap hit by
+cutting him), fifth-year option for first-round rookie deals, and the free-agency year.
+
+Measured since 2012 (fantasy-relevant players, 5+ half-PPR points per game):
+| | RB | WR | TE | QB |
+|---|---|---|---|---|
+| Changed teams in free agency: points per game vs similar players who stayed | 0.89 | 0.88 | 0.82 | 0.91 |
+| ...and still playing 4+ games next season (stayers: 93/95/95/89%) | 80% | 84% | 83% | 61% |
+| Released: points per game vs stayers | 0.74 | 0.75 | 0.89 | 0.84 |
+| ...and still playing next season | 53% | 67% | 57% | 61% |
+| Big veteran deals ending early (RB ≥ $8M, WR ≥ $15M, TE ≥ $10M, QB ≥ $25M) | 37% | 27% | 29% | 17% |
+Trades are too rare in the offseason data (n≈12) to measure; they're treated as no effect.
+
+How it changes projections: for each future season, the chance he changes teams (free-agency year: measured leave rate by
+position and age; cut-risk years: measured cut rate after guarantees run out) times the measured effect of leaving.
+Starters are less likely to be let go (free agency ×0.7, cuts ×0.5). Because the age curves already include the average
+move risk at each age, the result is applied **relative to that average**, halved for caution, capped at +10% / −25% a
+season, and not applied past the free-agency year. A player locked in by guarantees gains slightly; one entering free
+agency or a cut-risk year loses. This flows into the model value, the season outlook, trade ideas and the trade builder.
+
+Licensing: OverTheCap data is used via nflverse; get permission from OverTheCap before charging.

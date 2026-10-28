@@ -1,0 +1,256 @@
+{
+ "meta": {
+  "source": "OverTheCap via nflverse (historical_contracts)",
+  "built_for_season": 2026
+ },
+ "move_effects": {
+  "QB": {
+   "free_agent": {
+    "ppg_vs_stayers": 0.907,
+    "played_next_season": 0.611,
+    "stayers_played_next_season": 0.892,
+    "n": 54
+   },
+   "traded": {
+    "ppg_vs_stayers": 0.73,
+    "played_next_season": 0.833,
+    "stayers_played_next_season": 0.892,
+    "n": 6
+   },
+   "released": {
+    "ppg_vs_stayers": 0.837,
+    "played_next_season": 0.613,
+    "stayers_played_next_season": 0.892,
+    "n": 31
+   }
+  },
+  "RB": {
+   "free_agent": {
+    "ppg_vs_stayers": 0.886,
+    "played_next_season": 0.8,
+    "stayers_played_next_season": 0.925,
+    "n": 110
+   },
+   "traded": {
+    "ppg_vs_stayers": 1.05,
+    "played_next_season": 0.917,
+    "stayers_played_next_season": 0.925,
+    "n": 12
+   },
+   "released": {
+    "ppg_vs_stayers": 0.737,
+    "played_next_season": 0.53,
+    "stayers_played_next_season": 0.925,
+    "n": 66
+   }
+  },
+  "WR": {
+   "free_agent": {
+    "ppg_vs_stayers": 0.883,
+    "played_next_season": 0.838,
+    "stayers_played_next_season": 0.948,
+    "n": 142
+   },
+   "traded": {
+    "ppg_vs_stayers": 1.195,
+    "played_next_season": 0.846,
+    "stayers_played_next_season": 0.948,
+    "n": 13
+   },
+   "released": {
+    "ppg_vs_stayers": 0.754,
+    "played_next_season": 0.667,
+    "stayers_played_next_season": 0.948,
+    "n": 87
+   }
+  },
+  "TE": {
+   "free_agent": {
+    "ppg_vs_stayers": 0.824,
+    "played_next_season": 0.829,
+    "stayers_played_next_season": 0.945,
+    "n": 41
+   },
+   "released": {
+    "ppg_vs_stayers": 0.888,
+    "played_next_season": 0.571,
+    "stayers_played_next_season": 0.945,
+    "n": 14
+   }
+  }
+ },
+ "free_agent_leave_rate": {
+  "QB|29+": {
+   "left": 30,
+   "n": 49,
+   "rate": 0.612
+  },
+  "QB|26-28": {
+   "left": 16,
+   "n": 28,
+   "rate": 0.571
+  },
+  "QB|\u226425": {
+   "left": 7,
+   "n": 15,
+   "rate": 0.467
+  },
+  "TE|29+": {
+   "left": 14,
+   "n": 27,
+   "rate": 0.519
+  },
+  "RB|29+": {
+   "left": 20,
+   "n": 38,
+   "rate": 0.526
+  },
+  "RB|26-28": {
+   "left": 47,
+   "n": 73,
+   "rate": 0.644
+  },
+  "RB|\u226425": {
+   "left": 35,
+   "n": 75,
+   "rate": 0.467
+  },
+  "WR|\u226425": {
+   "left": 41,
+   "n": 101,
+   "rate": 0.406
+  },
+  "WR|26-28": {
+   "left": 54,
+   "n": 79,
+   "rate": 0.684
+  },
+  "WR|29+": {
+   "left": 35,
+   "n": 57,
+   "rate": 0.614
+  },
+  "TE|\u226425": {
+   "left": 9,
+   "n": 19,
+   "rate": 0.474
+  },
+  "TE|26-28": {
+   "left": 13,
+   "n": 31,
+   "rate": 0.419
+  }
+ },
+ "veteran_deal_survival": {
+  "QB": {
+   "deals": 161,
+   "share_of_years_served": 0.849,
+   "ended_early": 0.317,
+   "cut_soon_after_guarantees": 0.32
+  },
+  "QB|big": {
+   "deals": 29,
+   "share_of_years_served": 0.934,
+   "ended_early": 0.172,
+   "cut_soon_after_guarantees": 0.192
+  },
+  "TE": {
+   "deals": 184,
+   "share_of_years_served": 0.884,
+   "ended_early": 0.25,
+   "cut_soon_after_guarantees": 0.244
+  },
+  "TE|big": {
+   "deals": 21,
+   "share_of_years_served": 0.89,
+   "ended_early": 0.286,
+   "cut_soon_after_guarantees": 0.3
+  },
+  "WR": {
+   "deals": 273,
+   "share_of_years_served": 0.832,
+   "ended_early": 0.352,
+   "cut_soon_after_guarantees": 0.3
+  },
+  "RB": {
+   "deals": 159,
+   "share_of_years_served": 0.824,
+   "ended_early": 0.327,
+   "cut_soon_after_guarantees": 0.297
+  },
+  "RB|big": {
+   "deals": 30,
+   "share_of_years_served": 0.798,
+   "ended_early": 0.367,
+   "cut_soon_after_guarantees": 0.25
+  },
+  "WR|big": {
+   "deals": 56,
+   "share_of_years_served": 0.891,
+   "ended_early": 0.268,
+   "cut_soon_after_guarantees": 0.192
+  }
+ },
+ "annual_baseline": {
+  "QB|\u226425": {
+   "factor": 0.946,
+   "move_share": 0.094,
+   "n": 181
+  },
+  "QB|26-28": {
+   "factor": 0.931,
+   "move_share": 0.293,
+   "n": 99
+  },
+  "QB|29+": {
+   "factor": 0.849,
+   "move_share": 0.34,
+   "n": 191
+  },
+  "RB|\u226425": {
+   "factor": 0.94,
+   "move_share": 0.157,
+   "n": 414
+  },
+  "RB|26-28": {
+   "factor": 0.904,
+   "move_share": 0.409,
+   "n": 193
+  },
+  "RB|29+": {
+   "factor": 0.827,
+   "move_share": 0.522,
+   "n": 90
+  },
+  "WR|\u226425": {
+   "factor": 0.964,
+   "move_share": 0.117,
+   "n": 548
+  },
+  "WR|26-28": {
+   "factor": 0.933,
+   "move_share": 0.305,
+   "n": 285
+  },
+  "WR|29+": {
+   "factor": 0.845,
+   "move_share": 0.48,
+   "n": 198
+  },
+  "TE|\u226425": {
+   "factor": 0.994,
+   "move_share": 0.09,
+   "n": 133
+  },
+  "TE|26-28": {
+   "factor": 0.971,
+   "move_share": 0.208,
+   "n": 106
+  },
+  "TE|29+": {
+   "factor": 0.847,
+   "move_share": 0.333,
+   "n": 105
+  }
+ }
+}

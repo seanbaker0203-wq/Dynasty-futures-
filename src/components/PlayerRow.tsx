@@ -1,7 +1,7 @@
 import React from 'react';
 import type { MasterPlayer } from '../types';
 import { fmt } from '../lib/leagueStats';
-import { ContractNote, SignalTag } from './ValueBits';
+import { ContractNote, NflChip, SignalTag } from './ValueBits';
 
 export const PlayerRow: React.FC<{
   player: MasterPlayer;
@@ -32,6 +32,7 @@ export const PlayerRow: React.FC<{
           {p.age ? `, age ${Math.floor(p.age)}` : ''}
           {tag && <span className={`ml-2 ${tag === 'Starter' ? 'text-ink font-medium' : ''}`}>{tag}</span>}
           <SignalTag signal={p.futures?.signal} className="ml-2" />
+          <NflChip c={p.futures?.nfl_contract} className="ml-2" />
           {p.contract && <ContractNote c={p.contract} />}
         </span>
       </span>

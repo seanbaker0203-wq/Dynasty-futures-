@@ -68,6 +68,8 @@ export interface FuturesInfo {
   rank: number;
   position_rank: number;
   ktc_url: string | null;
+  /** NFL contract: when it ends, first season he can be cut cheaply, and the risk applied to projections */
+  nfl_contract?: NflContract | null;
 }
 
 export interface BoardPlayer extends FuturesInfo {
@@ -618,3 +620,27 @@ export const DEFAULT_ADJUSTMENTS: ValueAdjustments = {
   bench_seasons: 2,
   ideas_min_years_out: 3,
 };
+
+// ---- NFL contracts -----------------------------------------------------------------------------------
+export interface ContractEvent {
+  season: number;
+  kind: 'free_agent' | 'released';
+  /** Chance the player is on a different team (or released) that season */
+  probability: number;
+}
+export interface NflContract {
+  team: string | null;
+  type: string | null; // Drafted (rookie deal), UFA, Extension, Franchise, ...
+  signed: number;
+  years: number;
+  through: number;
+  apy: number; // $M per year
+  guaranteed: number; // $M
+  free_agent_year: number;
+  /** Fifth-year team option season (first-round rookie deals) */
+  option_year?: number | null;
+  /** First season the team saves at least half his cap hit by cutting him */
+  out_year: number | null;
+  by_season: { season: number; cap: number; dead_if_cut: number; savings_if_cut: number }[];
+  events: ContractEvent[];
+}

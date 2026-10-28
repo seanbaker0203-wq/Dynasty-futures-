@@ -21,6 +21,8 @@ import { expertChange, getExpertHistory } from '../sources/expertHistory';
 import { playerDirectory } from '../players';
 import { valueStore, type ValuedPlayer } from '../values';
 import { curveAt } from './ageCurves';
+import { contractOutlook } from './contracts';
+import type { NflContract } from '../../src/types';
 
 export const WEIGHTS = { model: 0.4, market: 0.3, experts: 0.3 };
 const HORIZON = 5;
@@ -206,7 +208,7 @@ async function buildBoard(settings: LeagueSettings, key: string): Promise<Board>
     if (ppg >= t.replacement * 0.75) return 'Depth';
     return 'Fading';
   };
-  const projections = new Map<string, { proj: SeasonProjection[]; points: number; falloff: number | null }>();
+  const projections = new Map<string, { proj: SeasonProjection[]; points: number; falloff: number | null; contract: NflContract | null }>();
   for (const r of all) {
     if (r.age == null || !thresholds[r.position]) continue;
     const implied = impliedPpg.get(r.key) ?? 0;
@@ -216,8 +218,18 @@ async function buildBoard(settings: LeagueSettings, key: string): Promise<Board>
     const now = Math.max(0.05, curveAt(r.position, r.age));
     const proj: SeasonProjection[] = [];
     let points = 0;
+    // Contract risk: free agency and cut-risk seasons (relative to the average risk already in the age curves).
+    const raw = Array.from({ length: HORIZON }, (_, t) => (base * curveAt(r.position, r.age! + t)) / now);
+    const thr = thresholds[r.position];
+    const { factors, contract } = contractOutlook(
+      r.sleeper_id,
+      r.position,
+      r.age,
+      Array.from({ length: HORIZON }, (_, t) => seasonYear + t),
+      (t) => raw[t] >= thr.starter
+    );
     for (let t = 0; t < HORIZON; t++) {
-      const ppg = (base * curveAt(r.position, r.age + t)) / now;
+      const ppg = raw[t] * factors[t];
       proj.push({ season: seasonYear + t, ppg: Math.round(ppg * 10) / 10, tier: tierFor(r.position, ppg) });
       points += Math.max(0, ppg - thresholds[r.position].replacement) * GAMES * Math.pow(DISCOUNT, t);
     }
@@ -233,7 +245,7 @@ async function buildBoard(settings: LeagueSettings, key: string): Promise<Board>
         break;
       }
     }
-    projections.set(r.key, { proj, points, falloff });
+    projections.set(r.key, { proj, points, falloff, contract });
   }
   const modelDesc = [...projections.values()].map((p) => p.points).sort((a, b) => b - a);
   const playerScale = market ? market.players.map((e) => e.value).sort((a, b) => b - a) : expertAll;
@@ -281,6 +293,7 @@ async function buildBoard(settings: LeagueSettings, key: string): Promise<Board>
       rank: 0,
       position_rank: 0,
       ktc_url: ktcUrl(r.name, r.expertPlayer?.ktc_id ?? null),
+      nfl_contract: proj?.contract ?? null,
       expert_history: (hist || []).slice(-12).map((h) => ({ date: h.date, value: sf ? h.value_sf : h.value_1qb })),
     };
   });

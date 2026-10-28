@@ -164,3 +164,12 @@ before charging.
   players in the league they synced.
 - Open question for a lawyer: DynastyProcess data is GPL-3 licensed; confirm how it can be used in a paid, closed product
   (or replace it with licensed data) before charging.
+
+## NFL contracts in values — 28 Oct 2026
+- Every player's NFL deal (OverTheCap via nflverse): years, $/yr, guarantees, dead money and cap saved if cut by season,
+  cut-risk year, fifth-year option, free-agency year (`server/model/contracts.ts`, `data/nfl-contracts.json`).
+- Measured effects of free agency and releases (by position/age) and how often big deals end early
+  (`data/contract-effects.json`), applied to five-season projections. See docs/VALUES.md.
+- Shown as a quiet "FA 2027" / "Cut risk 2027" tag on players, a contract section with the dead-money table in
+  Values, and "Contract watch" in the trade builder.
+- To do: refresh the data on a schedule (weekly in season); add OverTheCap to the permissions list before charging.

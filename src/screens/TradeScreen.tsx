@@ -333,6 +333,36 @@ export const TradeScreen: React.FC = () => {
             </div>
           )}
 
+          {(() => {
+            const watch = get
+              .filter((a) => a.kind === 'player')
+              .map((a) => ({ p: a.item as MasterPlayer, c: (a.item as MasterPlayer).futures?.nfl_contract }))
+              .filter((x) => x.c && x.c.events.length);
+            if (!watch.length) return null;
+            return (
+              <div className="rounded-lg bg-ink-soft px-3 py-2.5 text-[14px] space-y-1">
+                <div className="font-semibold text-ink">Contract watch</div>
+                {watch.map(({ p, c }) => {
+                  const out = c!.by_season.find((r) => r.season === c!.out_year);
+                  return (
+                    <p key={p.id}>
+                      <span className="font-semibold">{p.full_name}</span>:{' '}
+                      {c!.out_year && out
+                        ? `his team can cut him before ${c!.out_year} and save $${out.savings_if_cut}M. `
+                        : `protected by guaranteed money through ${c!.through}. `}
+                      Free agent in {c!.free_agent_year}
+                      {c!.option_year ? ` (if the ${c!.option_year} option is picked up)` : ''}.{' '}
+                      <span className="text-muted">
+                        {c!.events.map((e) => `${Math.round(e.probability * 100)}% ${e.kind === 'free_agent' ? 'leaves' : 'cut'} by ${e.season}`).join(', ')}
+                        , already in the five-season numbers.
+                      </span>
+                    </p>
+                  );
+                })}
+              </div>
+            );
+          })()}
+
           <div className="grid md:grid-cols-2 gap-4">
             {[
               { title: 'Your team after', rows: impactRows(meBefore, meAfter) },

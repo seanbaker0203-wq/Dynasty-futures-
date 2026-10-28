@@ -3,7 +3,7 @@ import { ChevronDown, Loader2, Search } from 'lucide-react';
 import { useRoster } from '../context/RosterContext';
 import { useBoard } from '../lib/useBoard';
 import { fmt } from '../lib/leagueStats';
-import { Change, SignalTag, Sparkline, TIER_STYLE } from '../components/ValueBits';
+import { Change, NflChip, NflContractDetail, SignalTag, Sparkline, TIER_STYLE } from '../components/ValueBits';
 import type { BoardPlayer } from '../types';
 import { PlayerLinks } from '../components/PlayerLinks';
 
@@ -46,6 +46,7 @@ export const ValueRow: React.FC<{ p: BoardPlayer; owner?: string; mine?: boolean
             {p.age ? `, ${Math.floor(p.age)}` : ''}
             {owner ? `, ${mine ? 'your team' : owner}` : ''}
             <SignalTag signal={p.signal} className="ml-2" />
+            <NflChip c={p.nfl_contract} className="ml-2" />
           </span>
         </span>
         {right ?? (
@@ -109,6 +110,7 @@ export const ValueRow: React.FC<{ p: BoardPlayer; owner?: string; mine?: boolean
             </div>
           )}
 
+          <NflContractDetail c={p.nfl_contract} />
           <PlayerLinks player={{ name: p.name, position: p.position, team: p.team, ktc_url: p.ktc_url }} />
         </div>
       )}
