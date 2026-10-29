@@ -72,6 +72,8 @@ export interface FuturesInfo {
   nfl_contract?: NflContract | null;
   /** Redraft only: rest-of-season projection */
   ros?: RosInfo | null;
+  /** Other sites' player ids, for links */
+  ext_ids?: PlayerExternalIds | null;
 }
 
 export interface BoardPlayer extends FuturesInfo {
@@ -719,4 +721,11 @@ export interface RedraftInfo {
   waivers: WaiverIdea[];
   /** Your remaining regular-season games: projections and win chance */
   my_schedule: { week: number; opponent_id: string; opponent: string; my_points: number; opp_points: number; win_prob: number }[];
+}
+
+export interface PlayerExternalIds {
+  espn: string | null;
+  yahoo: string | null;
+  cbs: string | null;
+  pfr: string | null;
 }

@@ -182,6 +182,7 @@ async function buildRos(settings: LeagueSettings, key: string): Promise<Board> {
       ktc_url: null,
       expert_history: [],
       nfl_contract: null,
+      ext_ids: valueStore.externalIds(r.id),
       ros: {
         points: Math.round(r.weeks.reduce((s, w) => s + w.points, 0)),
         ppg: Math.round(ppg * 10) / 10,

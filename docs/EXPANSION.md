@@ -14,6 +14,9 @@ _Written 24 Oct 2026. Planning only: nothing here is built yet. Order: finish an
 
 ## 1. Redraft football
 
+**Status (29 Oct 2026): core built** — see ROADMAP "Redraft mode". Remaining: live-test ESPN/Yahoo/Fleaflicker,
+FAAB from league history, draft assistant.
+
 ### What changes from dynasty
 | Area | Dynasty (today) | Redraft |
 |---|---|---|

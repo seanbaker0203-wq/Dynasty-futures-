@@ -6,10 +6,14 @@
 import 'dotenv/config';
 import express, { Request, Response, NextFunction } from 'express';
 import path from 'path';
+import crypto from 'node:crypto';
 import { valueStore } from './server/values';
 import { playerDirectory } from './server/players';
 import { fetchSleeperLeague } from './server/leagues/sleeper';
 import { fetchMflLeague } from './server/leagues/mfl';
+import { fetchEspnLeague } from './server/leagues/espn';
+import { fetchFleaflickerLeague } from './server/leagues/fleaflicker';
+import { exchangeYahooCode, fetchYahooLeague, listYahooLeagues, openToken, sealToken, yahooAccessToken, yahooAuthUrl, yahooEnabled } from './server/leagues/yahoo';
 import { LeagueSyncError } from './server/leagues/types';
 import { evaluateLeague } from './server/evaluate';
 import { getBoard, WEIGHTS } from './server/model/futures';
@@ -131,6 +135,40 @@ app.post(
   })
 );
 
+const cookieOf = (req: Request, name: string) =>
+  (req.headers.cookie || '')
+    .split(';')
+    .map((c) => c.trim().split('='))
+    .find(([k]) => k === name)?.[1] ?? null;
+const YAHOO_COOKIE = 'df_yahoo';
+
+/** Yahoo access token from the user's encrypted cookie (they signed in with Yahoo). */
+async function yahooTokenFor(req: Request) {
+  if (!yahooEnabled()) throw new LeagueSyncError('Yahoo isn’t set up on this server yet.', 503);
+  const sealed = cookieOf(req, YAHOO_COOKIE);
+  const refresh = sealed ? openToken(decodeURIComponent(sealed)) : null;
+  if (!refresh) throw new LeagueSyncError('Sign in with Yahoo first.', 401);
+  return yahooAccessToken(refresh);
+}
+
+/** Load a league from any supported platform. */
+async function loadLeague(req: Request): Promise<NormalizedLeague> {
+  const b = req.body || {};
+  const platform = String(b.platform || req.params?.platform || '');
+  const id = String(b.league_id || '');
+  if (!id) throw new LeagueSyncError('Enter your league ID.');
+  const season = Number(b.year) || SEASON.seasonYear;
+  let league: NormalizedLeague;
+  if (platform === 'sleeper') league = await fetchSleeperLeague(id, b.username);
+  else if (platform === 'mfl')
+    league = await fetchMflLeague(id, { franchiseId: b.franchise_id, apiKey: b.mfl_api_key, username: b.username, password: b.password, year: b.year ? Number(b.year) : undefined });
+  else if (platform === 'espn') league = await fetchEspnLeague(id, { season, espn_s2: b.espn_s2, swid: b.swid, teamId: b.franchise_id });
+  else if (platform === 'fleaflicker') league = await fetchFleaflickerLeague(id, { season, teamId: b.franchise_id });
+  else if (platform === 'yahoo') league = await fetchYahooLeague(id, await yahooTokenFor(req), b.franchise_id);
+  else throw new LeagueSyncError('Unknown platform.');
+  return applyFormat(league, b.format);
+}
+
 /** The user's choice of league type wins over what the platform says. */
 function applyFormat(league: NormalizedLeague, format: unknown) {
   if (format === 'dynasty' || format === 'keeper' || format === 'redraft') {
@@ -149,6 +187,52 @@ function rememberLeague(league: NormalizedLeague) {
 }
 const historyCache = new Map<string, { at: number; data: any }>();
 
+/** ESPN, Fleaflicker and Yahoo leagues. */
+app.post(
+  '/api/sync/:platform(espn|fleaflicker|yahoo)',
+  rateLimit('sync', { anon: 20, user: 80 }),
+  asyncRoute(async (req, res) => {
+    const league = await loadLeague(req);
+    rememberLeague(league);
+    res.json(rememberEval(league, await evaluateLeague(league, req.body?.franchise_id)));
+  })
+);
+
+// ---- Yahoo sign-in ---------------------------------------------------------------------------------------
+const yahooRedirect = (req: Request) => `${req.protocol}://${req.get('host')}/api/auth/yahoo/callback`;
+app.get('/api/auth/yahoo/start', (req, res) => {
+  if (!yahooEnabled()) return void res.status(503).send('Yahoo isn’t set up on this server yet.');
+  const state = crypto.randomBytes(16).toString('hex');
+  res.setHeader('Set-Cookie', `df_yahoo_state=${state}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=600`);
+  res.redirect(yahooAuthUrl(yahooRedirect(req), state));
+});
+app.get(
+  '/api/auth/yahoo/callback',
+  asyncRoute(async (req, res) => {
+    const { code, state } = req.query as Record<string, string>;
+    if (!code || !state || state !== cookieOf(req, 'df_yahoo_state')) return void res.redirect('/?yahoo=failed');
+    const tok = await exchangeYahooCode(code, yahooRedirect(req));
+    res.setHeader('Set-Cookie', [
+      `${YAHOO_COOKIE}=${encodeURIComponent(sealToken(tok.refresh_token))}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=${60 * 60 * 24 * 365}`,
+      'df_yahoo_state=; Path=/; Max-Age=0',
+    ]);
+    res.redirect('/?yahoo=connected');
+  })
+);
+app.get(
+  '/api/yahoo/leagues',
+  rateLimit('sync', { anon: 20, user: 80 }),
+  asyncRoute(async (req, res) => {
+    const leagues = await listYahooLeagues(await yahooTokenFor(req));
+    res.json({ leagues });
+  })
+);
+app.post('/api/auth/yahoo/disconnect', (_req, res) => {
+  res.setHeader('Set-Cookie', `${YAHOO_COOKIE}=; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=0`);
+  res.json({ ok: true });
+});
+app.get('/api/yahoo/status', (req, res) => res.json({ enabled: yahooEnabled(), signed_in: !!cookieOf(req, YAHOO_COOKIE) }));
+
 // Evaluations by league + team, so trade tools run on the server without the browser re-sending rosters.
 const evalCache = new Map<string, { at: number; result: RosterEvaluationResult }>();
 function rememberEval(league: NormalizedLeague, result: RosterEvaluationResult) {
@@ -156,14 +240,14 @@ function rememberEval(league: NormalizedLeague, result: RosterEvaluationResult) 
   for (const [k, v] of evalCache) if (Date.now() - v.at > 3 * 3600_000) evalCache.delete(k);
   return result;
 }
-async function evaluationFor(body: any): Promise<RosterEvaluationResult> {
-  const { platform, league_id, franchise_id, mfl_api_key } = body || {};
-  if (!league_id || !['sleeper', 'mfl'].includes(platform) || !franchise_id) throw new LeagueSyncError('Sync your league first.');
+async function evaluationFor(req: Request): Promise<RosterEvaluationResult> {
+  const { platform, league_id, franchise_id } = req.body || {};
+  if (!league_id || !platform || !franchise_id) throw new LeagueSyncError('Sync your league first.');
   const hit = evalCache.get(`${platform}:${league_id}:${franchise_id}`);
   if (hit && Date.now() - hit.at < 3 * 3600_000) return hit.result;
   let league = recentLeagues.get(`${platform}:${league_id}`)?.league;
   if (!league) {
-    league = platform === 'sleeper' ? await fetchSleeperLeague(String(league_id)) : await fetchMflLeague(String(league_id), { apiKey: mfl_api_key });
+    league = await loadLeague(req);
     rememberLeague(league);
   }
   return rememberEval(league, await evaluateLeague(league, String(franchise_id)));
@@ -202,7 +286,9 @@ app.post(
   rateLimit('history', { anon: 10, user: 40 }),
   asyncRoute(async (req, res) => {
     const { platform, league_id, mfl_api_key } = req.body || {};
-    if (!league_id || !['sleeper', 'mfl'].includes(platform)) throw new LeagueSyncError('Sync your league first.');
+    if (!league_id) throw new LeagueSyncError('Sync your league first.');
+    // Trade history is available for Sleeper and MFL leagues so far.
+    if (!['sleeper', 'mfl'].includes(platform)) return void res.json({ trades: [], profiles: [], seasons: [], unsupported: true });
     const key = `${platform}:${league_id}`;
     const hit = historyCache.get(key);
     if (hit && Date.now() - hit.at < 30 * 60_000) return void res.json(hit.data);
@@ -265,7 +351,7 @@ app.post(
   '/api/trade/ideas',
   rateLimit('ideas', { anon: 40, user: 300 }),
   asyncRoute(async (req, res) => {
-    const ev = await evaluationFor(req.body);
+    const ev = await evaluationFor(req);
     const me = ev.roster.franchise_id;
     const ref = referenceFor(ev, req.body?.fair);
     const s = ev.settings as LeagueSettings | undefined;
@@ -296,7 +382,7 @@ app.post(
   '/api/trade/personal-ideas',
   rateLimit('ideas', { anon: 40, user: 300 }),
   asyncRoute(async (req, res) => {
-    const ev = await evaluationFor(req.body);
+    const ev = await evaluationFor(req);
     const adj = req.body?.adjustments as ValueAdjustments | undefined;
     if (!adj?.enabled) return void res.json({ ideas: [] });
     const ideas = findPersonalIdeas({
@@ -317,7 +403,7 @@ app.post(
   '/api/trade/impact',
   rateLimit('impact', { anon: 200, user: 1200 }),
   asyncRoute(async (req, res) => {
-    const ev = await evaluationFor(req.body);
+    const ev = await evaluationFor(req);
     const me = ev.roster.franchise_id;
     const partnerId = String(req.body?.partner_id || '');
     const mine = assetsOf(ev, me);

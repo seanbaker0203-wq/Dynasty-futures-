@@ -34,12 +34,16 @@ export interface PickValue {
   value_sf: number;
 }
 
+import type { PlayerExternalIds } from '../src/types';
+
 export interface IdCrosswalkRow {
   mfl_id: string | null;
   sleeper_id: string | null;
   espn_id?: string | null;
   yahoo_id?: string | null;
   fleaflicker_id?: string | null;
+  cbs_id?: string | null;
+  pfr_id?: string | null;
   name: string;
   position: string;
   team: string | null;
@@ -140,6 +144,8 @@ export function buildSnapshot(valuesCsv: string, idsCsv: string): ValuesSnapshot
       espn_id: clean(r.espn_id),
       yahoo_id: clean(r.yahoo_id),
       fleaflicker_id: clean(r.fleaflicker_id),
+      cbs_id: clean(r.cbs_id),
+      pfr_id: clean(r.pfr_id),
       name: r.name,
       position: r.position,
       team: clean(r.team),
@@ -186,6 +192,7 @@ export class ValueStore {
       this.crosswalkByMfl.clear();
       for (const r of this.snapshot.crosswalk) if (r.mfl_id) this.crosswalkByMfl.set(r.mfl_id, r);
       this.otherIndex = null;
+      this.extIndex = null;
     }
     for (const pk of this.snapshot.picks) this.pickByName.set(pk.name.toLowerCase(), pk);
   }
@@ -257,6 +264,18 @@ export class ValueStore {
     return this.otherIndex.get(`${platform}:${id}`) ?? null;
   }
   private otherIndex: Map<string, string> | null = null;
+
+  /** Other sites' ids for a Sleeper id (for player links). */
+  externalIds(sleeperId: string | null | undefined): PlayerExternalIds | null {
+    if (!sleeperId) return null;
+    if (!this.extIndex) {
+      this.extIndex = new Map();
+      for (const r of this.snapshot.crosswalk ?? [])
+        if (r.sleeper_id) this.extIndex.set(r.sleeper_id, { espn: r.espn_id ?? null, yahoo: r.yahoo_id ?? null, cbs: r.cbs_id ?? null, pfr: r.pfr_id ?? null });
+    }
+    return this.extIndex.get(sleeperId) ?? null;
+  }
+  private extIndex: Map<string, PlayerExternalIds> | null = null;
 
   /** Name/position/sleeper id for any MFL player id, valued or not (after first refresh). */
   crosswalkForMfl(id: string) {

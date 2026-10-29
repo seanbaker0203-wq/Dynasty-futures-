@@ -77,7 +77,7 @@ interface RosterContextType {
   loadHistory: () => void;
   tradeDraft: TradeDraft | null;
   /** Identifies the synced league + team for server-side tools (null for sample data) */
-  leagueRequest: () => { platform: Platform; league_id: string; franchise_id: string; mfl_api_key?: string } | null;
+  leagueRequest: () => { platform: Platform; league_id: string; franchise_id: string; mfl_api_key?: string; espn_s2?: string; swid?: string; format?: LeagueFormat } | null;
   openTrade: (draft: TradeDraft) => void;
   clearTradeDraft: () => void;
 }
@@ -104,7 +104,7 @@ const toHistoryEntry = (req: SavedLeague): SavedLeague => ({
 });
 
 async function postSync(req: SyncRequest): Promise<RosterEvaluationResult> {
-  const endpoint = req.platform === 'sleeper' ? '/api/sync/sleeper' : '/api/sync/mfl';
+  const endpoint = `/api/sync/${req.platform}`;
   return apiPost<RosterEvaluationResult>(endpoint, req);
 }
 
@@ -149,6 +149,11 @@ export const RosterProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   };
 
   useEffect(() => {
+    try {
+      if (new URLSearchParams(window.location.search).get('yahoo')) setActiveView('ingest');
+    } catch {
+      // ignore
+    }
     try {
       const saved = localStorage.getItem(HISTORY_KEY);
       if (saved) setSyncHistory((JSON.parse(saved) as SavedLeague[]).map(toHistoryEntry));
@@ -319,7 +324,15 @@ export const RosterProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         leagueRequest: () => {
           const r = lastSync.current;
           if (!r || !evaluation) return null;
-          return { platform: r.platform, league_id: r.league_id, franchise_id: evaluation.roster.franchise_id, mfl_api_key: r.mfl_api_key };
+          return {
+            platform: r.platform,
+            league_id: r.league_id,
+            franchise_id: evaluation.roster.franchise_id,
+            mfl_api_key: r.mfl_api_key,
+            espn_s2: r.espn_s2,
+            swid: r.swid,
+            format: r.format,
+          };
         },
         openTrade: (draft) => {
           setTradeDraft(draft);

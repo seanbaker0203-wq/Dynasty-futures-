@@ -173,3 +173,20 @@ before charging.
 - Shown as a quiet "FA 2027" / "Cut risk 2027" tag on players, a contract section with the dead-money table in
   Values, and "Contract watch" in the trade builder.
 - To do: refresh the data on a schedule (weekly in season); add OverTheCap to the permissions list before charging.
+
+## Redraft mode — 29 Oct 2026
+- **One app, mode follows the league.** `LeagueSettings.format` = dynasty / keeper / redraft (Sleeper `settings.type`,
+  ESPN keeper count, Yahoo keeper flag; MFL and Fleaflicker default and can be changed). A league switcher at the top
+  lists saved leagues grouped by type, with a type selector that overrides the platform and reloads.
+- **Rest-of-season values** (`server/model/ros.ts`): 50% our weekly projections from now through the fantasy playoffs
+  (Sleeper/Rotowire, league scoring, playoff weeks 1.5×, byes zero, points above a replacement starter, rank-mapped to
+  the market scale), 50% FantasyCalc redraft market. K/DEF at 30% (streamed). Same Board shape, so every tool works.
+- **Redraft screens:** My team → This week / Season (playoff odds from 4,000 simulations of the real schedule incl.
+  median games, remaining games with win chances, playoff-week strength) / Waivers (points per week added to your
+  lineup, FAAB bid guide) / Rules. League, Values, Trade adapted (no picks, ages, five-season views).
+- **Platforms:** ESPN (public, or private with espn_s2 + SWID per request), Yahoo (OAuth; refresh token in an
+  encrypted httpOnly cookie, nothing stored server-side; needs YAHOO_CLIENT_ID/SECRET), Fleaflicker (public API).
+  Player ids mapped to Sleeper via the DynastyProcess crosswalk. **Not yet tested live** (domains blocked from the
+  build workspace); trade history (manager profiles) is Sleeper/MFL only for now.
+- **Player links:** Footballguys (direct, PFR-style ids), FantasyPros, ESPN, Yahoo, CBS, NFL.com, PFR, KTC (dynasty).
+- Next: live-test ESPN/Yahoo/Fleaflicker; FAAB guide from league bid history; live draft assistant (before August).

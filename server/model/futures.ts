@@ -296,6 +296,7 @@ async function buildBoard(settings: LeagueSettings, key: string): Promise<Board>
       position_rank: 0,
       ktc_url: ktcUrl(r.name, r.expertPlayer?.ktc_id ?? null),
       nfl_contract: proj?.contract ?? null,
+      ext_ids: valueStore.externalIds(r.sleeper_id),
       expert_history: (hist || []).slice(-12).map((h) => ({ date: h.date, value: sf ? h.value_sf : h.value_1qb })),
     };
   });

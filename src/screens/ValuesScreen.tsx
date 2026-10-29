@@ -118,7 +118,7 @@ export const ValueRow: React.FC<{ p: BoardPlayer; owner?: string; mine?: boolean
           )}
 
           <NflContractDetail c={p.nfl_contract} />
-          <PlayerLinks player={{ name: p.name, position: p.position, team: p.team, ktc_url: p.ktc_url }} />
+          <PlayerLinks player={{ name: p.name, position: p.position, team: p.team, ktc_url: p.ktc_url, ext_ids: p.ext_ids, format: p.ros ? 'redraft' : 'dynasty' }} />
         </div>
       )}
     </li>
