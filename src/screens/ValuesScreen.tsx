@@ -63,14 +63,21 @@ export const ValueRow: React.FC<{ p: BoardPlayer; owner?: string; mine?: boolean
       {open && (
         <div className="pb-4 sm:pl-12 space-y-4">
           <dl className="grid grid-cols-3 gap-2 text-[13px]">
-            {[
-              ['Our model', p.model],
-              ['Trade market', p.market],
-              ['Experts', p.experts],
-            ].map(([k, v]) => (
+            {(p.ros
+              ? [
+                  ['Pts/wk rest of season', p.ros.ppg.toFixed(1)],
+                  ['Pts/wk in playoffs', p.ros.playoff_ppg.toFixed(1)],
+                  ['Trade market', p.market != null ? fmt(p.market) : null],
+                ]
+              : [
+                  ['Our model', p.model != null ? fmt(p.model) : null],
+                  ['Trade market', p.market != null ? fmt(p.market) : null],
+                  ['Experts', p.experts != null ? fmt(p.experts) : null],
+                ]
+            ).map(([k, v]) => (
               <div key={k as string} className="rounded-lg border border-line bg-card px-2.5 py-2">
                 <dt className="text-muted">{k}</dt>
-                <dd className="font-semibold text-[15px]">{v != null ? fmt(v as number) : '–'}</dd>
+                <dd className="font-semibold text-[15px]">{v ?? '–'}</dd>
               </div>
             ))}
           </dl>
@@ -80,11 +87,11 @@ export const ValueRow: React.FC<{ p: BoardPlayer; owner?: string; mine?: boolean
               <span className="text-muted">Market, 30 days </span>
               <Change value={p.market_trend_30d} className="font-semibold" />
             </span>
-            <span className="flex items-center gap-2">
+            {!p.ros && (<span className="flex items-center gap-2">
               <span className="text-muted">Experts, 4 weeks </span>
               <Change value={p.expert_trend_4w} className="font-semibold" />
               <Sparkline values={p.expert_history.map((h) => h.value)} label="Expert value, last 12 weeks" />
-            </span>
+            </span>)}
             {p.ppg != null && (
               <span>
                 <span className="text-muted">Points per game </span>
@@ -157,11 +164,19 @@ export const ValuesScreen: React.FC = () => {
 
   return (
     <div className="space-y-4">
+      {s?.format === 'redraft' ? (
+        <p className="text-[14px] text-muted max-w-[40rem]">
+          Rest-of-season value: half our weekly projections from now through your fantasy playoffs (playoff weeks count 1.5×, byes count
+          zero), half the redraft trade market (FantasyCalc). Tuned to {s?.league_size} teams, {s?.superflex ? 'Superflex' : '1QB'},{' '}
+          {s?.scoring_type?.toLowerCase()}.
+        </p>
+      ) : (
       <p className="text-[14px] text-muted max-w-[40rem]">
         Futures Value is our own number: {w.model * 100}% our projection model, {w.market * 100}% the trade market (FantasyCalc),{' '}
         {w.experts * 100}% expert rankings (FantasyPros). Tuned to {s?.league_size} teams, {s?.superflex ? 'Superflex' : '1QB'},{' '}
         {s?.scoring_type?.toLowerCase()}. "vs market" is how far we sit above or below what the player trades for.
       </p>
+      )}
       {data.limited && (
         <p className="text-[14px] rounded-lg bg-ink-soft px-3 py-2">
           Showing the top 150 and everyone in your league. <span className="font-semibold">Sign in</span> (My team → Rules) to see the full rankings.

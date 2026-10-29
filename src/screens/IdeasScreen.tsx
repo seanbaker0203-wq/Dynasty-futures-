@@ -85,6 +85,7 @@ export const IdeasScreen: React.FC = () => {
     return <p className="text-muted">Trade ideas need season projections. Connect a real league to see them.</p>;
 
   const me = evaluation.roster.franchise_id;
+  const horizon = evaluation.settings?.format === 'redraft' ? 'rest of the season' : 'next five seasons';
   const seasons = evaluation.season_outlook.map((o) => o.season);
   const myAssets = [
     ...[...evaluation.players].filter((p) => p.market_value >= 300).sort((a, b) => b.market_value - a.market_value).map((p) => ({ id: `player:${p.id}`, label: `${p.position} ${p.full_name} (${fmt(p.market_value)})` })),
@@ -176,8 +177,8 @@ export const IdeasScreen: React.FC = () => {
 
       <p className="text-[14px] text-muted">
         {filtered
-          ? `Fair-value deals${sellName ? ` that move ${sellName}` : ''}${want.length ? ` for a ${want.join(' or ')}` : ''}, best for your next five seasons first. Picks or a second player are added to even out value when needed.`
-          : 'Deals that are fair on value, so the other side could say yes, but make your lineup better over the next five seasons. Best calls first.'}{' '}
+          ? `Fair-value deals${sellName ? ` that move ${sellName}` : ''}${want.length ? ` for a ${want.join(' or ')}` : ''}, best for your ${horizon} first. Picks or a second player are added to even out value when needed.`
+          : 'Deals that are fair on value, so the other side could say yes, but make your lineup better over the ' + horizon + '. Best calls first.'}{' '}
         {history ? 'Ranked using how each manager actually trades.' : ''}
       </p>
       {ideasError && (

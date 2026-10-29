@@ -27,7 +27,7 @@ export const LeagueScreen: React.FC = () => {
   return (
     <div className="space-y-3">
       <p className="text-[14px] text-muted">
-        Ranked by starting lineup, then depth and picks. Tap a team to see its core and picks.
+        {evaluation.redraft ? 'Ranked by rest-of-season lineup strength and depth. Tap a team to see its core players.' : 'Ranked by starting lineup, then depth and picks. Tap a team to see its core and picks.'}
       </p>
       <ol className="divide-y divide-line border-y border-line">
         {teams.map((t) => {
@@ -35,6 +35,7 @@ export const LeagueScreen: React.FC = () => {
           const expanded = open === t.franchise_id;
           const power = t.starter_value * 0.55 + t.bench_value * 0.3 + t.draft_capital_value * 0.15;
           const firsts = t.draft_picks.filter((p) => p.round === 1).length;
+          const rd = evaluation.redraft?.teams.find((x) => x.team_id === t.franchise_id);
           return (
             <li key={t.franchise_id} className={`sm:px-3 sm:rounded-lg ${isMe ? 'bg-ink-soft -mx-4 px-4 sm:mx-0' : ''}`}>
               <button
@@ -50,12 +51,28 @@ export const LeagueScreen: React.FC = () => {
                     {isMe && <span className="text-gold font-semibold"> (you)</span>}
                   </span>
                   <span className="block text-[13px] text-muted truncate">
-                    {labelFor(t.classification)}, {t.stance_label.toLowerCase()}
+                    {rd ? `${rd.projected_wins.toFixed(1)} projected wins` : `${labelFor(t.classification)}, ${t.stance_label.toLowerCase()}`}
                   </span>
                   <span className="mt-1.5 block h-1 rounded-full bg-line overflow-hidden" aria-hidden>
                     <span className={`block h-full rounded-full ${isMe ? 'bg-gold' : 'bg-ink'}`} style={{ width: `${(power / maxPower) * 100}%` }} />
                   </span>
                 </span>
+                {rd ? (
+                  <span className="grid grid-cols-2 sm:grid-cols-3 gap-4 sm:gap-6 text-right text-[13px] text-muted shrink-0">
+                    <span>
+                      <span className="block font-semibold text-text text-[15px]">
+                        {rd.record.wins}-{rd.record.losses}
+                      </span>
+                      record
+                    </span>
+                    <span className="hidden sm:block">
+                      <span className="block font-semibold text-text text-[15px]">{Math.round(rd.ros_avg)}</span>pts/wk
+                    </span>
+                    <span>
+                      <span className="block font-semibold text-text text-[15px]">{Math.round(rd.playoff_odds * 100)}%</span>playoffs
+                    </span>
+                  </span>
+                ) : (
                 <span className="hidden sm:grid grid-cols-3 gap-6 text-right text-[13px] text-muted shrink-0">
                   <span>
                     <span className="block font-semibold text-text text-[15px]">{Math.round(t.gross_liquidity)}</span>lineup
@@ -67,12 +84,13 @@ export const LeagueScreen: React.FC = () => {
                     <span className="block font-semibold text-text text-[15px]">{fmtShort(t.draft_capital_value)}</span>picks
                   </span>
                 </span>
+                )}
                 <ChevronDown className={`w-4 h-4 text-muted shrink-0 transition-transform ${expanded ? 'rotate-180' : ''}`} />
               </button>
 
               {expanded && (
                 <div className="pb-4 sm:pl-[3.25rem] space-y-4">
-                  <div className="grid grid-cols-3 gap-3 sm:hidden text-[13px] text-muted">
+                  {!rd && (<div className="grid grid-cols-3 gap-3 sm:hidden text-[13px] text-muted">
                     <span>
                       <span className="block font-semibold text-text text-[15px]">{Math.round(t.gross_liquidity)}</span>lineup
                     </span>
@@ -82,8 +100,15 @@ export const LeagueScreen: React.FC = () => {
                     <span>
                       <span className="block font-semibold text-text text-[15px]">{fmtShort(t.draft_capital_value)}</span>picks
                     </span>
-                  </div>
-                  <p className="text-[14px] text-muted">{t.stance_description}</p>
+                  </div>)}
+                  {rd ? (
+                    <p className="text-[14px] text-muted">
+                      Projects {Math.round(rd.ros_avg)} points a week from here and {Math.round(rd.playoff_avg)} in the playoff weeks.{' '}
+                      {Math.round(rd.playoff_odds * 100)}% to make the playoffs.
+                    </p>
+                  ) : (
+                    <p className="text-[14px] text-muted">{t.stance_description}</p>
+                  )}
                   <ManagerProfileNote profile={history?.profiles.find((p) => p.team_id === t.franchise_id)} />
                   <div>
                     <div className="text-[13px] font-semibold">Core players</div>
@@ -93,7 +118,7 @@ export const LeagueScreen: React.FC = () => {
                       ))}
                     </div>
                   </div>
-                  <div className="text-[14px]">
+                  {!rd && (<div className="text-[14px]">
                     <span className="font-semibold">Picks: </span>
                     <span className="text-muted">
                       {t.draft_picks.length} total, {firsts} first-rounder{firsts === 1 ? '' : 's'}
@@ -102,7 +127,7 @@ export const LeagueScreen: React.FC = () => {
                           Math.max(...t.draft_picks.map((p) => p.market_value))
                         )})`}
                     </span>
-                  </div>
+                  </div>)}
                   {!isMe && (
                     <div className="flex gap-2">
                       <button type="button" className="btn-primary" onClick={() => act(t, 'trade')}>

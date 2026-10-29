@@ -717,4 +717,6 @@ export interface RedraftInfo {
   faab_remaining: number | null;
   teams: RedraftTeam[];
   waivers: WaiverIdea[];
+  /** Your remaining regular-season games: projections and win chance */
+  my_schedule: { week: number; opponent_id: string; opponent: string; my_points: number; opp_points: number; win_prob: number }[];
 }

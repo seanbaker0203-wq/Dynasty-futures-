@@ -255,6 +255,7 @@ export const TradeScreen: React.FC = () => {
   }
 
   const settings = evaluation.settings;
+  const redraftMode = settings?.format === 'redraft';
   const meBefore = measure(mySide, settings, baseline);
   const meAfter = measure(applyTrade(mySide, give, get), settings, baseline);
   const themBefore = measure(theirSide, settings, baseline);
@@ -263,8 +264,12 @@ export const TradeScreen: React.FC = () => {
 
   const impactRows = (b: typeof meBefore, a: typeof meAfter) => [
     { name: 'Lineup strength', b: b.lineup, a: a.lineup, show: (v: number) => `${Math.round(v)}` },
-    { name: 'Prime years left', b: b.prime, a: a.prime, show: (v: number) => `${v.toFixed(1)} yrs` },
-    { name: 'Draft capital', b: b.picks, a: a.picks, show: (v: number) => fmtShort(v) },
+    ...(redraftMode
+      ? []
+      : [
+          { name: 'Prime years left', b: b.prime, a: a.prime, show: (v: number) => `${v.toFixed(1)} yrs` },
+          { name: 'Draft capital', b: b.picks, a: a.picks, show: (v: number) => fmtShort(v) },
+        ]),
   ];
 
   return (
@@ -354,7 +359,7 @@ export const TradeScreen: React.FC = () => {
                       {c!.option_year ? ` (if the ${c!.option_year} option is picked up)` : ''}.{' '}
                       <span className="text-muted">
                         {c!.events.map((e) => `${Math.round(e.probability * 100)}% ${e.kind === 'free_agent' ? 'leaves' : 'cut'} by ${e.season}`).join(', ')}
-                        , already in the five-season numbers.
+                        , already in the projections.
                       </span>
                     </p>
                   );
@@ -408,8 +413,12 @@ export const TradeScreen: React.FC = () => {
 
           {fiveYear.length > 0 && (
             <div className="space-y-2">
-              <h3 className="display text-[22px] text-ink">Over the next five seasons</h3>
-              <p className="text-[13px] text-muted">Projected starting lineup points per week (including expected points from picks) and league rank.</p>
+              <h3 className="display text-[22px] text-ink">{redraftMode ? 'Rest of this season' : 'Over the next five seasons'}</h3>
+              <p className="text-[13px] text-muted">
+                {redraftMode
+                  ? 'Projected starting lineup points per week for the rest of the season and league rank.'
+                  : 'Projected starting lineup points per week (including expected points from picks) and league rank.'}
+              </p>
               <div className="overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0">
                 <table className="w-full min-w-[20rem] text-[14px]">
                   <thead>

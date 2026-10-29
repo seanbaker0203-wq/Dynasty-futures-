@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
-import { RosterEvaluationResult, SyncRequest, Platform, LeagueHistory } from '../types';
+import { RosterEvaluationResult, SyncRequest, Platform, LeagueHistory, LeagueFormat } from '../types';
 import { apiPost } from '../lib/api';
 import { SEED_PLAYERS } from '../data/seedPlayers';
 import { DEMO_ROSTERS } from '../data/demoRosters';
@@ -23,6 +23,8 @@ export type DashboardViewMode =
   | 'trade'
   | 'ideas'
   | 'gaps'
+  | 'season'
+  | 'waivers'
   | 'terms'
   | 'privacy';
 
@@ -56,7 +58,15 @@ interface RosterContextType {
   loadComparisonDemo: (type: 'juggernaut' | 'contender' | 'rebuild') => void;
   clearRoster: () => void;
   clearComparisonRoster: () => void;
-  syncHistory: SyncRequest[];
+  syncHistory: SavedLeague[];
+  /** Open another saved league (switches dynasty/redraft mode with it) */
+  switchLeague: (league: SavedLeague) => Promise<void>;
+  /** Change this league's type (dynasty / keeper / redraft) and reload it */
+  setLeagueFormat: (format: LeagueFormat) => Promise<void>;
+  /** Forget a saved league on this device */
+  forgetLeague: (league: SavedLeague) => void;
+  /** dynasty (default), keeper or redraft: from the open league */
+  format: LeagueFormat;
   /** Team picked as trade partner / comparison from the league screens */
   partnerId: string | null;
   setPartnerId: (id: string | null) => void;
@@ -76,12 +86,21 @@ const RosterContext = createContext<RosterContextType | undefined>(undefined);
 
 const HISTORY_KEY = 'dynasty_sync_history';
 
+/** A league you've connected, remembered on this device (never passwords, keys or cookies). */
+export interface SavedLeague extends SyncRequest {
+  league_name?: string;
+  team_name?: string;
+}
+
 /** Only non-secret fields are remembered between visits. */
-const toHistoryEntry = (req: SyncRequest): SyncRequest => ({
+const toHistoryEntry = (req: SavedLeague): SavedLeague => ({
   platform: req.platform,
   league_id: req.league_id,
   username: req.platform === 'sleeper' ? req.username : undefined,
   franchise_id: req.franchise_id,
+  format: req.format,
+  league_name: req.league_name,
+  team_name: req.team_name,
 });
 
 async function postSync(req: SyncRequest): Promise<RosterEvaluationResult> {
@@ -99,7 +118,7 @@ export const RosterProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   const [comparisonError, setComparisonError] = useState<string | null>(null);
   const [activePlatform, setActivePlatform] = useState<Platform>('mfl');
   const [isDemo, setIsDemo] = useState(false);
-  const [syncHistory, setSyncHistory] = useState<SyncRequest[]>([]);
+  const [syncHistory, setSyncHistory] = useState<SavedLeague[]>([]);
   const [partnerId, setPartnerId] = useState<string | null>(null);
   // Last successful request, kept in memory only (may hold an MFL password or API key).
   const lastSync = useRef<SyncRequest | null>(null);
@@ -132,16 +151,16 @@ export const RosterProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   useEffect(() => {
     try {
       const saved = localStorage.getItem(HISTORY_KEY);
-      if (saved) setSyncHistory((JSON.parse(saved) as SyncRequest[]).map(toHistoryEntry));
+      if (saved) setSyncHistory((JSON.parse(saved) as SavedLeague[]).map(toHistoryEntry));
     } catch {
       // Storage unavailable (private mode); history is a convenience only.
     }
   }, []);
 
-  const saveToHistory = (req: SyncRequest) => {
+  const saveToHistory = (req: SavedLeague) => {
     const entry = toHistoryEntry(req);
     setSyncHistory((prev) => {
-      const updated = [entry, ...prev.filter((h) => !(h.platform === entry.platform && h.league_id === entry.league_id))].slice(0, 5);
+      const updated = [entry, ...prev.filter((h) => !(h.platform === entry.platform && h.league_id === entry.league_id))].slice(0, 12);
       try {
         localStorage.setItem(HISTORY_KEY, JSON.stringify(updated));
       } catch {
@@ -157,7 +176,9 @@ export const RosterProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     try {
       const result = await postSync(req);
       const myTeamId = result.roster.franchise_id;
-      if (!lastSync.current || lastSync.current.league_id !== req.league_id || lastSync.current.platform !== req.platform) {
+      const sameLeague = !!lastSync.current && lastSync.current.league_id === req.league_id && lastSync.current.platform === req.platform;
+      const sameFormat = sameLeague && evaluation?.settings?.format === result.settings?.format;
+      if (!sameLeague) {
         historyFor.current = null;
         setHistory(null);
       }
@@ -167,8 +188,10 @@ export const RosterProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       setEvaluation(result);
       setComparisonEvaluation(null);
       setPartnerId(null);
-      setActiveView('single');
-      saveToHistory({ ...req, franchise_id: myTeamId });
+      // New league or new mode: open its home screen. Same league (refresh, switch team): stay put.
+      if (!sameFormat) setActiveView(result.settings?.format === 'redraft' ? 'week' : 'single');
+      const myName = result.league_franchises?.find((f) => f.franchise_id === myTeamId)?.franchise_name;
+      saveToHistory({ ...req, franchise_id: myTeamId, league_name: result.league_name || result.roster.league_name, team_name: myName });
     } catch (err: any) {
       setError(err.message || 'Sync failed.');
     } finally {
@@ -186,6 +209,28 @@ export const RosterProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     } finally {
       setIsComparisonLoading(false);
     }
+  };
+
+  const switchLeague = async (league: SavedLeague) => {
+    const { league_name: _n, team_name: _t, ...req } = league;
+    await syncRoster(req);
+  };
+
+  const setLeagueFormat = async (format: LeagueFormat) => {
+    if (!lastSync.current) return;
+    await syncRoster({ ...lastSync.current, format });
+  };
+
+  const forgetLeague = (league: SavedLeague) => {
+    setSyncHistory((prev) => {
+      const updated = prev.filter((h) => !(h.platform === league.platform && h.league_id === league.league_id));
+      try {
+        localStorage.setItem(HISTORY_KEY, JSON.stringify(updated));
+      } catch {
+        // ignore
+      }
+      return updated;
+    });
   };
 
   const selectMyTeam = async (franchiseId: string) => {
@@ -260,6 +305,10 @@ export const RosterProvider: React.FC<{ children: React.ReactNode }> = ({ childr
           setComparisonError(null);
         },
         syncHistory,
+        switchLeague,
+        setLeagueFormat,
+        forgetLeague,
+        format: (evaluation?.settings?.format as LeagueFormat) || 'dynasty',
         partnerId,
         setPartnerId,
         history,

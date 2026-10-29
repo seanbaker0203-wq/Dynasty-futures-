@@ -9,6 +9,7 @@ const room = (t: LeagueTeamSummary, pos: string) =>
 export const CompareScreen: React.FC = () => {
   const { evaluation, partnerId, setPartnerId, setActiveView } = useRoster();
   if (!evaluation) return null;
+  const redraftMode = evaluation.settings?.format === 'redraft';
 
   const me = evaluation.roster.franchise_id;
   const teams = [...(evaluation.league_teams || [])].sort((a, b) => a.power_rank - b.power_rank);
@@ -20,9 +21,9 @@ export const CompareScreen: React.FC = () => {
   const rows: { name: string; a: number; b: number; show: (v: number) => string; higherIsBetter?: boolean }[] = [
     { name: 'Power rank', a: mine.power_rank, b: them.power_rank, show: (v) => ordinal(v), higherIsBetter: false },
     { name: 'Lineup strength', a: mine.gross_liquidity, b: them.gross_liquidity, show: (v) => `${Math.round(v)}` },
-    { name: 'Prime years left', a: mine.asset_half_life, b: them.asset_half_life, show: (v) => `${v.toFixed(1)} yrs` },
+    ...(redraftMode ? [] : [{ name: 'Prime years left', a: mine.asset_half_life, b: them.asset_half_life, show: (v: number) => `${v.toFixed(1)} yrs` }]),
     { name: 'Bench value', a: mine.bench_value, b: them.bench_value, show: fmt },
-    { name: 'Draft capital', a: mine.draft_capital_value, b: them.draft_capital_value, show: fmt },
+    ...(redraftMode ? [] : [{ name: 'Draft capital', a: mine.draft_capital_value, b: them.draft_capital_value, show: fmt }]),
     ...['QB', 'RB', 'WR', 'TE'].map((pos) => ({ name: `${pos} room`, a: room(mine, pos), b: room(them, pos), show: fmt })),
   ];
 

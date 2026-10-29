@@ -145,7 +145,35 @@ export function buildRedraft(
   }
   ideas.sort((a, b) => b.upgrade_ros - a.upgrade_ros || b.upgrade_week - a.upgrade_week);
 
+  // ---- your remaining schedule ------------------------------------------------------------------------------
+  const erf = (x: number) => {
+    const t = 1 / (1 + 0.3275911 * Math.abs(x));
+    const y = 1 - ((((1.061405429 * t - 1.453152027) * t + 1.421413741) * t - 0.284496736) * t + 0.254829592) * t * Math.exp(-x * x);
+    return x >= 0 ? y : -y;
+  };
+  const me = byId.get(userTeamId);
+  const my_schedule = me
+    ? sched
+        .filter((m) => m.a === userTeamId || m.b === userTeamId)
+        .sort((x, y) => x.week - y.week)
+        .map((m) => {
+          const oppId = m.a === userTeamId ? m.b : m.a;
+          const opp = byId.get(oppId);
+          const mp = weekPts(me, m.week), op = opp ? weekPts(opp, m.week) : 0;
+          const sd = Math.sqrt(Math.max(12, 0.17 * mp) ** 2 + Math.max(12, 0.17 * op) ** 2);
+          return {
+            week: m.week,
+            opponent_id: oppId,
+            opponent: opp?.name ?? oppId,
+            my_points: Math.round(mp * 10) / 10,
+            opp_points: Math.round(op * 10) / 10,
+            win_prob: Math.round((0.5 * (1 + erf((mp - op) / (sd * Math.SQRT2)))) * 100) / 100,
+          };
+        })
+    : [];
+
   return {
+    my_schedule,
     week,
     playoffs: { start_week: start, end_week: end, teams: nPlayoff },
     faab_budget: budget,

@@ -33,6 +33,8 @@ import { MoversScreen } from './screens/MoversScreen';
 import { PlanScreen } from './screens/PlanScreen';
 import { RulesScreen } from './screens/RulesScreen';
 import { WeekScreen } from './screens/WeekScreen';
+import { SeasonScreen } from './screens/SeasonScreen';
+import { WaiversScreen } from './screens/WaiversScreen';
 import { AccountProvider } from './context/AccountContext';
 import { LeagueBar } from './components/LeagueBar';
 import { ArrowLeftRight, LineChart, Link2, Shield, Trophy } from 'lucide-react';
@@ -40,7 +42,7 @@ import { ArrowLeftRight, LineChart, Link2, Shield, Trophy } from 'lucide-react';
 type Destination = 'team' | 'league' | 'values' | 'trade' | 'connect';
 
 const DESTINATIONS: { id: Destination; label: string; icon: React.FC<{ className?: string }>; views: DashboardViewMode[] }[] = [
-  { id: 'team', label: 'My team', icon: Shield, views: ['single', 'week', 'plan', 'optimization', 'rules'] },
+  { id: 'team', label: 'My team', icon: Shield, views: ['single', 'week', 'season', 'waivers', 'plan', 'optimization', 'rules'] },
   { id: 'league', label: 'League', icon: Trophy, views: ['league', 'compare', 'trades', 'picks', 'freeagents'] },
   { id: 'values', label: 'Values', icon: LineChart, views: ['values', 'movers'] },
   { id: 'trade', label: 'Trade', icon: ArrowLeftRight, views: ['trade', 'ideas', 'gaps'] },
@@ -78,9 +80,10 @@ const SubTabs: React.FC<{ options: { view: DashboardViewMode; label: string; cou
 };
 
 const AppContent: React.FC = () => {
-  const { activeView, setActiveView, evaluation } = useRoster();
+  const { activeView, setActiveView, evaluation, format } = useRoster();
+  const redraft = format === 'redraft';
   const current = destinationOf(activeView);
-  const go = (d: Destination) => setActiveView(DESTINATIONS.find((x) => x.id === d)!.views[0]);
+  const go = (d: Destination) => setActiveView(redraft && d === 'team' ? 'week' : DESTINATIONS.find((x) => x.id === d)!.views[0]);
   const locked = (d: Destination) => d !== 'connect' && !evaluation;
 
   const navButton = (d: (typeof DESTINATIONS)[number], variant: 'top' | 'bottom') => {
@@ -140,14 +143,25 @@ const AppContent: React.FC = () => {
         {current === 'team' && (
           <>
             <SubTabs
-              options={[
-                { view: 'single', label: 'Overview' },
-                { view: 'week', label: 'This week' },
-                { view: 'plan', label: 'Plan' },
-                { view: 'optimization', label: 'Moves', count: evaluation?.remediations?.length },
-                { view: 'rules', label: 'Rules' },
-              ]}
+              options={
+                redraft
+                  ? [
+                      { view: 'week', label: 'This week' },
+                      { view: 'season', label: 'Season' },
+                      { view: 'waivers', label: 'Waivers', count: evaluation?.redraft?.waivers.filter((w) => w.upgrade_ros >= 1).length || undefined },
+                      { view: 'rules', label: 'Rules' },
+                    ]
+                  : [
+                      { view: 'single', label: 'Overview' },
+                      { view: 'week', label: 'This week' },
+                      { view: 'plan', label: 'Plan' },
+                      { view: 'optimization', label: 'Moves', count: evaluation?.remediations?.length },
+                      { view: 'rules', label: 'Rules' },
+                    ]
+              }
             />
+            {activeView === 'season' && <SeasonScreen />}
+            {activeView === 'waivers' && <WaiversScreen />}
             {activeView === 'rules' && <RulesScreen />}
             {activeView === 'week' && <WeekScreen />}
             {activeView === 'single' && <TeamScreen />}
@@ -163,8 +177,12 @@ const AppContent: React.FC = () => {
                 { view: 'league', label: 'Rankings' },
                 { view: 'compare', label: 'Compare' },
                 { view: 'trades', label: 'Trades' },
-                { view: 'picks', label: 'Picks' },
-                { view: 'freeagents', label: 'Free agents' },
+                ...(redraft
+                  ? []
+                  : ([
+                      { view: 'picks', label: 'Picks' },
+                      { view: 'freeagents', label: 'Free agents' },
+                    ] as const)),
               ]}
             />
             {activeView === 'trades' && <TradesScreen />}
