@@ -6,6 +6,7 @@
 import { fetchJson, HttpError } from '../http';
 import { playerDirectory } from '../players';
 import { valueStore } from '../values';
+import { sleeperTeam } from '../sources/weekly';
 import type { LeagueSettings } from '../../src/types';
 import { LeagueSyncError, type LeaguePlayer, type LeagueTeam, type NormalizedLeague } from './types';
 
@@ -91,7 +92,10 @@ export async function fetchEspnLeague(
       const pos = POS[p.defaultPositionId] || '';
       const team = PRO_TEAM[p.proTeamId] ?? null;
       // Defenses use the team abbreviation (Sleeper's id); everyone else maps through the crosswalk.
-      const pid = pos === 'DEF' && team ? team : valueStore.sleeperIdFor('espn', String(e.playerId)) || `espn:${e.playerId}`;
+      const pid =
+        pos === 'DEF' && team
+          ? team
+          : valueStore.sleeperIdFor('espn', String(e.playerId)) || playerDirectory.findByName(p.fullName, pos, team) || `espn:${e.playerId}`;
       ids.push(pid);
       if (e.lineupSlotId !== SLOT.BENCH && e.lineupSlotId !== SLOT.IR) starters.push(pid);
       if (e.lineupSlotId === SLOT.IR) designations[pid] = 'IR';

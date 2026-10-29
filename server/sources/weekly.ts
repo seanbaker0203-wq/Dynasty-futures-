@@ -55,6 +55,12 @@ export async function weeklyProjections(season: number, week: number): Promise<M
 // MFL team codes → Sleeper's (defenses are keyed by team abbreviation on Sleeper).
 const TEAM_FIX: Record<string, string> = { JAC: 'JAX', KCC: 'KC', GBP: 'GB', NEP: 'NE', NOS: 'NO', SFO: 'SF', TBB: 'TB', LVR: 'LV', OAK: 'LV', SDC: 'LAC', STL: 'LAR', WSH: 'WAS' };
 
+/** Any platform's NFL team code -> Sleeper's (e.g. JAC -> JAX, WSH -> WAS). */
+export const sleeperTeam = (code: string | null | undefined) => {
+  const t = String(code || '').toUpperCase();
+  return t ? TEAM_FIX[t] || t : null;
+};
+
 /** The Sleeper id for one of our players (MFL ids go through the DynastyProcess crosswalk). */
 export function sleeperIdFor(platform: string, p: { id: string; position: string; team?: string | null }): string | null {
   if (p.position === 'DEF') {

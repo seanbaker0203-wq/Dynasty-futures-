@@ -186,7 +186,8 @@ before charging.
   lineup, FAAB bid guide) / Rules. League, Values, Trade adapted (no picks, ages, five-season views).
 - **Platforms:** ESPN (public, or private with espn_s2 + SWID per request), Yahoo (OAuth; refresh token in an
   encrypted httpOnly cookie, nothing stored server-side; needs YAHOO_CLIENT_ID/SECRET), Fleaflicker (public API).
-  Player ids mapped to Sleeper via the DynastyProcess crosswalk. **Not yet tested live** (domains blocked from the
-  build workspace); trade history (manager profiles) is Sleeper/MFL only for now.
+  Player ids mapped to Sleeper via the DynastyProcess crosswalk, then name + position against Sleeper's directory; team
+  codes normalized (JAC→JAX). **Tested live 29 Oct:** ESPN public league (1667721), Fleaflicker active league (316893)
+  incl. schedule, records, FAAB. Yahoo awaits the app keys in Render. Trade history is Sleeper/MFL only for now.
 - **Player links:** Footballguys (direct, PFR-style ids), FantasyPros, ESPN, Yahoo, CBS, NFL.com, PFR, KTC (dynasty).
 - Next: live-test ESPN/Yahoo/Fleaflicker; FAAB guide from league bid history; live draft assistant (before August).

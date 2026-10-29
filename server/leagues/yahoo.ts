@@ -9,6 +9,7 @@ import crypto from 'node:crypto';
 import { fetchJson, HttpError } from '../http';
 import { playerDirectory } from '../players';
 import { valueStore } from '../values';
+import { sleeperTeam } from '../sources/weekly';
 import type { LeagueSettings } from '../../src/types';
 import { LeagueSyncError, type LeaguePlayer, type LeagueTeam, type NormalizedLeague } from './types';
 
@@ -157,8 +158,11 @@ export async function fetchYahooLeague(leagueKey: string, token: string, teamId?
       const pm = merge(pl.player?.[0]);
       const sel = merge(pl.player?.[1]?.selected_position);
       const pos = String(pm.display_position || '').split(',')[0].replace('DEF', 'DEF');
-      const team = String(pm.editorial_team_abbr || '').toUpperCase() || null;
-      const pid = pos === 'DEF' && team ? team : valueStore.sleeperIdFor('yahoo', String(pm.player_id)) || `y:${pm.player_id}`;
+      const team = sleeperTeam(pm.editorial_team_abbr);
+      const pid =
+        pos === 'DEF' && team
+          ? team
+          : valueStore.sleeperIdFor('yahoo', String(pm.player_id)) || playerDirectory.findByName(pm.name?.full, pos, team) || `y:${pm.player_id}`;
       ids.push(pid);
       if (sel.position && !['BN', 'IR'].includes(sel.position)) startersIds.push(pid);
       if (sel.position === 'IR') designations[pid] = 'IR';

@@ -23,6 +23,18 @@ export function ageFromBirthdate(birthdate: string | null | undefined, now = new
   return Math.round(((now.getTime() - b.getTime()) / (365.25 * 24 * 3600 * 1000)) * 10) / 10;
 }
 
+/** "Ja'Marr Chase Jr." -> "jamarr chase" */
+export const normName = (n: string) =>
+  String(n || '')
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[.'’`]/g, '')
+    .replace(/-/g, ' ')
+    .replace(/\b(jr|sr|ii|iii|iv|v)\b/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+
 class PlayerDirectory {
   private players = new Map<string, PlayerInfo>();
   private loadedAt = 0;
@@ -46,6 +58,28 @@ class PlayerDirectory {
   get(id: string): PlayerInfo | undefined {
     return this.players.get(id);
   }
+
+  /**
+   * Sleeper id by name + position (fallback when another platform's id isn't in the crosswalk).
+   * Prefers players currently on an NFL team, then the given team if any.
+   */
+  findByName(name: string, position: string, team?: string | null): string | null {
+    if (!this.nameIndex || this.nameIndexFor !== this.players) {
+      this.nameIndex = new Map();
+      this.nameIndexFor = this.players;
+      for (const [id, p] of this.players) {
+        if (!['QB', 'RB', 'WR', 'TE', 'K'].includes(p.position)) continue;
+        const k = `${normName(p.full_name)}|${p.position}`;
+        this.nameIndex.set(k, [...(this.nameIndex.get(k) || []), id]);
+      }
+    }
+    const ids = this.nameIndex.get(`${normName(name)}|${position === 'PK' ? 'K' : position}`) || [];
+    if (ids.length <= 1) return ids[0] ?? null;
+    const onTeam = ids.filter((id) => this.players.get(id)?.team);
+    return onTeam.find((id) => team && this.players.get(id)?.team === team) ?? onTeam[0] ?? ids[0];
+  }
+  private nameIndex: Map<string, string[]> | null = null;
+  private nameIndexFor: Map<string, PlayerInfo> | null = null;
 
   async refresh(force = false): Promise<void> {
     if (!force && this.players.size > 0 && Date.now() - this.loadedAt < REFRESH_MS) return;

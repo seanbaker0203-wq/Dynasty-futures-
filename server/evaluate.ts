@@ -332,7 +332,12 @@ export async function evaluateLeague(league: NormalizedLeague, requestedTeamId?:
     }));
 
   const redraftInfo = redraft
-    ? buildRedraft(league, rosterPlayers, userTeamId, freeAgents, league.current_week ?? (await nflState()).week)
+    ? await (async () => {
+        // Trust the platform's week only if it agrees with the NFL calendar (stale leagues report last season's week).
+        const nflWeek = (await nflState()).week;
+        const w = league.current_week && Math.abs(league.current_week - nflWeek) <= 1 ? league.current_week : nflWeek;
+        return buildRedraft(league, rosterPlayers, userTeamId, freeAgents, w);
+      })()
     : undefined;
 
   const unvalued = userEval.players.filter((p) => p.market_value === 0 && !['K', 'DEF'].includes(p.position));
