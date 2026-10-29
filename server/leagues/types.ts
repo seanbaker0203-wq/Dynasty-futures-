@@ -28,6 +28,10 @@ export interface LeagueTeam {
   /** Salary-cap leagues: salary and contract years left per player */
   contracts?: Record<string, { salary: number; years: number | null }>;
   picks: LeaguePickRef[];
+  /** This season's record (redraft tools) */
+  record?: { wins: number; losses: number; ties: number; points_for: number };
+  /** FAAB left this season */
+  faab_remaining?: number | null;
 }
 
 /** Platform-neutral league snapshot every adapter produces. */
@@ -41,6 +45,9 @@ export interface NormalizedLeague {
   players: Map<string, LeaguePlayer>;
   /** team_id of the requesting user, when we could identify it */
   user_team_id: string | null;
+  /** Remaining regular-season matchups (redraft playoff odds) */
+  schedule?: { week: number; a: string; b: string }[];
+  current_week?: number;
 }
 
 export class LeagueSyncError extends Error {

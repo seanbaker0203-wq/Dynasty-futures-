@@ -22,6 +22,7 @@ import { playerDirectory } from '../players';
 import { valueStore, type ValuedPlayer } from '../values';
 import { curveAt } from './ageCurves';
 import { contractOutlook } from './contracts';
+import { getRosBoard } from './ros';
 import type { NflContract } from '../../src/types';
 
 export const WEIGHTS = { model: 0.4, market: 0.3, experts: 0.3 };
@@ -79,6 +80,7 @@ const ktcUrl = (name: string, ktcId: string | null) =>
     : null;
 
 export async function getBoard(settings: LeagueSettings): Promise<Board> {
+  if (settings.format === 'redraft') return getRosBoard(settings);
   const key = boardKey(settings);
   const hit = cache.get(key);
   if (hit && Date.now() - hit.at < TTL) return hit.board;

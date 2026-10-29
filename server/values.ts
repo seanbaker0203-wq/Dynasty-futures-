@@ -37,6 +37,9 @@ export interface PickValue {
 export interface IdCrosswalkRow {
   mfl_id: string | null;
   sleeper_id: string | null;
+  espn_id?: string | null;
+  yahoo_id?: string | null;
+  fleaflicker_id?: string | null;
   name: string;
   position: string;
   team: string | null;
@@ -134,6 +137,9 @@ export function buildSnapshot(valuesCsv: string, idsCsv: string): ValuesSnapshot
     .map((r) => ({
       mfl_id: clean(r.mfl_id),
       sleeper_id: clean(r.sleeper_id),
+      espn_id: clean(r.espn_id),
+      yahoo_id: clean(r.yahoo_id),
+      fleaflicker_id: clean(r.fleaflicker_id),
       name: r.name,
       position: r.position,
       team: clean(r.team),
@@ -179,6 +185,7 @@ export class ValueStore {
     if (this.snapshot.crosswalk) {
       this.crosswalkByMfl.clear();
       for (const r of this.snapshot.crosswalk) if (r.mfl_id) this.crosswalkByMfl.set(r.mfl_id, r);
+      this.otherIndex = null;
     }
     for (const pk of this.snapshot.picks) this.pickByName.set(pk.name.toLowerCase(), pk);
   }
@@ -230,6 +237,26 @@ export class ValueStore {
   byMflId(id: string) {
     return this.byMfl.get(id);
   }
+
+  /** Every id-crosswalk row (after first refresh). */
+  allCrosswalk(): IdCrosswalkRow[] {
+    return this.snapshot.crosswalk ?? [];
+  }
+
+  /** Sleeper id for another platform's player id (ESPN, Yahoo, Fleaflicker). */
+  sleeperIdFor(platform: 'espn' | 'yahoo' | 'fleaflicker', id: string): string | null {
+    if (!this.otherIndex) {
+      this.otherIndex = new Map();
+      for (const r of this.snapshot.crosswalk ?? []) {
+        if (!r.sleeper_id) continue;
+        if (r.espn_id) this.otherIndex.set(`espn:${r.espn_id}`, r.sleeper_id);
+        if (r.yahoo_id) this.otherIndex.set(`yahoo:${r.yahoo_id}`, r.sleeper_id);
+        if (r.fleaflicker_id) this.otherIndex.set(`fleaflicker:${r.fleaflicker_id}`, r.sleeper_id);
+      }
+    }
+    return this.otherIndex.get(`${platform}:${id}`) ?? null;
+  }
+  private otherIndex: Map<string, string> | null = null;
 
   /** Name/position/sleeper id for any MFL player id, valued or not (after first refresh). */
   crosswalkForMfl(id: string) {

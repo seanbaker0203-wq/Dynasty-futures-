@@ -38,6 +38,18 @@ export function parseSleeperSettings(league: any): LeagueSettings {
     scoring_type: scoring.rec >= 1 ? 'PPR' : scoring.rec > 0 ? 'Half PPR' : 'Standard',
     superflex: qb >= 2 || superFlex > 0,
     te_premium: (scoring.bonus_rec_te || 0) > 0,
+    // Sleeper league type: 0 redraft, 1 keeper, 2 dynasty.
+    format: league?.settings?.type === 2 ? 'dynasty' : league?.settings?.type === 1 ? 'keeper' : 'redraft',
+    format_source: 'platform',
+    playoffs: league?.settings?.playoff_week_start
+      ? {
+          start_week: Number(league.settings.playoff_week_start),
+          teams: Number(league.settings.playoff_teams) || 6,
+          weeks: Math.max(1, Math.ceil(Math.log2(Math.max(2, Number(league.settings.playoff_teams) || 6)))),
+        }
+      : null,
+    median_game: league?.settings?.league_average_match === 1,
+    faab_budget: league?.settings?.waiver_type === 2 ? Number(league.settings.waiver_budget) || 100 : null,
   };
 }
 
@@ -120,9 +132,32 @@ export async function fetchSleeperLeague(leagueId: string, username?: string): P
       player_ids: ids,
       starters: (r.starters || []).map(String).filter((s: string) => s !== '0'),
       designations,
-      picks: (picksByTeam.get(String(r.roster_id)) || []).sort((a, b) => a.year - b.year || a.round - b.round),
+      picks: settings.format === 'redraft' ? [] : (picksByTeam.get(String(r.roster_id)) || []).sort((a, b) => a.year - b.year || a.round - b.round),
+      record: {
+        wins: Number(r.settings?.wins) || 0,
+        losses: Number(r.settings?.losses) || 0,
+        ties: Number(r.settings?.ties) || 0,
+        points_for: (Number(r.settings?.fpts) || 0) + (Number(r.settings?.fpts_decimal) || 0) / 100,
+      },
+      faab_remaining: settings.faab_budget != null ? settings.faab_budget - (Number(r.settings?.waiver_budget_used) || 0) : null,
     };
   });
+
+  // Remaining regular-season matchups, for playoff odds.
+  let schedule: NormalizedLeague['schedule'] = [];
+  let currentWeek: number | undefined;
+  if (league.status === 'in_season' && settings.playoffs) {
+    const state = await fetchJson<any>(`${API}/state/nfl`).catch(() => null);
+    currentWeek = Number(state?.display_week || state?.week) || undefined;
+    const from = Math.max(1, currentWeek || 1);
+    const weeks = Array.from({ length: Math.max(0, settings.playoffs.start_week - from) }, (_, i) => from + i);
+    const res = await Promise.all(weeks.map((w) => fetchJson<any[]>(`${API}/league/${id}/matchups/${w}`).catch(() => [])));
+    res.forEach((ms, i) => {
+      const byMatch = new Map<number, string[]>();
+      for (const m of ms || []) if (m.matchup_id != null) byMatch.set(m.matchup_id, [...(byMatch.get(m.matchup_id) || []), String(m.roster_id)]);
+      for (const pair of byMatch.values()) if (pair.length === 2) schedule!.push({ week: weeks[i], a: pair[0], b: pair[1] });
+    });
+  }
 
   // Identify the user's team by Sleeper username or display name.
   let userTeamId: string | null = null;
@@ -148,5 +183,7 @@ export async function fetchSleeperLeague(leagueId: string, username?: string): P
     teams,
     players,
     user_team_id: userTeamId,
+    schedule,
+    current_week: currentWeek,
   };
 }

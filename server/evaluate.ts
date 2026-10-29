@@ -26,6 +26,8 @@ import { projectOutlook, rankOutlooks } from './model/outlook';
 import { valueStore } from './values';
 import { gradeLeague } from './classify';
 import type { NormalizedLeague } from './leagues/types';
+import { buildRedraft } from './model/redraft';
+import { nflState } from './sources/weekly';
 
 const normalizePosition = (pos: string): Position => {
   const p = (pos || '').toUpperCase();
@@ -311,12 +313,13 @@ export async function evaluateLeague(league: NormalizedLeague, requestedTeamId?:
     lt.cap = capInfo.get(lt.franchise_id);
   }
 
+  const redraft = league.settings.format === 'redraft';
   // Free agents: valued players nobody in this league rosters.
   const rostered = new Set(league.teams.flatMap((t) => t.player_ids));
   const idKey = league.platform === 'mfl' ? 'mfl_id' : 'sleeper_id';
   const freeAgents: MasterPlayer[] = board.players
     .filter((bp) => bp[idKey] && !rostered.has(bp[idKey]!) && bp.value > 0)
-    .slice(0, 60)
+    .slice(0, redraft ? 150 : 60)
     .map((bp) => ({
       id: bp[idKey]!,
       full_name: bp.name,
@@ -327,6 +330,10 @@ export async function evaluateLeague(league: NormalizedLeague, requestedTeamId?:
       market_value: bp.value,
       futures: futuresOf(bp),
     }));
+
+  const redraftInfo = redraft
+    ? buildRedraft(league, rosterPlayers, userTeamId, freeAgents, league.current_week ?? (await nflState()).week)
+    : undefined;
 
   const unvalued = userEval.players.filter((p) => p.market_value === 0 && !['K', 'DEF'].includes(p.position));
   const warnings = [...(userEval.warnings || [])];
@@ -345,8 +352,12 @@ export async function evaluateLeague(league: NormalizedLeague, requestedTeamId?:
     draft_picks: userEval.draft_picks,
     league_teams: leagueTeams,
     free_agents: freeAgents,
+    redraft: redraftInfo,
+    league_name: league.name,
     values_meta: {
-      source: `Futures Value: ${WEIGHTS.model * 100}% our projection model, ${WEIGHTS.market * 100}% FantasyCalc trade market, ${WEIGHTS.experts * 100}% FantasyPros experts (via DynastyProcess)`,
+      source: redraft
+        ? 'Rest-of-season value: 50% our weekly projections through the fantasy playoffs (Sleeper/Rotowire), 50% FantasyCalc redraft market'
+        : `Futures Value: ${WEIGHTS.model * 100}% our projection model, ${WEIGHTS.market * 100}% FantasyCalc trade market, ${WEIGHTS.experts * 100}% FantasyPros experts (via DynastyProcess)`,
       scrape_date: valueStore.meta.scrape_date,
       player_count: board.players.length,
     },

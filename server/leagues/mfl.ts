@@ -92,6 +92,9 @@ export function parseMflSettings(league: any, rules: any): LeagueSettings {
     scoring_type: wrRec >= 1 ? 'PPR' : wrRec > 0 ? 'Half PPR' : 'Standard',
     superflex: qbMax >= 2,
     te_premium: (recPoints.TE || 0) > wrRec,
+    // MFL doesn't label league type; most MFL leagues are dynasty or keeper. Users can change it in the app.
+    format: 'dynasty',
+    format_source: 'default',
   };
 }
 

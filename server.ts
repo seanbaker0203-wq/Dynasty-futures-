@@ -104,9 +104,9 @@ app.post(
   ['/api/sync/sleeper', '/sync/sleeper'],
   rateLimit('sync', { anon: 20, user: 80 }),
   asyncRoute(async (req, res) => {
-    const { league_id, username, franchise_id } = req.body || {};
+    const { league_id, username, franchise_id, format } = req.body || {};
     if (!league_id) throw new LeagueSyncError('Enter your Sleeper league ID.');
-    const league = await fetchSleeperLeague(String(league_id), username);
+    const league = applyFormat(await fetchSleeperLeague(String(league_id), username), format);
     rememberLeague(league);
     res.json(rememberEval(league, await evaluateLeague(league, franchise_id)));
   })
@@ -116,7 +116,7 @@ app.post(
   ['/api/sync/mfl', '/sync/mfl'],
   rateLimit('sync', { anon: 20, user: 80 }),
   asyncRoute(async (req, res) => {
-    const { league_id, franchise_id, mfl_api_key, username, password, year } = req.body || {};
+    const { league_id, franchise_id, mfl_api_key, username, password, year, format } = req.body || {};
     if (!league_id) throw new LeagueSyncError('Enter your MFL league ID.');
     const league = await fetchMflLeague(String(league_id), {
       franchiseId: franchise_id,
@@ -125,10 +125,21 @@ app.post(
       password,
       year: year ? Number(year) : undefined,
     });
+    applyFormat(league, format);
     rememberLeague(league);
     res.json(rememberEval(league, await evaluateLeague(league, franchise_id)));
   })
 );
+
+/** The user's choice of league type wins over what the platform says. */
+function applyFormat(league: NormalizedLeague, format: unknown) {
+  if (format === 'dynasty' || format === 'keeper' || format === 'redraft') {
+    league.settings.format = format;
+    league.settings.format_source = 'user';
+    if (format === 'redraft') for (const t of league.teams) t.picks = [];
+  }
+  return league;
+}
 
 // Leagues synced recently, so the (slower) trade-history call doesn't have to log in again.
 const recentLeagues = new Map<string, { league: NormalizedLeague; at: number }>();

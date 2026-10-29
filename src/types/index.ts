@@ -5,7 +5,7 @@
 
 export type Position = 'QB' | 'RB' | 'WR' | 'TE' | 'K' | 'DEF' | 'PICK';
 
-export type Platform = 'sleeper' | 'mfl' | 'csv' | 'manual';
+export type Platform = 'sleeper' | 'mfl' | 'espn' | 'yahoo' | 'fleaflicker' | 'csv' | 'manual';
 
 export type ValuationMode = 'rankings_asc' | 'auction_desc';
 
@@ -70,6 +70,8 @@ export interface FuturesInfo {
   ktc_url: string | null;
   /** NFL contract: when it ends, first season he can be cut cheaply, and the risk applied to projections */
   nfl_contract?: NflContract | null;
+  /** Redraft only: rest-of-season projection */
+  ros?: RosInfo | null;
 }
 
 export interface BoardPlayer extends FuturesInfo {
@@ -148,7 +150,19 @@ export interface LeagueSettings {
   te_premium?: boolean;
   /** Salary-cap leagues (MFL) */
   salary_cap?: { cap: number; taxi_pct: number; ir_pct: number };
+  /** League type: dynasty (default), keeper or redraft. Decides which tools and values the app shows. */
+  format?: LeagueFormat;
+  /** Where the format came from: the platform's own setting, or the user's choice */
+  format_source?: 'platform' | 'user' | 'default';
+  /** Fantasy playoffs: first week and number of teams */
+  playoffs?: { start_week: number; teams: number; weeks: number } | null;
+  /** Each week also counts as a game against the league median score */
+  median_game?: boolean;
+  /** FAAB budget per team (null = rolling/priority waivers) */
+  faab_budget?: number | null;
 }
+
+export type LeagueFormat = 'dynasty' | 'keeper' | 'redraft';
 
 export interface CapOutlook {
   season: number;
@@ -416,6 +430,10 @@ export interface RosterEvaluationResult {
   season_outlook?: SeasonOutlook[];
   pick_plan?: PickPlan[];
   cap?: TeamCap;
+  /** Redraft leagues: standings, weekly projections, playoff odds, waiver ideas */
+  redraft?: RedraftInfo;
+  /** League name as the platform shows it */
+  league_name?: string;
   /** All teams in the league, for switching "my team" without re-syncing */
   league_franchises?: { franchise_id: string; franchise_name: string; owner_name?: string }[];
 }
@@ -429,6 +447,13 @@ export interface SyncRequest {
   franchise_id?: string;
   year?: string; // MFL season year (e.g. 2024, 2025)
   valuation_mode?: ValuationMode;
+  /** User's choice of league type (overrides the platform) */
+  format?: LeagueFormat;
+  /** ESPN private leagues: cookies from the user's browser (sent per request, never stored on the server) */
+  espn_s2?: string;
+  swid?: string;
+  /** Yahoo: league key like 461.l.12345 (signed in with Yahoo) */
+  league_name?: string;
 }
 
 export interface MFLLinkedLeague {
@@ -643,4 +668,53 @@ export interface NflContract {
   out_year: number | null;
   by_season: { season: number; cap: number; dead_if_cut: number; savings_if_cut: number }[];
   events: ContractEvent[];
+}
+
+// ---- Redraft ---------------------------------------------------------------------------------------
+export interface RosInfo {
+  /** Projected points for the rest of the season (regular + playoff weeks), league scoring */
+  points: number;
+  /** Average per scheduled game */
+  ppg: number;
+  /** Projected points per playoff week (average) */
+  playoff_ppg: number;
+  /** Projected points per week, from this week to the last playoff week (0 = bye or no projection) */
+  weeks: { week: number; points: number; opponent: string | null }[];
+}
+
+export interface RedraftTeam {
+  team_id: string;
+  name: string;
+  record: { wins: number; losses: number; ties: number; points_for: number };
+  /** Best-lineup projected points by week, this week through the last playoff week */
+  weekly: { week: number; points: number }[];
+  /** Average projected points per week for the rest of the regular season */
+  ros_avg: number;
+  /** Average projected points per playoff week */
+  playoff_avg: number;
+  playoff_odds: number; // 0..1
+  bye_odds: number; // top-2 seed, 0..1
+  projected_wins: number;
+}
+
+export interface WaiverIdea {
+  player: MasterPlayer;
+  /** Projected points per week added to your best lineup, rest of season (incl. playoffs) */
+  upgrade_ros: number;
+  /** Points added to this week's best lineup */
+  upgrade_week: number;
+  /** Who he'd replace in your lineup most weeks */
+  replaces: string | null;
+  /** Suggested FAAB bid range in dollars (FAAB leagues) */
+  faab: { low: number; high: number } | null;
+  note: string;
+}
+
+export interface RedraftInfo {
+  week: number;
+  playoffs: { start_week: number; end_week: number; teams: number };
+  faab_budget: number | null;
+  faab_remaining: number | null;
+  teams: RedraftTeam[];
+  waivers: WaiverIdea[];
 }

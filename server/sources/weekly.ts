@@ -14,6 +14,8 @@ export interface WeeklyProjection {
   team: string | null;
   injury_status: string | null;
   game_date: string | null;
+  name: string;
+  position: string;
 }
 
 const POSITIONS = ['QB', 'RB', 'WR', 'TE', 'K', 'DEF'];
@@ -42,6 +44,8 @@ export async function weeklyProjections(season: number, week: number): Promise<M
       team: r.team ?? null,
       injury_status: r.player?.injury_status ?? null,
       game_date: r.date ?? null,
+      name: r.player ? `${r.player.first_name ?? ''} ${r.player.last_name ?? ''}`.trim() : String(r.player_id),
+      position: r.player?.position ?? '',
     });
   }
   cache.set(key, { at: Date.now(), data });

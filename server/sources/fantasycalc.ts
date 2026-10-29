@@ -33,21 +33,23 @@ export interface MarketFormat {
   superflex: boolean;
   teams: number;
   ppr: number; // 0, 0.5, 1
+  /** false = redraft (this-season) values; default dynasty */
+  dynasty?: boolean;
 }
 
-export const formatKey = (f: MarketFormat) => `${f.superflex ? 2 : 1}qb-${f.teams}t-${f.ppr}ppr`;
+export const formatKey = (f: MarketFormat) => `${f.dynasty === false ? 'rd-' : ''}${f.superflex ? 2 : 1}qb-${f.teams}t-${f.ppr}ppr`;
 
 export async function getMarket(f: MarketFormat): Promise<MarketSnapshot | null> {
   const teams = Math.min(16, Math.max(8, Math.round(f.teams || 12)));
   const ppr = f.ppr >= 1 ? 1 : f.ppr > 0 ? 0.5 : 0;
-  const key = formatKey({ superflex: f.superflex, teams, ppr });
+  const key = formatKey({ superflex: f.superflex, teams, ppr, dynasty: f.dynasty });
   const hit = cache.get(key);
   if (hit && Date.now() - hit.fetched_at < TTL) return hit;
   if (inflight.has(key)) return inflight.get(key)!;
 
   const p = (async () => {
     try {
-      const url = `https://api.fantasycalc.com/values/current?isDynasty=true&numQbs=${f.superflex ? 2 : 1}&numTeams=${teams}&ppr=${ppr}`;
+      const url = `https://api.fantasycalc.com/values/current?isDynasty=${f.dynasty === false ? 'false' : 'true'}&numQbs=${f.superflex ? 2 : 1}&numTeams=${teams}&ppr=${ppr}`;
       const rows = await fetchJson<any[]>(url, { timeoutMs: 20000 });
       const entries: MarketEntry[] = rows.map((r) => ({
         name: r.player?.name ?? '',
