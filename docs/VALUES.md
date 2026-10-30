@@ -117,3 +117,17 @@ season, and not applied past the free-agency year. A player locked in by guarant
 agency or a cut-risk year loses. This flows into the model value, the season outlook, trade ideas and the trade builder.
 
 Licensing: OverTheCap data is used via nflverse; get permission from OverTheCap before charging.
+
+## League norms (added 30 Oct 2026)
+Advice and projections follow how each league actually plays (`leagueNorms` in `server/evaluate.ts`):
+- **QBs per team:** median active QBs rostered (taxi/IR excluded). Only QBs beyond that count are called "extra";
+  a team at the league's norm gets no "sell your backup QB" advice.
+- **Waiver QB level:** projection of the best free-agent QB who actually starts for his NFL team (6+ recent games or
+  3+ starter-level projected weeks); 8 points a game if none (a backup who only plays when his starter is out).
+- **Backup QB coverage in projections:** a starting QB misses about 15% of games (bye + injuries). Each backup counts
+  15% × (his points per game − the waiver level) in the season outlook, so trade ideas stop giving away needed depth.
+- **QB market:** share of league trades that included a QB, and what sellers got back vs the QB's value today (median,
+  QB as the main piece). Under 15% of trades → advice says not to sell a QB on its own; under 80% back → says sellers
+  get little. Built from the league's trade history (loaded in the background after each sync).
+Sean's league (37804), 30 Oct: 3 active QBs per team (4 with taxi), best streamable QB 14.2 pts/game, QBs in 12% of
+trades, sellers got ~86% of today's value back.

@@ -6,6 +6,8 @@ import { RosterDNAMathEngine } from '../../src/lib/rosterMath';
 import type { DraftPick, LeagueSettings, MasterPlayer, SeasonOutlook } from '../../src/types';
 
 const SKILL = ['QB', 'RB', 'WR', 'TE'];
+/** Share of games a starting QB misses (bye + injuries), measured league-wide roughly 1 bye + 1.5 games of 17. */
+const QB_MISS = 0.15;
 
 export function projectOutlook(
   players: MasterPlayer[],
@@ -17,7 +19,18 @@ export function projectOutlook(
     // Everyone counts in future seasons: taxi and IR players are back.
     const asPoints = players.map((p) => ({ ...p, roster_designation: 'ACTIVE' as const, market_value: p.futures?.projection[i]?.ppg ?? 0 }));
     const { starters } = RosterDNAMathEngine.splitStartersAndBench(asPoints, [], settings);
-    const points = starters.reduce((s, p) => s + p.market_value, 0);
+    let points = starters.reduce((s, p) => s + p.market_value, 0);
+    // A backup QB starts when the starter is on bye or hurt (about 15% of games). He's worth what he scores above
+    // the best QB this league leaves on waivers; in leagues that hoard QBs that's very little.
+    const norms = settings?.league_norms;
+    if (norms) {
+      const startIds = new Set(starters.map((p) => p.id));
+      const backups = asPoints.filter((p) => p.position === 'QB' && !startIds.has(p.id)).map((p) => p.market_value).sort((a, b) => b - a);
+      const waiver = norms.waiver_qb_ppg[i] ?? norms.waiver_qb_ppg[norms.waiver_qb_ppg.length - 1] ?? 0;
+      starters.filter((p) => p.position === 'QB').forEach((_, j) => {
+        if (backups[j] != null) points += QB_MISS * Math.max(0, backups[j] - waiver);
+      });
+    }
     const slotsPpg = starters.filter((p) => SKILL.includes(p.position)).map((p) => p.market_value).sort((a, b) => a - b);
 
     // Picks: chance of a starter-level season x gain over the next-weakest starter. Best picks first, one

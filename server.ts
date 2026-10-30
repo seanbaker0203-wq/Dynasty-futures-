@@ -112,6 +112,7 @@ app.post(
     if (!league_id) throw new LeagueSyncError('Enter your Sleeper league ID.');
     const league = applyFormat(await fetchSleeperLeague(String(league_id), username), format);
     rememberLeague(league);
+    warmHistory(league);
     res.json(rememberEval(league, await evaluateLeague(league, franchise_id)));
   })
 );
@@ -131,6 +132,7 @@ app.post(
     });
     applyFormat(league, format);
     rememberLeague(league);
+    warmHistory(league, mfl_api_key);
     res.json(rememberEval(league, await evaluateLeague(league, franchise_id)));
   })
 );
@@ -169,6 +171,30 @@ async function loadLeague(req: Request): Promise<NormalizedLeague> {
   return applyFormat(league, b.format);
 }
 
+/** Three seasons of league trades: report cards, manager profiles and how QBs trade (cached 30 min). */
+async function buildLeagueHistory(league: NormalizedLeague, apiKey?: string) {
+  const key = `${league.platform}:${league.league_id}`;
+  const [raw, board] = await Promise.all([fetchTrades(league, { apiKey }), getBoard(league.settings)]);
+  let names = new Map<string, { name: string; position: string }>();
+  if (league.platform === 'mfl') {
+    const missing = new Set<string>();
+    for (const t of raw) for (const s of t.sides) for (const a of s.received)
+      if (a.kind === 'player' && !board.byMfl.has(a.id) && !league.players.get(a.id)?.name) missing.add(a.id);
+    names = await fetchMflNames([...missing]);
+  }
+  const data = buildHistory(raw, league, board, names);
+  historyCache.set(key, { at: Date.now(), data });
+  return data;
+}
+
+/** Build trade history in the background after a sync, so league-norm advice has it next time. */
+function warmHistory(league: NormalizedLeague, apiKey?: string) {
+  if (!['sleeper', 'mfl'].includes(league.platform)) return;
+  const hit = historyCache.get(`${league.platform}:${league.league_id}`);
+  if (hit && Date.now() - hit.at < 6 * 3600_000) return;
+  buildLeagueHistory(league, apiKey).catch((e) => console.warn('[history] warm failed:', e.message));
+}
+
 /** The user's choice of league type wins over what the platform says. */
 function applyFormat(league: NormalizedLeague, format: unknown) {
   if (format === 'dynasty' || format === 'keeper' || format === 'redraft') {
@@ -185,7 +211,7 @@ function rememberLeague(league: NormalizedLeague) {
   recentLeagues.set(`${league.platform}:${league.league_id}`, { league, at: Date.now() });
   for (const [k, v] of recentLeagues) if (Date.now() - v.at > 2 * 3600_000) recentLeagues.delete(k);
 }
-const historyCache = new Map<string, { at: number; data: any }>();
+import { historyCache } from './server/leagues/historyStore';
 
 /** ESPN, Fleaflicker and Yahoo leagues. */
 app.post(
@@ -300,17 +326,7 @@ app.post(
           : await fetchMflLeague(String(league_id), { apiKey: mfl_api_key });
       rememberLeague(league);
     }
-    const [raw, board] = await Promise.all([fetchTrades(league, { apiKey: mfl_api_key }), getBoard(league.settings)]);
-    let names = new Map<string, { name: string; position: string }>();
-    if (league.platform === 'mfl') {
-      const missing = new Set<string>();
-      for (const t of raw) for (const s of t.sides) for (const a of s.received)
-        if (a.kind === 'player' && !board.byMfl.has(a.id) && !league.players.get(a.id)?.name) missing.add(a.id);
-      names = await fetchMflNames([...missing]);
-    }
-    const data = buildHistory(raw, league, board, names);
-    historyCache.set(key, { at: Date.now(), data });
-    res.json(data);
+    res.json(await buildLeagueHistory(league, mfl_api_key));
   })
 );
 

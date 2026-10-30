@@ -10,6 +10,7 @@ import { RosterDNAMathEngine } from '../src/lib/rosterMath';
 import { DraftPickEngine } from '../src/lib/draftPicks';
 import { getSeasonContext } from '../src/lib/season';
 import type {
+  LeagueNorms,
   ClassificationType,
   DraftPick,
   LeagueTeamSummary,
@@ -27,6 +28,8 @@ import { valueStore } from './values';
 import { gradeLeague } from './classify';
 import type { NormalizedLeague } from './leagues/types';
 import { buildRedraft } from './model/redraft';
+import { historyFor } from './leagues/historyStore';
+import { normName } from './players';
 import { nflState } from './sources/weekly';
 
 const normalizePosition = (pos: string): Position => {
@@ -109,9 +112,44 @@ function applyContracts(league: NormalizedLeague, pool: Map<string, MasterPlayer
   return caps;
 }
 
+/**
+ * How this league actually plays, so advice fits it: how many QBs teams carry, how good the best free-agent QB is
+ * (what a team without a backup falls back on), and how QBs have traded here.
+ */
+function leagueNorms(league: NormalizedLeague, board: Board, pool: Map<string, MasterPlayer>): LeagueNorms {
+  // Active QBs (taxi and IR don't count), to match how the advice counts them.
+  const qbCounts = league.teams
+    .map((t) => t.player_ids.filter((id) => pool.get(id)?.position === 'QB' && !t.designations[id]).length)
+    .sort((a, b) => a - b);
+  const qb_per_team = qbCounts.length ? qbCounts[Math.floor((qbCounts.length - 1) / 2)] : 2;
+  // Free agents: not rostered by id or by name (some platforms' ids don't map for every player).
+  const rostered = new Set(league.teams.flatMap((t) => t.player_ids));
+  const rosteredNames = new Set([...rostered].map((id) => normName(pool.get(id)?.full_name || '')).filter(Boolean));
+  const idKey = league.platform === 'mfl' ? 'mfl_id' : 'sleeper_id';
+  const faQbs = board.players.filter(
+    (bp) => bp.position === 'QB' && bp.team && !(bp[idKey] && rostered.has(bp[idKey]!)) && !rosteredNames.has(normName(bp.name))
+  );
+  // Only QBs who actually start for their NFL team help when you stream (6+ recent games). A backup on waivers
+  // only scores when his own starter goes down: count that as a desperation level of 8 points a game.
+  const DESPERATION = 8;
+  const starting = faQbs.filter((q) => (q.games ?? 0) >= 6 || (q.ros?.weeks.filter((w) => w.points >= 10).length ?? 0) >= 3);
+  const seasons = board.players[0]?.projection.length ?? 1;
+  const waiver_qb_ppg = Array.from({ length: seasons }, (_, i) =>
+    Math.round(Math.max(DESPERATION, ...starting.map((q) => (q.ros ? q.ros.ppg : q.projection[i]?.ppg ?? 0))) * 10) / 10
+  );
+  const market = historyFor(league.platform, league.league_id)?.qb_market;
+  return {
+    qb_per_team,
+    waiver_qb_ppg,
+    qb_trade_share: market ? market.share : null,
+    qb_sale_ratio: market?.sale_ratio ?? null,
+  };
+}
+
 export async function evaluateLeague(league: NormalizedLeague, requestedTeamId?: string | null) {
   const board = await getBoard(league.settings);
   const pool = buildPlayerPool(league, board);
+  league.settings.league_norms = leagueNorms(league, board, pool);
   const capInfo = applyContracts(league, pool);
   const teamById = new Map(league.teams.map((t) => [t.team_id, t]));
   const userTeamId =

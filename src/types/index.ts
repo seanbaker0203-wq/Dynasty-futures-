@@ -158,6 +158,8 @@ export interface LeagueSettings {
   format_source?: 'platform' | 'user' | 'default';
   /** Fantasy playoffs: first week and number of teams */
   playoffs?: { start_week: number; teams: number; weeks: number } | null;
+  /** How this league actually plays: QBs rostered per team, best waiver QB, how QBs trade (set during evaluation) */
+  league_norms?: LeagueNorms;
   /** Each week also counts as a game against the league median score */
   median_game?: boolean;
   /** FAAB budget per team (null = rolling/priority waivers) */
@@ -614,6 +616,8 @@ export interface LeagueHistory {
   trades: TradeReport[];
   profiles: ManagerProfile[];
   seasons: number[];
+  /** How quarterbacks trade in this league */
+  qb_market?: { trades_with_qb: number; trades: number; share: number; sale_ratio: number | null; sales: number };
 }
 
 // ---- Private notebook and personal value adjustments ----------------------------------------------
@@ -728,4 +732,15 @@ export interface PlayerExternalIds {
   yahoo: string | null;
   cbs: string | null;
   pfr: string | null;
+}
+
+export interface LeagueNorms {
+  /** Median QBs rostered per team */
+  qb_per_team: number;
+  /** Projected points per game of the best free-agent QB, by projected season */
+  waiver_qb_ppg: number[];
+  /** Share of league trades that included a QB (null until trade history is loaded) */
+  qb_trade_share: number | null;
+  /** What QB sellers got back, as a share of the QB's value today (median) */
+  qb_sale_ratio: number | null;
 }

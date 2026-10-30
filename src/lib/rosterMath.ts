@@ -321,22 +321,40 @@ export class RosterDNAMathEngine {
     const contending = ['Juggernaut', 'Contender', 'Fraudulent Contender'].includes(metrics.classification);
     const list = (ps: MasterPlayer[]) => ps.map((p) => p.full_name).join(', ');
 
-    // 1. Valuable backup QBs in a 1QB league score nothing.
+    // 1. Extra QBs in a 1QB league, judged against how this league plays. A first backup covers byes and injuries
+    //    (worth more when the league leaves nothing on waivers); only QBs beyond the league's usual count are surplus.
     if (is1QB) {
-      const benchQBs = bench.filter((p) => p.position === 'QB' && p.market_value >= 1000);
-      if (benchQBs.length >= 1 && benchQBs.reduce((s, p) => s + p.market_value, 0) >= 2000) {
-        const value = benchQBs.reduce((s, p) => s + p.market_value, 0);
+      const norms = settings?.league_norms;
+      const qbs = [...starters, ...bench].filter((p) => p.position === 'QB' && p.roster_designation !== 'TAXI' && p.roster_designation !== 'IR').sort((a, b) => b.market_value - a.market_value);
+      const usual = Math.max(2, norms?.qb_per_team ?? 2);
+      const extra = qbs.slice(usual).filter((p) => p.market_value >= 1000);
+      const thinMarket = norms?.qb_trade_share != null && norms.qb_trade_share < 0.15;
+      const cheapSales = norms?.qb_sale_ratio != null && norms.qb_sale_ratio < 0.8;
+      if (extra.length) {
+        const value = extra.reduce((s, p) => s + p.market_value, 0);
+        const marketNote =
+          thinMarket || cheapSales
+            ? ` QBs rarely move in your league${norms?.qb_trade_share != null ? ` (${Math.round(norms.qb_trade_share * 100)}% of trades)` : ''}${
+                cheapSales ? ` and sellers have gotten about ${Math.round(norms!.qb_sale_ratio! * 100)}% of the QB's value back` : ''
+              }, so don't sell one on its own.`
+            : '';
         remediations.push({
           category: 'Surplus Capital',
           severity: 'opportunity',
-          metric_name: 'Backup QBs',
-          current_value: `${benchQBs.length} worth ${value.toLocaleString()}`,
-          threshold: 'one starter in a 1QB league',
-          issue: `${list(benchQBs)} ${benchQBs.length === 1 ? 'sits' : 'sit'} behind your starter. In a 1QB league a backup QB adds no points.`,
-          actionable_step: `Turn ${benchQBs.length === 1 ? 'your backup QB' : 'a backup QB'} into a starter at a position where you're thin.`,
+          metric_name: 'Extra QBs',
+          current_value: `${qbs.length} QBs (league norm ${usual})`,
+          threshold: `${usual} QBs, what teams in your league usually carry`,
+          issue: `You carry ${qbs.length} active QBs; most teams here carry ${usual}. Beyond the ${usual} you'd keep for byes and injuries, ${list(extra)} ${
+            extra.length === 1 ? 'adds' : 'add'
+          } little.${marketNote}`,
+          actionable_step:
+            thinMarket || cheapSales
+              ? `Use ${extra.length === 1 ? extra[0].full_name : 'an extra QB'} as the second piece in a bigger deal, or to a team whose starter just got hurt.`
+              : `Turn ${extra.length === 1 ? extra[0].full_name : 'an extra QB'} into help at a position where you're thin.`,
           recommended_moves: [
-            `Shop ${benchQBs[0].full_name} to a team whose starting QB is weak or hurt`,
-            'Ask for a starting RB or WR, or a first-round pick, rather than more depth',
+            `Keep your top backup: he covers byes and injuries${norms?.waiver_qb_ppg?.[0] != null ? ` (best free-agent QB projects ${norms.waiver_qb_ppg[0]} points a game)` : ''}`,
+            `Offer ${extra[extra.length - 1].full_name} when a starting QB goes down somewhere`,
+            'Package extras with a pick to consolidate into a better starter',
           ],
         });
       }

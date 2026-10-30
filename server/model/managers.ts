@@ -155,6 +155,26 @@ export function buildHistory(
     p.summary = bits.join(', ') + '.';
   }
 
+  // How QBs trade here: how often, and what sellers got back (today's values) when a QB was the main piece.
+  const withQb = trades.filter((t) => t.sides.some((s) => s.received.some((i) => i.position === 'QB')));
+  const ratios: number[] = [];
+  for (const t of withQb) {
+    for (const s of t.sides) {
+      const qbVal = s.received.filter((i) => i.position === 'QB').reduce((a, i) => a + i.value, 0);
+      if (qbVal < 1000 || qbVal < 0.6 * s.value_now) continue; // the QB must be the main piece
+      const seller = t.sides.find((x) => x !== s)!;
+      ratios.push(seller.value_now / qbVal);
+    }
+  }
+  ratios.sort((a, b) => a - b);
+  const qb_market = {
+    trades_with_qb: withQb.length,
+    trades: trades.length,
+    share: trades.length ? Math.round((withQb.length / trades.length) * 1000) / 1000 : 0,
+    sale_ratio: ratios.length ? Math.round(ratios[Math.floor(ratios.length / 2)] * 100) / 100 : null,
+    sales: ratios.length,
+  };
+
   const seasons = [...new Set(raw.map((t) => t.season))].sort();
-  return { trades, profiles, seasons };
+  return { trades, profiles, seasons, qb_market };
 }
