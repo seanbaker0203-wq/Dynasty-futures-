@@ -147,7 +147,28 @@ export const ConnectScreen: React.FC<{ onDone?: () => void }> = ({ onDone }) => 
 
         {platform === 'yahoo' ? (
           <div className="space-y-3">
-            {yahooErr && <p className="text-down text-[14px]">{yahooErr}</p>}
+            {yahooErr && (
+              <div className="space-y-2">
+                <p className="text-down text-[14px]">{yahooErr}</p>
+                <div className="flex flex-wrap gap-2">
+                  <a href="/api/auth/yahoo/start" className="btn-quiet">
+                    Sign in with Yahoo again
+                  </a>
+                  <button
+                    type="button"
+                    className="btn-quiet"
+                    onClick={async () => {
+                      await fetch('/api/auth/yahoo/disconnect', { method: 'POST' }).catch(() => null);
+                      setYahooErr(null);
+                      setYahooLeagues(null);
+                      setYahoo((y) => (y ? { ...y, signed_in: false } : y));
+                    }}
+                  >
+                    Disconnect Yahoo
+                  </button>
+                </div>
+              </div>
+            )}
             {!yahoo ? (
               <p className="flex items-center gap-2 text-muted">
                 <Loader2 className="w-4 h-4 animate-spin" /> Checking Yahoo
@@ -164,7 +185,7 @@ export const ConnectScreen: React.FC<{ onDone?: () => void }> = ({ onDone }) => 
                 </a>
               </>
             ) : !yahooLeagues ? (
-              <p className="flex items-center gap-2 text-muted">
+              yahooErr ? null : <p className="flex items-center gap-2 text-muted">
                 <Loader2 className="w-4 h-4 animate-spin" /> Finding your Yahoo leagues
               </p>
             ) : yahooLeagues.length === 0 ? (

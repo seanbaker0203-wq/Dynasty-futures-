@@ -6,7 +6,7 @@
  * https://<host>/api/auth/yahoo/callback) and set YAHOO_CLIENT_ID and YAHOO_CLIENT_SECRET.
  */
 import crypto from 'node:crypto';
-import { fetchJson, HttpError } from '../http';
+
 import { playerDirectory } from '../players';
 import { valueStore } from '../values';
 import { sleeperTeam } from '../sources/weekly';
@@ -24,7 +24,8 @@ export const yahooEnabled = () => !!(clientId() && clientSecret());
 
 // ---- OAuth ------------------------------------------------------------------------------------------------
 export function yahooAuthUrl(redirectUri: string, state: string) {
-  const q = new URLSearchParams({ client_id: clientId(), redirect_uri: redirectUri, response_type: 'code', state, language: 'en-us' });
+  // fspt-r = Fantasy Sports read. Asking for it explicitly makes Yahoo show it on the consent page.
+  const q = new URLSearchParams({ client_id: clientId(), redirect_uri: redirectUri, response_type: 'code', state, language: 'en-us', scope: 'fspt-r' });
   return `${AUTH}/request_auth?${q}`;
 }
 
@@ -76,12 +77,33 @@ export async function yahooAccessToken(refreshToken: string): Promise<string> {
 }
 
 const yget = async (path: string, token: string) => {
+  let r: Response;
   try {
-    return (await fetchJson<any>(`${API}/${path}${path.includes('?') ? '&' : '?'}format=json`, { headers: { Authorization: `Bearer ${token}` }, timeoutMs: 20000 }))
-      ?.fantasy_content;
+    r = await fetch(`${API}/${path}${path.includes('?') ? '&' : '?'}format=json`, {
+      headers: { Authorization: `Bearer ${token}`, Accept: 'application/json' },
+      signal: AbortSignal.timeout(20000),
+    });
   } catch (err) {
-    if (err instanceof HttpError && err.status === 401) throw new LeagueSyncError('Your Yahoo sign-in expired. Sign in with Yahoo again.', 401);
     throw new LeagueSyncError(`Yahoo couldn't be reached (${(err as Error).message}).`, 502);
+  }
+  const text = await r.text();
+  if (!r.ok) {
+    // Yahoo explains refusals in the body (JSON or XML): pass that on.
+    const why =
+      text.match(/"description"\s*:\s*"([^"]+)"/)?.[1] || text.match(/<description>([^<]+)<\/description>/)?.[1] || text.match(/oauth_problem="?([\w_]+)/)?.[1] || '';
+    console.warn(`[yahoo] ${r.status} on ${path}: ${text.slice(0, 300)}`);
+    if (r.status === 401) throw new LeagueSyncError(`Your Yahoo sign-in expired or was refused${why ? ` (${why})` : ''}. Sign in with Yahoo again.`, 401);
+    if (r.status === 403)
+      throw new LeagueSyncError(
+        `Yahoo refused access to fantasy data${why ? ` (${why})` : ''}. Check the Yahoo app has "Fantasy Sports: Read" enabled, then sign in with Yahoo again.`,
+        403
+      );
+    throw new LeagueSyncError(`Yahoo returned an error (${r.status}${why ? `: ${why}` : ''}).`, 502);
+  }
+  try {
+    return JSON.parse(text)?.fantasy_content;
+  } catch {
+    throw new LeagueSyncError('Yahoo sent something unexpected. Try again.', 502);
   }
 };
 
