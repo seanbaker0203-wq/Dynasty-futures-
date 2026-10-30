@@ -16,16 +16,20 @@ import { LeagueSyncError, type LeaguePlayer, type LeagueTeam, type NormalizedLea
 const AUTH = 'https://api.login.yahoo.com/oauth2';
 const API = 'https://fantasysports.yahooapis.com/fantasy/v2';
 
-export const yahooEnabled = () => !!(process.env.YAHOO_CLIENT_ID && process.env.YAHOO_CLIENT_SECRET);
+// Trim stray spaces, line breaks or quotes from copy-pasted values.
+const clean = (v: string | undefined) => (v || '').trim().replace(/^['"]|['"]$/g, '').trim();
+const clientId = () => clean(process.env.YAHOO_CLIENT_ID);
+const clientSecret = () => clean(process.env.YAHOO_CLIENT_SECRET);
+export const yahooEnabled = () => !!(clientId() && clientSecret());
 
 // ---- OAuth ------------------------------------------------------------------------------------------------
 export function yahooAuthUrl(redirectUri: string, state: string) {
-  const q = new URLSearchParams({ client_id: process.env.YAHOO_CLIENT_ID!, redirect_uri: redirectUri, response_type: 'code', state, language: 'en-us' });
+  const q = new URLSearchParams({ client_id: clientId(), redirect_uri: redirectUri, response_type: 'code', state, language: 'en-us' });
   return `${AUTH}/request_auth?${q}`;
 }
 
 async function tokenRequest(body: Record<string, string>) {
-  const basic = Buffer.from(`${process.env.YAHOO_CLIENT_ID}:${process.env.YAHOO_CLIENT_SECRET}`).toString('base64');
+  const basic = Buffer.from(`${clientId()}:${clientSecret()}`).toString('base64');
   const r = await fetch(`${AUTH}/get_token`, {
     method: 'POST',
     headers: { Authorization: `Basic ${basic}`, 'Content-Type': 'application/x-www-form-urlencoded' },
@@ -42,7 +46,7 @@ export const exchangeYahooCode = (code: string, redirectUri: string) =>
 export const refreshYahooToken = (refreshToken: string) => tokenRequest({ grant_type: 'refresh_token', refresh_token: refreshToken });
 
 // Encrypted cookie holding the refresh token (AES-256-GCM, key derived from the client secret).
-const key = () => crypto.createHash('sha256').update(`yahoo-cookie:${process.env.YAHOO_CLIENT_SECRET}`).digest();
+const key = () => crypto.createHash('sha256').update(`yahoo-cookie:${clientSecret()}`).digest();
 export function sealToken(token: string) {
   const iv = crypto.randomBytes(12);
   const c = crypto.createCipheriv('aes-256-gcm', key(), iv);
