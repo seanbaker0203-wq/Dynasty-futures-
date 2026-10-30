@@ -93,6 +93,12 @@ const yget = async (path: string, token: string) => {
       text.match(/"description"\s*:\s*"([^"]+)"/)?.[1] || text.match(/<description>([^<]+)<\/description>/)?.[1] || text.match(/oauth_problem="?([\w_]+)/)?.[1] || '';
     console.warn(`[yahoo] ${r.status} on ${path}: ${text.slice(0, 300)}`);
     if (r.status === 401) throw new LeagueSyncError(`Your Yahoo sign-in expired or was refused${why ? ` (${why})` : ''}. Sign in with Yahoo again.`, 401);
+    // Since July 2026 Yahoo gates the Fantasy API behind an approval program; unapproved apps sign in fine but get this 403.
+    if (r.status === 403 && /not authorized to perform this action/i.test(why))
+      throw new LeagueSyncError(
+        `Yahoo league sync is waiting on Yahoo's approval of Dynasty Futures for fantasy data. Until then, connect with your league ID on another platform, or check back soon.`,
+        403
+      );
     if (r.status === 403)
       throw new LeagueSyncError(
         `Yahoo refused access to fantasy data${why ? ` (${why})` : ''}. Check the Yahoo app has "Fantasy Sports: Read" enabled, then sign in with Yahoo again.`,
