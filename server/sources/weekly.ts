@@ -67,6 +67,8 @@ export function sleeperIdFor(platform: string, p: { id: string; position: string
     const t = String(p.team || '').toUpperCase();
     return t ? TEAM_FIX[t] || t : null;
   }
-  if (platform === 'sleeper') return p.id;
-  return valueStore.crosswalkForMfl(p.id)?.sleeper_id || null;
+  if (platform === 'mfl') return valueStore.crosswalkForMfl(p.id)?.sleeper_id || null;
+  // Sleeper ids natively; ESPN, Fleaflicker and Yahoo players are mapped to Sleeper ids at sync time.
+  // Unmatched players keep a prefixed id like "espn:123" and have no projection.
+  return p.id.includes(':') ? null : p.id;
 }

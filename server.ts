@@ -21,6 +21,7 @@ import { aiTradeRouter } from './server/aiTrade';
 import { fetchMflNames, fetchTrades } from './server/leagues/history';
 import { buildHistory } from './server/model/managers';
 import { nflState, sleeperIdFor, weeklyProjections } from './server/sources/weekly';
+import { weatherForTeams } from './server/sources/weather';
 import type { NormalizedLeague } from './server/leagues/types';
 import { SEASON } from './src/lib/season';
 import { accountsEnabled, identify, rateLimit } from './server/security';
@@ -342,7 +343,16 @@ app.post(
     const proj = await weeklyProjections(state.season, week);
     const recPts = /^ppr$/i.test(scoring_type || '') ? 1 : /half/i.test(scoring_type || '') ? 0.5 : 0;
     const out: Record<string, unknown> = {};
-    for (const p of players.slice(0, 80)) {
+    const list = players.slice(0, 80);
+    // Game-day weather for every NFL team on this roster (outdoor games only get adjusted).
+    const teams = new Set<string>();
+    for (const p of list) {
+      const sid = sleeperIdFor(String(platform), { id: String(p.id), position: String(p.position), team: p.team });
+      const t = (sid && proj.get(sid)?.team) || p.team;
+      if (t) teams.add(String(t));
+    }
+    const weather = await weatherForTeams(state.season, week, [...teams]).catch(() => ({}) as Record<string, never>);
+    for (const p of list) {
       const sid = sleeperIdFor(String(platform), { id: String(p.id), position: String(p.position), team: p.team });
       const pr = sid ? proj.get(sid) : undefined;
       if (!pr) {
@@ -350,15 +360,22 @@ app.post(
         continue;
       }
       const tePts = te_premium && p.position === 'TE' ? 0.5 * pr.rec : 0;
+      const raw = pr.pts_std + recPts * pr.rec + tePts;
+      const team = pr.team || (p.position === 'DEF' ? sid : p.team);
+      const wx = team ? (weather as Record<string, any>)[team] : undefined;
+      const factor = wx?.factors?.[p.position] ?? 1;
       out[p.id] = {
-        points: Math.round((pr.pts_std + recPts * pr.rec + tePts) * 10) / 10,
+        points: Math.round(raw * factor * 10) / 10,
+        base_points: Math.round(raw * 10) / 10,
+        weather_factor: factor,
+        weather_team: wx ? team : null,
         opponent: pr.opponent,
         injury_status: pr.injury_status,
         game_date: pr.game_date,
         matched: true,
       };
     }
-    res.json({ season: state.season, week, current_week: state.week, source: 'Sleeper (Rotowire projections)', projections: out });
+    res.json({ season: state.season, week, current_week: state.week, source: 'Sleeper (Rotowire projections)', projections: out, weather });
   })
 );
 

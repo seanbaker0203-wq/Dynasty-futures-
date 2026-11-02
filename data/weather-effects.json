@@ -1,0 +1,299 @@
+{
+ "source": "nflverse play-by-play + weekly player stats, regular seasons 2016-2025",
+ "method": "player-game half-PPR points / same player's average in his other games that season; outdoor games bucketed by reported game-time weather",
+ "buckets": {
+  "clear": {
+   "games": 1590,
+   "avg_total_points": 45.6,
+   "by_position": {
+    "QB": {
+     "factor": 1.0,
+     "lo": 0.985,
+     "hi": 1.014,
+     "n": 2975
+    },
+    "RB": {
+     "factor": 1.0,
+     "lo": 0.984,
+     "hi": 1.015,
+     "n": 5602
+    },
+    "WR": {
+     "factor": 1.0,
+     "lo": 0.987,
+     "hi": 1.012,
+     "n": 8315
+    },
+    "TE": {
+     "factor": 1.0,
+     "lo": 0.977,
+     "hi": 1.024,
+     "n": 3119
+    },
+    "K": {
+     "factor": 1.0,
+     "lo": 0.985,
+     "hi": 1.014,
+     "n": 2910
+    }
+   }
+  },
+  "cold": {
+   "games": 44,
+   "avg_total_points": 43.2,
+   "by_position": {
+    "QB": {
+     "factor": 0.788,
+     "lo": 0.702,
+     "hi": 0.869,
+     "n": 59
+    },
+    "RB": {
+     "factor": 0.965,
+     "lo": 0.865,
+     "hi": 1.06,
+     "n": 113
+    },
+    "WR": {
+     "factor": 0.878,
+     "lo": 0.779,
+     "hi": 0.978,
+     "n": 171
+    },
+    "TE": {
+     "factor": 0.882,
+     "lo": 0.744,
+     "hi": 1.041,
+     "n": 62
+    },
+    "K": {
+     "factor": 0.914,
+     "lo": 0.808,
+     "hi": 1.022,
+     "n": 61
+    }
+   }
+  },
+  "wind_15": {
+   "games": 141,
+   "avg_total_points": 40.9,
+   "by_position": {
+    "QB": {
+     "factor": 0.888,
+     "lo": 0.836,
+     "hi": 0.935,
+     "n": 250
+    },
+    "RB": {
+     "factor": 0.961,
+     "lo": 0.909,
+     "hi": 1.016,
+     "n": 494
+    },
+    "WR": {
+     "factor": 0.919,
+     "lo": 0.872,
+     "hi": 0.962,
+     "n": 735
+    },
+    "TE": {
+     "factor": 0.944,
+     "lo": 0.882,
+     "hi": 1.011,
+     "n": 264
+    },
+    "K": {
+     "factor": 0.892,
+     "lo": 0.839,
+     "hi": 0.945,
+     "n": 253
+    }
+   }
+  },
+  "wind_20": {
+   "games": 34,
+   "avg_total_points": 45.4,
+   "by_position": {
+    "QB": {
+     "factor": 0.888,
+     "lo": 0.798,
+     "hi": 0.989,
+     "n": 69
+    },
+    "RB": {
+     "factor": 1.086,
+     "lo": 0.984,
+     "hi": 1.201,
+     "n": 122
+    },
+    "WR": {
+     "factor": 0.933,
+     "lo": 0.84,
+     "hi": 1.027,
+     "n": 168
+    },
+    "TE": {
+     "factor": 0.766,
+     "lo": 0.658,
+     "hi": 0.902,
+     "n": 76
+    },
+    "K": {
+     "factor": 0.906,
+     "lo": 0.809,
+     "hi": 0.995,
+     "n": 60
+    }
+   }
+  },
+  "rain": {
+   "games": 114,
+   "avg_total_points": 40.4,
+   "by_position": {
+    "QB": {
+     "factor": 0.876,
+     "lo": 0.829,
+     "hi": 0.925,
+     "n": 223
+    },
+    "RB": {
+     "factor": 0.93,
+     "lo": 0.874,
+     "hi": 0.99,
+     "n": 404
+    },
+    "WR": {
+     "factor": 0.909,
+     "lo": 0.865,
+     "hi": 0.96,
+     "n": 595
+    },
+    "TE": {
+     "factor": 0.863,
+     "lo": 0.784,
+     "hi": 0.938,
+     "n": 230
+    },
+    "K": {
+     "factor": 0.974,
+     "lo": 0.919,
+     "hi": 1.033,
+     "n": 218
+    }
+   }
+  },
+  "heavy_rain": {
+   "games": 1,
+   "avg_total_points": 25.0,
+   "by_position": {}
+  },
+  "snow": {
+   "games": 22,
+   "avg_total_points": 43.5,
+   "by_position": {
+    "QB": {
+     "factor": 0.84,
+     "lo": 0.698,
+     "hi": 0.98,
+     "n": 35
+    },
+    "RB": {
+     "factor": 1.13,
+     "lo": 0.989,
+     "hi": 1.279,
+     "n": 70
+    },
+    "WR": {
+     "factor": 0.821,
+     "lo": 0.723,
+     "hi": 0.921,
+     "n": 95
+    },
+    "TE": {
+     "factor": 0.794,
+     "lo": 0.593,
+     "hi": 0.986,
+     "n": 39
+    },
+    "K": {
+     "factor": 0.857,
+     "lo": 0.755,
+     "hi": 0.976,
+     "n": 36
+    }
+   }
+  },
+  "wet_and_windy": {
+   "games": 22,
+   "avg_total_points": 37.3,
+   "by_position": {
+    "QB": {
+     "factor": 0.736,
+     "lo": 0.639,
+     "hi": 0.842,
+     "n": 36
+    },
+    "RB": {
+     "factor": 1.033,
+     "lo": 0.905,
+     "hi": 1.17,
+     "n": 84
+    },
+    "WR": {
+     "factor": 0.781,
+     "lo": 0.679,
+     "hi": 0.891,
+     "n": 100
+    },
+    "TE": {
+     "factor": 0.746,
+     "lo": 0.57,
+     "hi": 0.896,
+     "n": 47
+    },
+    "K": {
+     "factor": 0.707,
+     "lo": 0.612,
+     "hi": 0.808,
+     "n": 42
+    }
+   }
+  },
+  "dome": {
+   "games": 793,
+   "avg_total_points": 48.0,
+   "by_position": {
+    "QB": {
+     "factor": 1.027,
+     "lo": 1.005,
+     "hi": 1.047,
+     "n": 1467
+    },
+    "RB": {
+     "factor": 1.008,
+     "lo": 0.982,
+     "hi": 1.027,
+     "n": 2707
+    },
+    "WR": {
+     "factor": 1.047,
+     "lo": 1.03,
+     "hi": 1.067,
+     "n": 4206
+    },
+    "TE": {
+     "factor": 0.98,
+     "lo": 0.948,
+     "hi": 1.017,
+     "n": 1619
+    },
+    "K": {
+     "factor": 1.025,
+     "lo": 1.003,
+     "hi": 1.048,
+     "n": 1446
+    }
+   }
+  }
+ }
+}

@@ -1,11 +1,14 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Loader2 } from 'lucide-react';
+import { CloudRain, CloudSun, Loader2, Snowflake, Thermometer, Wind } from 'lucide-react';
 import { useRoster } from '../context/RosterContext';
 import { apiPost } from '../lib/api';
 import type { MasterPlayer } from '../types';
 
 interface Proj {
   points: number | null;
+  base_points?: number;
+  weather_factor?: number;
+  weather_team?: string | null;
   opponent: string | null;
   injury_status: string | null;
   game_date?: string | null;
@@ -16,7 +19,35 @@ interface WeekData {
   current_week: number;
   source: string;
   projections: Record<string, Proj>;
+  weather?: Record<string, GameWeather>;
 }
+interface GameWeather {
+  game: string;
+  home: string;
+  away: string;
+  kickoff: string | null;
+  kickoff_confirmed: boolean;
+  venue: string;
+  city: string;
+  status: 'forecast' | 'indoors' | 'roof' | 'too_early' | 'unavailable';
+  condition: 'clear' | 'cold' | 'wind_15' | 'wind_20' | 'rain' | 'heavy_rain' | 'snow' | 'wet_and_windy';
+  severity: 'none' | 'watch' | 'moderate' | 'high';
+  headline: string;
+  details: string | null;
+  impact: string | null;
+  factors: Record<string, number>;
+}
+
+const WxIcon: React.FC<{ c: GameWeather['condition']; className?: string }> = ({ c, className = 'w-4 h-4' }) =>
+  c === 'snow' ? <Snowflake className={className} /> : c === 'wind_15' || c === 'wind_20' ? <Wind className={className} /> : c === 'cold' ? <Thermometer className={className} /> : c === 'clear' ? <CloudSun className={className} /> : <CloudRain className={className} />;
+
+const kickoffText = (w: GameWeather) => {
+  if (!w.kickoff) return '';
+  const d = new Date(w.kickoff);
+  const day = d.toLocaleDateString(undefined, { weekday: 'short' });
+  return w.kickoff_confirmed ? `${day} ${d.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })}` : day;
+};
+const pct = (f: number) => `${f >= 1 ? '+' : '−'}${Math.abs(Math.round((f - 1) * 100))}%`;
 
 type SlotName = 'QB' | 'RB' | 'WR' | 'TE' | 'FLEX' | 'SUPER_FLEX' | 'K' | 'DEF';
 const ELIGIBLE: Record<SlotName, string[]> = {
@@ -121,6 +152,25 @@ export const WeekScreen: React.FC = () => {
     );
 
   const proj = (p: MasterPlayer) => data.projections[p.id];
+  const wxFor = (p: MasterPlayer) => {
+    const t = proj(p)?.weather_team;
+    const w = t ? data.weather?.[t] : undefined;
+    return w && w.severity !== 'none' && proj(p)?.opponent ? w : undefined;
+  };
+  // Weather alerts: outdoor games this week with bad weather that involve players you'd start or might start.
+  const starters = new Set(plan.lineup.map((l) => l.player?.id).filter(Boolean) as string[]);
+  const alerts = (() => {
+    const byGame = new Map<string, { w: GameWeather; mine: MasterPlayer[] }>();
+    for (const p of active) {
+      const w = wxFor(p);
+      if (!w || w.severity === 'watch' && !starters.has(p.id)) continue;
+      const g = byGame.get(w.game) ?? { w, mine: [] };
+      g.mine.push(p);
+      byGame.set(w.game, g);
+    }
+    const rank = { high: 0, moderate: 1, watch: 2, none: 3 };
+    return [...byGame.values()].sort((a, b) => rank[a.w.severity] - rank[b.w.severity]);
+  })();
   const row = (p: MasterPlayer, label?: string) => {
     const pr = proj(p);
     const bye = !pr?.opponent;
@@ -131,6 +181,17 @@ export const WeekScreen: React.FC = () => {
           <span className="block font-semibold truncate">
             {p.full_name}
             <InjuryTag s={pr?.injury_status ?? null} />
+            {wxFor(p) && (
+              <span
+                title={`${wxFor(p)!.headline}: ${wxFor(p)!.details ?? ''}`}
+                className={`ml-1.5 inline-flex items-center gap-0.5 rounded px-1.5 py-px text-[11px] font-semibold align-middle ${
+                  (pr?.weather_factor ?? 1) > 1.005 ? 'bg-up/12 text-up' : wxFor(p)!.severity === 'high' ? 'bg-down/12 text-down' : 'bg-gold/15 text-gold'
+                }`}
+              >
+                <WxIcon c={wxFor(p)!.condition} className="w-3 h-3" />
+                {pr?.weather_factor && Math.abs(pr.weather_factor - 1) >= 0.01 ? pct(pr.weather_factor) : 'watch'}
+              </span>
+            )}
           </span>
           <span className="block text-[13px] text-muted truncate">
             {p.position} · {bye ? (pr?.injury_status ? 'Not projected' : 'Bye') : `vs ${pr.opponent}`}
@@ -156,6 +217,51 @@ export const WeekScreen: React.FC = () => {
         </select>
         {loading && <Loader2 className="w-4 h-4 animate-spin text-muted" />}
       </div>
+
+      {alerts.length > 0 && (
+        <section className="space-y-2" aria-label="Weather alerts">
+          <h2 className="display text-[22px] text-ink">Weather alerts</h2>
+          {alerts.map(({ w, mine }) => (
+            <div
+              key={w.game}
+              className={`rounded-lg border p-3 ${w.severity === 'high' ? 'border-down/40 bg-down/5' : 'border-gold/40 bg-gold/5'}`}
+            >
+              <div className="flex items-center gap-2 font-semibold">
+                <WxIcon c={w.condition} className={`w-4 h-4 shrink-0 ${w.severity === 'high' ? 'text-down' : 'text-gold'}`} />
+                <span>
+                  {w.headline} · {w.game}
+                </span>
+                <span className="ml-auto text-[12px] font-normal text-muted shrink-0">
+                  {w.city} {kickoffText(w)}
+                </span>
+              </div>
+              {w.details && <p className="text-[13px] text-muted mt-1">{w.details}</p>}
+              {w.impact && <p className="text-[14px] mt-1.5">{w.impact}</p>}
+              <ul className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-[13px]">
+                {mine.map((p) => {
+                  const pr = proj(p);
+                  const f = pr?.weather_factor ?? 1;
+                  return (
+                    <li key={p.id}>
+                      <span className="font-semibold">{p.full_name}</span>
+                      {starters.has(p.id) ? '' : ' (bench)'}{' '}
+                      <span className="text-muted">
+                        {Math.abs(f - 1) >= 0.01 && pr?.base_points != null
+                          ? `${pr.base_points.toFixed(1)} → ${(pr.points ?? 0).toFixed(1)} (${pct(f)})`
+                          : 'no adjustment yet'}
+                      </span>
+                    </li>
+                  );
+                })}
+              </ul>
+            </div>
+          ))}
+          <p className="text-[12px] text-muted">
+            Projections in weather games are adjusted by how much each position scored in similar weather, 2016–2025, weighted by the chance it
+            happens. Forecasts update hourly and firm up closer to kickoff.
+          </p>
+        </section>
+      )}
 
       <section>
         <div className="flex items-baseline justify-between">
@@ -202,7 +308,7 @@ export const WeekScreen: React.FC = () => {
       </section>
 
       <p className="text-[12px] text-muted">
-        Projections: {data.source}, scored for your league ({evaluation?.settings?.scoring_type ?? 'standard'}). Players listed Out or Doubtful count as 0.
+        Projections: {data.source}, scored for your league ({evaluation?.settings?.scoring_type ?? 'standard'}). Players listed Out or Doubtful count as 0. Bad-weather games are adjusted (see Weather alerts); forecasts come from the National Weather Service.
         Taxi and IR players can’t start.
       </p>
     </div>
