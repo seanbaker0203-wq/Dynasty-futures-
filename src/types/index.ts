@@ -337,6 +337,8 @@ export interface FlexForFirstOpportunity {
 }
 
 export type DashboardViewMode =
+  | 'watchlist'
+  | 'mytrades'
   | 'portfolio'
   | 'market'
   | 'ingest'

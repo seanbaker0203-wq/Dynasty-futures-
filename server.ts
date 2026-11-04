@@ -371,6 +371,55 @@ app.post(
   })
 );
 
+/** Trade tracker: every trade you made in your saved Sleeper/MFL leagues, scored on today's values. */
+app.post(
+  '/api/trades/mine',
+  rateLimit('history', { anon: 10, user: 40 }),
+  asyncRoute(async (req, res) => {
+    const list: any[] = Array.isArray(req.body?.leagues) ? req.body.leagues.slice(0, 12) : [];
+    const results = await Promise.all(
+      list.map(async (l) => {
+        const platform = String(l.platform);
+        const base = { platform, league_id: String(l.league_id) };
+        if (!['sleeper', 'mfl'].includes(platform)) return { ...base, name: l.league_name ?? String(l.league_id), unsupported: true, trades: [] };
+        try {
+          const league = await loadLeague(req, { platform, league_id: l.league_id, franchise_id: l.franchise_id, username: l.username, format: l.format });
+          const mine = String(l.franchise_id ?? league.user_team_id ?? '');
+          if (!mine) return { ...base, name: league.name, error: "Couldn't tell which team is yours.", trades: [] };
+          const key = `${platform}:${league.league_id}`;
+          const hit = historyCache.get(key);
+          const hist = hit && Date.now() - hit.at < 30 * 60_000 ? hit.data : await buildLeagueHistory(league);
+          const trades = hist.trades
+            .filter((t: any) => t.sides.some((s: any) => s.team_id === mine))
+            .map((t: any) => {
+              const me = t.sides.find((s: any) => s.team_id === mine);
+              const them = t.sides.find((s: any) => s.team_id !== mine);
+              const net = me.value_now - (them?.value_now ?? 0);
+              const bigger = Math.max(me.value_now, them?.value_now ?? 0) || 1;
+              return {
+                id: t.id,
+                date: t.date,
+                season: t.season,
+                partner: them?.team_name ?? 'Unknown',
+                got: me.received,
+                gave: them?.received ?? [],
+                got_value: me.value_now,
+                gave_value: them?.value_now ?? 0,
+                net,
+                // Within 10%, or under 300 points (small trades swing on noise): even.
+                verdict: Math.abs(net) / bigger < 0.1 || Math.abs(net) < 300 ? 'even' : net > 0 ? 'won' : 'lost',
+              };
+            });
+          return { ...base, name: league.name, superflex: !!league.settings.superflex, format: league.settings.format, trades };
+        } catch (e) {
+          return { ...base, name: l.league_name ?? String(l.league_id), error: (e as Error).message, trades: [] };
+        }
+      })
+    );
+    res.json({ leagues: results });
+  })
+);
+
 /** This week's projected points for a roster, scored for the league (start/sit). */
 app.post(
   '/api/projections/week',

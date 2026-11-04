@@ -119,6 +119,7 @@ create table if not exists public.user_settings (
   updated_at timestamptz not null default now()
 );
 alter table public.user_settings add column if not exists reference_values jsonb;
+alter table public.user_settings add column if not exists watchlist jsonb;            -- players you're watching
 
 -- ---------- Row-level security ----------
 alter table public.value_snapshots enable row level security;

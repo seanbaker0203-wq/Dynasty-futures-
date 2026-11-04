@@ -14,9 +14,20 @@ export interface ReferenceSettings {
 }
 const DEFAULT_REFERENCE: ReferenceSettings = { source: 'market', imported: null };
 
+/** A player you're watching. value_at_add is his Futures Value (in that format) when you added him. */
+export interface WatchItem {
+  key: string; // Sleeper id, or "<platform>:<id>" when there is none
+  name: string;
+  position: string;
+  added_at: string;
+  format: 'sf' | '1qb';
+  value_at_add: number | null;
+}
+
 const LOCAL_RULES = 'df_private_rules';
 const LOCAL_ADJ = 'df_private_adjustments';
 const LOCAL_REF = 'df_private_reference';
+const LOCAL_WATCH = 'df_watchlist';
 
 const readLocal = <T,>(key: string, fallback: T): T => {
   try {
@@ -62,6 +73,9 @@ interface AccountContextType {
   /** Which values your league mates use (for value gaps and "looks fair to them") */
   reference: ReferenceSettings;
   saveReference: (r: ReferenceSettings) => Promise<void>;
+  watchlist: WatchItem[];
+  isWatched: (key: string | null | undefined) => boolean;
+  toggleWatch: (item: Omit<WatchItem, 'added_at'>) => Promise<void>;
   storage: 'cloud' | 'device';
   error: string | null;
 }
@@ -80,6 +94,7 @@ export const AccountProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const [adjustments, setAdjustments] = useState<ValueAdjustments>(() => normalizeAdj(readLocal(LOCAL_ADJ, null)));
   const [error, setError] = useState<string | null>(null);
   const [reference, setReference] = useState<ReferenceSettings>(() => ({ ...DEFAULT_REFERENCE, ...readLocal(LOCAL_REF, {}) }));
+  const [watchlist, setWatchlist] = useState<WatchItem[]>(() => readLocal<WatchItem[]>(LOCAL_WATCH, []));
 
   useEffect(() => {
     let unsub: (() => void) | undefined;
@@ -128,6 +143,19 @@ export const AccountProvider: React.FC<{ children: React.ReactNode }> = ({ child
         setReference({ ...DEFAULT_REFERENCE, ...localRef });
       }
       dropLocal(LOCAL_REF);
+
+      // Watchlist (separate query: an older database without this column shouldn't break the rest).
+      const localWatch = readLocal<WatchItem[]>(LOCAL_WATCH, []);
+      const { data: w, error: e3 } = await sb.from('user_settings').select('watchlist').eq('user_id', userId).maybeSingle();
+      if (e3) {
+        setWatchlist(localWatch); // keep using this device's list until the database is updated
+      } else {
+        const cloud: WatchItem[] = Array.isArray(w?.watchlist) ? w!.watchlist : [];
+        const merged = [...cloud, ...localWatch.filter((l) => !cloud.some((c) => c.key === l.key))];
+        if (merged.length !== cloud.length) await sb.from('user_settings').upsert({ user_id: userId, watchlist: merged, updated_at: new Date().toISOString() });
+        setWatchlist(merged);
+        dropLocal(LOCAL_WATCH);
+      }
     } catch (e: any) {
       setError(missingTables(e?.message || 'Couldn’t load your saved data.'));
     }
@@ -139,6 +167,7 @@ export const AccountProvider: React.FC<{ children: React.ReactNode }> = ({ child
       setRules(readLocal<DynastyRule[]>(LOCAL_RULES, []));
       setAdjustments(normalizeAdj(readLocal(LOCAL_ADJ, null)));
       setReference({ ...DEFAULT_REFERENCE, ...readLocal(LOCAL_REF, {}) });
+      setWatchlist(readLocal<WatchItem[]>(LOCAL_WATCH, []));
     }
   }, [userId, load]);
 
@@ -200,6 +229,20 @@ export const AccountProvider: React.FC<{ children: React.ReactNode }> = ({ child
     } else writeLocal(LOCAL_REF, r);
   };
 
+  const isWatched = (key: string | null | undefined) => !!key && watchlist.some((w) => w.key === key);
+  const toggleWatch: AccountContextType['toggleWatch'] = async (item) => {
+    setError(null);
+    const next = isWatched(item.key) ? watchlist.filter((w) => w.key !== item.key) : [{ ...item, added_at: new Date().toISOString() }, ...watchlist].slice(0, 100);
+    setWatchlist(next);
+    if (sb && userId) {
+      const { error: e } = await sb.from('user_settings').upsert({ user_id: userId, watchlist: next, updated_at: new Date().toISOString() });
+      if (e) {
+        writeLocal(LOCAL_WATCH, next); // database not updated yet: keep it on this device
+        setError(/watchlist/.test(e.message) ? 'Your watchlist is saved on this device until the database is updated (run supabase/schema.sql).' : missingTables(e.message));
+      }
+    } else writeLocal(LOCAL_WATCH, next);
+  };
+
   const signIn = async (email: string) => {
     if (!sb) throw new Error('Accounts aren’t set up on this server yet.');
     const { error: e } = await sb.auth.signInWithOtp({ email: email.trim(), options: { emailRedirectTo: window.location.origin } });
@@ -225,6 +268,9 @@ export const AccountProvider: React.FC<{ children: React.ReactNode }> = ({ child
         saveAdjustments,
         reference,
         saveReference,
+        watchlist,
+        isWatched,
+        toggleWatch,
         storage: userId ? 'cloud' : 'device',
         error,
       }}

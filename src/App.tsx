@@ -39,6 +39,9 @@ import { AccountProvider } from './context/AccountContext';
 import { LeagueBar } from './components/LeagueBar';
 import { MarketScreen } from './components/MarketTrades';
 import { PortfolioScreen } from './screens/PortfolioScreen';
+import { WatchlistScreen } from './screens/WatchlistScreen';
+import { MyTradesScreen } from './screens/MyTradesScreen';
+import { useAccount } from './context/AccountContext';
 import { ArrowLeftRight, LineChart, Link2, Shield, Trophy } from 'lucide-react';
 
 type Destination = 'team' | 'league' | 'values' | 'trade' | 'connect';
@@ -46,8 +49,8 @@ type Destination = 'team' | 'league' | 'values' | 'trade' | 'connect';
 const DESTINATIONS: { id: Destination; label: string; icon: React.FC<{ className?: string }>; views: DashboardViewMode[] }[] = [
   { id: 'team', label: 'My team', icon: Shield, views: ['single', 'week', 'season', 'waivers', 'plan', 'optimization', 'portfolio', 'rules'] },
   { id: 'league', label: 'League', icon: Trophy, views: ['league', 'compare', 'trades', 'picks', 'freeagents'] },
-  { id: 'values', label: 'Values', icon: LineChart, views: ['values', 'movers', 'market'] },
-  { id: 'trade', label: 'Trade', icon: ArrowLeftRight, views: ['trade', 'ideas', 'gaps'] },
+  { id: 'values', label: 'Values', icon: LineChart, views: ['values', 'movers', 'market', 'watchlist'] },
+  { id: 'trade', label: 'Trade', icon: ArrowLeftRight, views: ['trade', 'ideas', 'gaps', 'mytrades'] },
   { id: 'connect', label: 'Connect', icon: Link2, views: ['ingest', 'terms', 'privacy'] },
 ];
 
@@ -85,6 +88,7 @@ const AppContent: React.FC = () => {
   const { activeView, setActiveView, evaluation, format, syncHistory } = useRoster();
   const redraft = format === 'redraft';
   const multiLeague = syncHistory.length >= 2;
+  const { watchlist } = useAccount();
   const current = destinationOf(activeView);
   const go = (d: Destination) => setActiveView(redraft && d === 'team' ? 'week' : DESTINATIONS.find((x) => x.id === d)!.views[0]);
   const locked = (d: Destination) => d !== 'connect' && !evaluation;
@@ -206,9 +210,18 @@ const AppContent: React.FC = () => {
                 { view: 'values', label: 'Rankings' },
                 { view: 'movers', label: 'Movers' },
                 ...(redraft ? [] : ([{ view: 'market', label: 'Trades' }] as const)),
+                { view: 'watchlist', label: 'Watchlist', count: watchlist.length || undefined },
               ]}
             />
-            {activeView === 'values' ? <ValuesScreen /> : activeView === 'market' ? <MarketScreen superflex={!!evaluation?.settings?.superflex} /> : <MoversScreen />}
+            {activeView === 'values' ? (
+              <ValuesScreen />
+            ) : activeView === 'market' ? (
+              <MarketScreen superflex={!!evaluation?.settings?.superflex} />
+            ) : activeView === 'watchlist' ? (
+              <WatchlistScreen />
+            ) : (
+              <MoversScreen />
+            )}
           </>
         )}
 
@@ -219,9 +232,18 @@ const AppContent: React.FC = () => {
                 { view: 'trade', label: 'Builder' },
                 { view: 'ideas', label: 'Ideas' },
                 { view: 'gaps', label: 'Value gaps' },
+                { view: 'mytrades', label: 'My trades' },
               ]}
             />
-            {activeView === 'ideas' ? <IdeasScreen /> : activeView === 'gaps' ? <GapsScreen /> : <TradeScreen />}
+            {activeView === 'ideas' ? (
+              <IdeasScreen />
+            ) : activeView === 'gaps' ? (
+              <GapsScreen />
+            ) : activeView === 'mytrades' ? (
+              <MyTradesScreen />
+            ) : (
+              <TradeScreen />
+            )}
           </>
         )}
         <LegalLinks />

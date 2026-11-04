@@ -1,5 +1,6 @@
 import React, { useMemo, useState } from 'react';
-import { ChevronDown, Loader2, Search } from 'lucide-react';
+import { ChevronDown, Loader2, Search, Star } from 'lucide-react';
+import { useAccount } from '../context/AccountContext';
 import { useRoster } from '../context/RosterContext';
 import { useBoard } from '../lib/useBoard';
 import { fmt } from '../lib/leagueStats';
@@ -35,6 +36,9 @@ export const ValueRow: React.FC<{ p: BoardPlayer; owner?: string; mine?: boolean
 }) => {
   const [open, setOpen] = useState(false);
   const superflex = !!useRoster().evaluation?.settings?.superflex;
+  const { isWatched, toggleWatch } = useAccount();
+  const watchKey = p.sleeper_id ?? (p.mfl_id ? `mfl:${p.mfl_id}` : p.id);
+  const watched = isWatched(watchKey);
   return (
     <li className={mine ? 'bg-ink-soft -mx-4 px-4 sm:mx-0 sm:px-3 sm:rounded-lg' : 'sm:px-3'}>
       <button type="button" onClick={() => setOpen(!open)} aria-expanded={open} className="w-full flex items-center gap-3 py-3 text-left">
@@ -42,6 +46,7 @@ export const ValueRow: React.FC<{ p: BoardPlayer; owner?: string; mine?: boolean
         <span className="flex-1 min-w-0">
           <span className="block font-semibold truncate">
             {p.name} <span className="text-[13px] font-medium text-muted">{p.position}{p.position_rank}</span>
+            {watched && <Star className="inline w-3.5 h-3.5 ml-1 -mt-0.5 fill-gold text-gold" aria-label="On your watchlist" />}
           </span>
           <span className="block text-[13px] text-muted truncate">
             {p.team || 'FA'}
@@ -119,6 +124,15 @@ export const ValueRow: React.FC<{ p: BoardPlayer; owner?: string; mine?: boolean
               </div>
             </div>
           )}
+
+          <button
+            type="button"
+            onClick={() => toggleWatch({ key: watchKey, name: p.name, position: p.position, format: superflex ? 'sf' : '1qb', value_at_add: p.value })}
+            aria-pressed={watched}
+            className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-[13px] font-semibold ${watched ? 'border-gold text-gold' : 'border-line text-muted'}`}
+          >
+            <Star className={`w-3.5 h-3.5 ${watched ? 'fill-gold' : ''}`} /> {watched ? 'Watching' : 'Watch'}
+          </button>
 
           <NflContractDetail c={p.nfl_contract} />
           {!p.ros && <PlayerMarketTrades sleeperId={p.sleeper_id} superflex={superflex} />}
