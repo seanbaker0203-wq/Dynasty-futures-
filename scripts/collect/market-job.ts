@@ -12,6 +12,7 @@
  */
 import fs from 'fs';
 import path from 'path';
+import zlib from 'zlib';
 import { crawlSleeper, refreshLeagues, type CollectedTrade, type KnownLeague } from '../../server/collect/sleeperCrawler';
 import { fetchJson } from '../../server/http';
 
@@ -22,6 +23,15 @@ const PER_MINUTE = Number(process.env.PER_MINUTE || 600); // Sleeper asks for un
 fs.mkdirSync(dir, { recursive: true });
 const leaguesFile = path.join(dir, 'leagues.ndjson');
 const tradesFile = path.join(dir, 'trades.ndjson');
+
+// First run (empty Actions cache): start from the collection committed in data/market-seed.
+for (const [name, file] of [['seed_trades.ndjson.gz', tradesFile], ['seed_leagues.ndjson.gz', leaguesFile]] as const) {
+  const seed = path.resolve('data/market-seed', name);
+  if (!fs.existsSync(file) && fs.existsSync(seed)) {
+    fs.writeFileSync(file, zlib.gunzipSync(fs.readFileSync(seed)));
+    console.log(`seeded ${path.basename(file)} from ${name}`);
+  }
+}
 
 const readLines = <T>(f: string): T[] =>
   fs.existsSync(f) ? fs.readFileSync(f, 'utf8').split('\n').filter(Boolean).map((l) => JSON.parse(l) as T) : [];

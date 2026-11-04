@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Turn collected trades into the app's market data files.
 
-  python3 -I build_market_data.py <trades.ndjson> <data dir> [--days 120] [--alpha 1.5]
+  python3 -I build_market_data.py <trades.ndjson> <data dir> [--days 60] [--alpha 1.5]
 
 Writes:
   <data dir>/trade-values.json   {"superflex": fit, "oneqb": fit}   (fits from trade_values.py, last 365 days)
@@ -12,7 +12,7 @@ import sys, os, json, argparse, subprocess, tempfile, datetime
 
 ap = argparse.ArgumentParser()
 ap.add_argument('trades'); ap.add_argument('data_dir')
-ap.add_argument('--days', type=int, default=120)
+ap.add_argument('--days', type=int, default=60)
 ap.add_argument('--alpha', type=float, default=1.0)
 A = ap.parse_args()
 here = os.path.dirname(os.path.abspath(__file__))
@@ -25,7 +25,15 @@ for name, sf in (('superflex', 1), ('oneqb', 0)):
     subprocess.run([sys.executable, '-I', os.path.join(here, 'trade_values.py'), A.trades, out, '--sf', str(sf), '--alpha', str(A.alpha)], check=True)
     fits[name] = json.load(open(out))
     os.unlink(out)
-json.dump(fits, open(os.path.join(A.data_dir, 'trade-values.json'), 'w'), separators=(',', ':'))
+# Never replace a fit with one built on clearly fewer trades (e.g. a fresh, empty collection store).
+prev_path = os.path.join(A.data_dir, 'trade-values.json')
+if os.path.exists(prev_path):
+    prev = json.load(open(prev_path))
+    for name in fits:
+        if name in prev and prev[name].get('trades', 0) > fits[name]['trades'] * 1.05:
+            print(f"keeping previous {name} fit ({prev[name]['trades']} trades > {fits[name]['trades']})")
+            fits[name] = prev[name]
+json.dump(fits, open(prev_path, 'w'), separators=(',', ':'))
 
 seen, rows = set(), []
 cutoff = now - datetime.timedelta(days=A.days)

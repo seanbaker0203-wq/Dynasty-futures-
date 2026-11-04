@@ -154,3 +154,23 @@ Small samples are pulled toward "no change" (25 player-games of prior weight); w
 than its lighter version; RB effects are kept between −10% and +5%. Heavy rain has too few logged games of its own, so
 it uses the rain-and-wind numbers. Defenses gain in proportion to the drop in total points (capped at +15%). The final
 multiplier is scaled by the chance of the weather, so a 50% chance of rain gets half the effect.
+
+## Our own trade market (added 4 Nov 2026)
+
+Real dynasty trades collected from public Sleeper leagues (Sleeper's API is public and read-only; we stay under its
+1,000-calls-a-minute limit). There is no league search, so the collector starts from one league and moves out through
+its members' other leagues. Dynasty leagues only; two-team trades with something going each way. Stored: league id,
+format (1QB/Superflex, teams, PPR, TE premium), date and the players and picks traded. No managers' names.
+
+First collection, 4 Nov 2026: 77,528 trades from 5,711 leagues (72,533 Superflex, 4,995 1QB), nearly all from 2026.
+A daily GitHub workflow re-checks known leagues for new trades and finds more leagues.
+
+**Values** (`scripts/analysis/trade_values.py`): each player and pick gets the value that makes real trades even out
+(least squares on the log of each side's total, trades weighted by recency with a 90-day half-life, and a prior that
+pulls rarely traded assets toward a low value). Picks are grouped by round and how many drafts away. A consolidation
+premium can't be measured from trades alone (it only stretches the values, the order stays the same), so sides simply
+add up and the values are placed on the market scale by rank. Shown only for formats with 2,000+ trades.
+
+Check against FantasyCalc (built from 8.2M trades), players traded 5+ times: Spearman rank correlation 0.91 Superflex
+(0.88 within FantasyCalc's top 100), 0.89 1QB (0.85). Shown in the app as "Our trade data"; not part of Futures
+Value yet. It is the planned replacement for the FantasyPros component if that can't be licensed.
