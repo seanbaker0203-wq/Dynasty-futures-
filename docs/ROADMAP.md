@@ -191,3 +191,33 @@ before charging.
   incl. schedule, records, FAAB. Yahoo awaits the app keys in Render. Trade history is Sleeper/MFL only for now.
 - **Player links:** Footballguys (direct, PFR-style ids), FantasyPros, ESPN, Yahoo, CBS, NFL.com, PFR, KTC (dynasty).
 - Next: live-test ESPN/Yahoo/Fleaflicker; FAAB guide from league bid history; live draft assistant (before August).
+
+## Yahoo, weather, league norms — 30 Oct to 2 Nov 2026
+- **Yahoo:** sign-in works; fantasy data is refused (403) until Yahoo approves the app in its Fantasy API access program
+  (applied 31 Oct; Yahoo quotes 1–2 weeks, others report 3 weeks to 2+ months). The app explains this to users.
+- **Weather alerts** on This week: NWS forecast for each outdoor game window; projections adjusted by position from
+  measured 2016–2025 effects (docs/VALUES.md). Not yet confirmed against live forecasts.
+- **League norms:** QB depth advice and backup-QB value follow what each league actually carries and trades.
+- Fixed: ESPN/Fleaflicker/Yahoo players showed as "Bye" on This week.
+
+## Own trade market, portfolio, watchlist, trade tracker — 4 Nov 2026
+- **Trade database:** 77,528 real dynasty trades from 5,711 public Sleeper leagues (snowball crawl; no usernames).
+  Values → Trades (search by player or pick) and each player's recent trades. A daily GitHub workflow
+  (.github/workflows/market-data.yml) re-checks known leagues and finds new ones; state in the Actions cache,
+  seeded from data/market-seed. MFL trades can't be collected this way.
+- **Our trade values** fitted from those trades (docs/VALUES.md): rank correlation with FantasyCalc 0.91 Superflex,
+  0.89 1QB. Shown as "Our trade data"; not in Futures Value yet. Candidate replacement for the FantasyPros share.
+- **Portfolio** (My team → Portfolio): every player you own across saved leagues, valued in each league's format.
+- **Watchlist** (Values → Watchlist): value since you added him; account or device storage (needs
+  `user_settings.watchlist`: re-run supabase/schema.sql).
+- **Trade tracker** (Trade → My trades): your trades across saved Sleeper/MFL leagues on today's values.
+- Data permissions: see the project doc data-permissions.md (KTC import likely conflicts with KTC's terms; OverTheCap
+  data needs a license; FantasyCalc free under 1,000 monthly users with attribution, no trade-calculator substitute).
+
+### Decided / next
+- **No weekly team email in season** (managers check the app several times a week). Later: an off-season digest,
+  monthly or twice a month, going weekly around the NFL draft and training camp.
+- **Rookie report** (to build before the 2027 NFL draft, late April): rookie rankings by format, landing-spot updates
+  after the draft, rookie-pick values from our own trade data (picks by round and draft year already fitted), and
+  prospect profiles. Needs a college data source (e.g. CollegeFootballData, free API key) and draft capital.
+- Public value-chart and market-report pages (search traffic); draft assistant before August.
