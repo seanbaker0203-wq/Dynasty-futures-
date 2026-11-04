@@ -57,6 +57,8 @@ export interface FuturesInfo {
   market: number | null; // FantasyCalc trade market, on the shared scale
   experts: number | null; // FantasyPros-based (DynastyProcess), mapped to the shared scale
   model: number | null; // our production + age model, mapped to the shared scale
+  own_trade?: number | null; // our own trade market (trades we collected), mapped to the shared scale
+  own_trade_count?: number | null; // how many collected trades included him
   edge: number | null; // (value - market) / market
   signal: ValueSignal;
   market_trend_30d: number | null; // fraction, e.g. -0.08
@@ -335,6 +337,7 @@ export interface FlexForFirstOpportunity {
 }
 
 export type DashboardViewMode =
+  | 'market'
   | 'ingest'
   | 'single'
   | 'sitstart'

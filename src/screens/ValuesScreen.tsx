@@ -6,6 +6,7 @@ import { fmt } from '../lib/leagueStats';
 import { Change, NflChip, NflContractDetail, SignalTag, Sparkline, TIER_STYLE } from '../components/ValueBits';
 import type { BoardPlayer } from '../types';
 import { PlayerLinks } from '../components/PlayerLinks';
+import { PlayerMarketTrades } from '../components/MarketTrades';
 
 const POSITIONS = ['All', 'QB', 'RB', 'WR', 'TE'];
 type Scope = 'all' | 'league' | 'mine' | 'available';
@@ -33,6 +34,7 @@ export const ValueRow: React.FC<{ p: BoardPlayer; owner?: string; mine?: boolean
   right,
 }) => {
   const [open, setOpen] = useState(false);
+  const superflex = !!useRoster().evaluation?.settings?.superflex;
   return (
     <li className={mine ? 'bg-ink-soft -mx-4 px-4 sm:mx-0 sm:px-3 sm:rounded-lg' : 'sm:px-3'}>
       <button type="button" onClick={() => setOpen(!open)} aria-expanded={open} className="w-full flex items-center gap-3 py-3 text-left">
@@ -62,7 +64,7 @@ export const ValueRow: React.FC<{ p: BoardPlayer; owner?: string; mine?: boolean
 
       {open && (
         <div className="pb-4 sm:pl-12 space-y-4">
-          <dl className="grid grid-cols-3 gap-2 text-[13px]">
+          <dl className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-[13px]">
             {(p.ros
               ? [
                   ['Pts/wk rest of season', p.ros.ppg.toFixed(1)],
@@ -73,6 +75,7 @@ export const ValueRow: React.FC<{ p: BoardPlayer; owner?: string; mine?: boolean
                   ['Our model', p.model != null ? fmt(p.model) : null],
                   ['Trade market', p.market != null ? fmt(p.market) : null],
                   ['Experts', p.experts != null ? fmt(p.experts) : null],
+                  ...(p.own_trade != null ? [[`Our trade data (${p.own_trade_count} trades)`, fmt(p.own_trade)]] : []),
                 ]
             ).map(([k, v]) => (
               <div key={k as string} className="rounded-lg border border-line bg-card px-2.5 py-2">
@@ -118,6 +121,7 @@ export const ValueRow: React.FC<{ p: BoardPlayer; owner?: string; mine?: boolean
           )}
 
           <NflContractDetail c={p.nfl_contract} />
+          {!p.ros && <PlayerMarketTrades sleeperId={p.sleeper_id} superflex={superflex} />}
           <PlayerLinks player={{ name: p.name, position: p.position, team: p.team, ktc_url: p.ktc_url, ext_ids: p.ext_ids, format: p.ros ? 'redraft' : 'dynasty' }} />
         </div>
       )}

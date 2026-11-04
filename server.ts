@@ -22,6 +22,7 @@ import { fetchMflNames, fetchTrades } from './server/leagues/history';
 import { buildHistory } from './server/model/managers';
 import { nflState, sleeperIdFor, weeklyProjections } from './server/sources/weekly';
 import { weatherForTeams } from './server/sources/weather';
+import { marketTrades, ownTradeMeta } from './server/model/marketTrades';
 import type { NormalizedLeague } from './server/leagues/types';
 import { SEASON } from './src/lib/season';
 import { accountsEnabled, identify, rateLimit } from './server/security';
@@ -93,6 +94,21 @@ app.post(
       thresholds: board.thresholds,
       players,
     });
+  })
+);
+
+/** Real trades from public Sleeper dynasty leagues: newest first, for a format, optionally only those with one player. */
+app.get(
+  '/api/market/trades',
+  rateLimit('market', { anon: 60, user: 300 }),
+  asyncRoute(async (req, res) => {
+    await playerDirectory.refresh();
+    const superflex = req.query.sf === '1' ? true : req.query.sf === '0' ? false : undefined;
+    const player = typeof req.query.player === 'string' && /^\d{1,8}$/.test(req.query.player) ? req.query.player : undefined;
+    const limit = Math.min(200, Math.max(1, Number(req.query.limit) || 50));
+    const q = typeof req.query.q === 'string' ? req.query.q.slice(0, 40) : undefined;
+    const { built, trades } = marketTrades({ superflex, player, q, limit });
+    res.json({ built, meta: superflex != null ? ownTradeMeta(superflex) : null, trades });
   })
 );
 

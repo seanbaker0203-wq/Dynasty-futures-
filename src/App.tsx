@@ -37,6 +37,7 @@ import { SeasonScreen } from './screens/SeasonScreen';
 import { WaiversScreen } from './screens/WaiversScreen';
 import { AccountProvider } from './context/AccountContext';
 import { LeagueBar } from './components/LeagueBar';
+import { MarketScreen } from './components/MarketTrades';
 import { ArrowLeftRight, LineChart, Link2, Shield, Trophy } from 'lucide-react';
 
 type Destination = 'team' | 'league' | 'values' | 'trade' | 'connect';
@@ -44,7 +45,7 @@ type Destination = 'team' | 'league' | 'values' | 'trade' | 'connect';
 const DESTINATIONS: { id: Destination; label: string; icon: React.FC<{ className?: string }>; views: DashboardViewMode[] }[] = [
   { id: 'team', label: 'My team', icon: Shield, views: ['single', 'week', 'season', 'waivers', 'plan', 'optimization', 'rules'] },
   { id: 'league', label: 'League', icon: Trophy, views: ['league', 'compare', 'trades', 'picks', 'freeagents'] },
-  { id: 'values', label: 'Values', icon: LineChart, views: ['values', 'movers'] },
+  { id: 'values', label: 'Values', icon: LineChart, views: ['values', 'movers', 'market'] },
   { id: 'trade', label: 'Trade', icon: ArrowLeftRight, views: ['trade', 'ideas', 'gaps'] },
   { id: 'connect', label: 'Connect', icon: Link2, views: ['ingest', 'terms', 'privacy'] },
 ];
@@ -199,9 +200,10 @@ const AppContent: React.FC = () => {
               options={[
                 { view: 'values', label: 'Rankings' },
                 { view: 'movers', label: 'Movers' },
+                ...(redraft ? [] : ([{ view: 'market', label: 'Trades' }] as const)),
               ]}
             />
-            {activeView === 'values' ? <ValuesScreen /> : <MoversScreen />}
+            {activeView === 'values' ? <ValuesScreen /> : activeView === 'market' ? <MarketScreen superflex={!!evaluation?.settings?.superflex} /> : <MoversScreen />}
           </>
         )}
 

@@ -14,6 +14,7 @@
  * and buy / sell signals from the gap between Futures Value and the market plus recent momentum.
  */
 import type { BoardPlayer, LeagueSettings, ProjectionTier, SeasonProjection, ValueSignal } from '../../src/types';
+import { ownTradeValue } from './marketTrades';
 import { getSeasonContext } from '../../src/lib/season';
 import { getMarket, type MarketSnapshot } from '../sources/fantasycalc';
 import { getProduction, pointsFor, type SeasonLine } from '../sources/production';
@@ -252,8 +253,18 @@ async function buildBoard(settings: LeagueSettings, key: string): Promise<Board>
   const modelDesc = [...projections.values()].map((p) => p.points).sort((a, b) => b - a);
   const playerScale = market ? market.players.map((e) => e.value).sort((a, b) => b - a) : expertAll;
 
+  // Our own trade market (real trades we collected), mapped to the shared scale by rank. Shown, not yet blended.
+  const MIN_OWN_TRADES = 3;
+  const ownDesc = all
+    .map((r) => ownTradeValue(r.sleeper_id, sf))
+    .filter((o): o is { value: number; trades: number } => !!o && o.trades >= MIN_OWN_TRADES)
+    .map((o) => o.value)
+    .sort((a, b) => b - a);
+
   // ---- 5. Blend, rank, signal ------------------------------------------------------------------------
   const out: BoardPlayer[] = all.map((r) => {
+    const own = ownTradeValue(r.sleeper_id, sf);
+    const ownV = own && own.trades >= MIN_OWN_TRADES && ownDesc.length > 20 ? tepAdj(r.position, onScale(playerScale, pctOf(ownDesc, own.value))) : null;
     const marketV = tepAdj(r.position, r.market?.value ?? null);
     const expertV = tepAdj(r.position, expertOnScale(r.expertRaw));
     const proj = projections.get(r.key);
@@ -284,6 +295,8 @@ async function buildBoard(settings: LeagueSettings, key: string): Promise<Board>
       market: marketV,
       experts: expertV,
       model: modelV,
+      own_trade: ownV,
+      own_trade_count: own?.trades ?? null,
       edge: rawEdge,
       signal: 'HOLD' as ValueSignal,
       market_trend_30d: mTrend != null ? Math.round(mTrend * 1000) / 1000 : null,

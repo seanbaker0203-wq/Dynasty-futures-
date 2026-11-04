@@ -133,6 +133,10 @@ export const PrivacyScreen: React.FC = () => (
         <b>What you save:</b> rules, notes, tags, settings and value lists you import.
       </li>
       <li>
+        <b>Public trade records:</b> to build our market values we read completed trades from public Sleeper dynasty leagues: the league
+        ID, its scoring format, the date, and which players and picks changed hands. We don’t collect managers’ names or usernames.
+      </li>
+      <li>
         <b>Technical data:</b> IP address and basic request information, used for security and rate limiting.
       </li>
     </ul>
