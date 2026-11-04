@@ -7,6 +7,7 @@ import { RosterDNAMathEngine } from '../lib/rosterMath';
 import { generateDemoLeagueTeams } from '../lib/demoLeague';
 
 export type DashboardViewMode =
+  | 'portfolio'
   | 'market'
   | 'ingest'
   | 'single'

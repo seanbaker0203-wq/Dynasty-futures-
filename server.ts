@@ -23,6 +23,7 @@ import { buildHistory } from './server/model/managers';
 import { nflState, sleeperIdFor, weeklyProjections } from './server/sources/weekly';
 import { weatherForTeams } from './server/sources/weather';
 import { marketTrades, ownTradeMeta } from './server/model/marketTrades';
+import { buildPortfolio } from './server/model/portfolio';
 import type { NormalizedLeague } from './server/leagues/types';
 import { SEASON } from './src/lib/season';
 import { accountsEnabled, identify, rateLimit } from './server/security';
@@ -94,6 +95,29 @@ app.post(
       thresholds: board.thresholds,
       players,
     });
+  })
+);
+
+/** Portfolio: your players across all your saved leagues (up to 12), each valued in its own league. */
+app.post(
+  '/api/portfolio',
+  rateLimit('portfolio', { anon: 10, user: 40 }),
+  asyncRoute(async (req, res) => {
+    const list: any[] = Array.isArray(req.body?.leagues) ? req.body.leagues.slice(0, 12) : [];
+    if (list.length < 1) throw new LeagueSyncError('No saved leagues yet.');
+    const loaded = await Promise.all(
+      list.map(async (l) => {
+        // Saved leagues carry only non-secret fields (no MFL passwords or ESPN cookies).
+        const body = { platform: l.platform, league_id: l.league_id, franchise_id: l.franchise_id, username: l.username, format: l.format };
+        try {
+          const league = await loadLeague(req, body);
+          return { league, team_id: l.franchise_id ? String(l.franchise_id) : null, platform: String(l.platform), league_id: String(l.league_id) };
+        } catch (e) {
+          return { league: null, team_id: null, error: (e as Error).message, platform: String(l.platform), league_id: String(l.league_id) };
+        }
+      })
+    );
+    res.json(await buildPortfolio(loaded));
   })
 );
 
@@ -171,8 +195,8 @@ async function yahooTokenFor(req: Request) {
 }
 
 /** Load a league from any supported platform. */
-async function loadLeague(req: Request): Promise<NormalizedLeague> {
-  const b = req.body || {};
+async function loadLeague(req: Request, body?: any): Promise<NormalizedLeague> {
+  const b = body ?? req.body ?? {};
   const platform = String(b.platform || req.params?.platform || '');
   const id = String(b.league_id || '');
   if (!id) throw new LeagueSyncError('Enter your league ID.');

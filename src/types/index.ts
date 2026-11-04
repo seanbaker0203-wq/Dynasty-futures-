@@ -337,6 +337,7 @@ export interface FlexForFirstOpportunity {
 }
 
 export type DashboardViewMode =
+  | 'portfolio'
   | 'market'
   | 'ingest'
   | 'single'
