@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { RosterProvider, useRoster, type DashboardViewMode } from './context/RosterContext';
 import { ConnectScreen } from './screens/ConnectScreen';
 import { TeamScreen } from './screens/TeamScreen';
@@ -92,6 +92,18 @@ const AppContent: React.FC = () => {
   const current = destinationOf(activeView);
   const go = (d: Destination) => setActiveView(redraft && d === 'team' ? 'week' : DESTINATIONS.find((x) => x.id === d)!.views[0]);
   const locked = (d: Destination) => d !== 'connect' && !evaluation;
+
+  // Every screen opens at the top (the browser would otherwise keep the old scroll position on reload and on switching).
+  useEffect(() => {
+    try {
+      if ('scrollRestoration' in window.history) window.history.scrollRestoration = 'manual';
+    } catch {
+      // ignore
+    }
+  }, []);
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [activeView, evaluation?.roster?.external_league_id]);
 
   const navButton = (d: (typeof DESTINATIONS)[number], variant: 'top' | 'bottom') => {
     const Icon = d.icon;
