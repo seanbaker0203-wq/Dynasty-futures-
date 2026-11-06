@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { ChevronDown, Loader2 } from 'lucide-react';
+import { ChevronDown, Loader2, X } from 'lucide-react';
 import { useRoster } from '../context/RosterContext';
 import type { Platform } from '../types';
 
@@ -20,7 +20,7 @@ const HELP: Record<string, { placeholder: string; hint: string }> = {
 };
 
 export const ConnectScreen: React.FC<{ onDone?: () => void }> = ({ onDone }) => {
-  const { syncRoster, switchLeague, loadDemoRoster, isLoading, error, syncHistory, evaluation, isDemo } = useRoster();
+  const { syncRoster, switchLeague, forgetLeague, loadDemoRoster, isLoading, error, syncHistory, evaluation, isDemo } = useRoster();
   const fromYahoo = typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('yahoo');
 
   const [platform, setPlatform] = useState<Platform>(fromYahoo ? 'yahoo' : syncHistory[0]?.platform || 'sleeper');
@@ -103,16 +103,31 @@ export const ConnectScreen: React.FC<{ onDone?: () => void }> = ({ onDone }) => 
         <div className="space-y-2">
           <h2 className="text-[13px] font-semibold text-muted">Your leagues</h2>
           <div className="flex flex-wrap gap-2">
-            {syncHistory.map((h) => (
-              <button key={`${h.platform}-${h.league_id}`} type="button" disabled={isLoading} onClick={() => switchLeague(h)} className="btn-quiet disabled:opacity-50">
-                {h.league_name || `${SHORT[h.platform] ?? h.platform} ${h.league_id}`}
-                <span className="text-muted font-normal ml-1">
-                  {SHORT[h.platform]}
-                  {h.format ? `, ${h.format}` : ''}
+            {syncHistory.map((h) => {
+              const label = h.league_name || `${SHORT[h.platform] ?? h.platform} ${h.league_id}`;
+              return (
+                <span key={`${h.platform}-${h.league_id}`} className="inline-flex items-stretch">
+                  <button type="button" disabled={isLoading} onClick={() => switchLeague(h)} className="btn-quiet disabled:opacity-50 !rounded-r-none">
+                    {label}
+                    <span className="text-muted font-normal ml-1">
+                      {SHORT[h.platform]}
+                      {h.format ? `, ${h.format}` : ''}
+                    </span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => forgetLeague(h)}
+                    aria-label={`Remove ${label} from your leagues`}
+                    title="Remove from your leagues"
+                    className="btn-quiet !rounded-l-none !border-l-0 !px-2.5 text-muted hover:text-down"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
                 </span>
-              </button>
-            ))}
+              );
+            })}
           </div>
+          <p className="text-[12px] text-muted">Remove (×) takes a league off this list and out of your portfolio. Your league itself isn't changed.</p>
         </div>
       )}
 
