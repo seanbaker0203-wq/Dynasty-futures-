@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { ChevronDown, Loader2, X } from 'lucide-react';
-import { useRoster } from '../context/RosterContext';
+import { ChevronDown, Loader2 } from 'lucide-react';
+import { useRoster, type SavedLeague } from '../context/RosterContext';
 import type { Platform } from '../types';
 
 const PLATFORMS: { id: Platform; label: string }[] = [
@@ -20,7 +20,7 @@ const HELP: Record<string, { placeholder: string; hint: string }> = {
 };
 
 export const ConnectScreen: React.FC<{ onDone?: () => void }> = ({ onDone }) => {
-  const { syncRoster, switchLeague, forgetLeague, loadDemoRoster, isLoading, error, syncHistory, evaluation, isDemo } = useRoster();
+  const { syncRoster, switchLeague, loadDemoRoster, isLoading, error, syncHistory, evaluation, isDemo } = useRoster();
   const fromYahoo = typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('yahoo');
 
   const [platform, setPlatform] = useState<Platform>(fromYahoo ? 'yahoo' : syncHistory[0]?.platform || 'sleeper');
@@ -103,31 +103,16 @@ export const ConnectScreen: React.FC<{ onDone?: () => void }> = ({ onDone }) => 
         <div className="space-y-2">
           <h2 className="text-[13px] font-semibold text-muted">Your leagues</h2>
           <div className="flex flex-wrap gap-2">
-            {syncHistory.map((h) => {
-              const label = h.league_name || `${SHORT[h.platform] ?? h.platform} ${h.league_id}`;
-              return (
-                <span key={`${h.platform}-${h.league_id}`} className="inline-flex items-stretch">
-                  <button type="button" disabled={isLoading} onClick={() => switchLeague(h)} className="btn-quiet disabled:opacity-50 !rounded-r-none">
-                    {label}
-                    <span className="text-muted font-normal ml-1">
-                      {SHORT[h.platform]}
-                      {h.format ? `, ${h.format}` : ''}
-                    </span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => forgetLeague(h)}
-                    aria-label={`Remove ${label} from your leagues`}
-                    title="Remove from your leagues"
-                    className="btn-quiet !rounded-l-none !border-l-0 !px-2.5 text-muted hover:text-down"
-                  >
-                    <X className="w-4 h-4" />
-                  </button>
+            {syncHistory.map((h) => (
+              <button key={`${h.platform}-${h.league_id}`} type="button" disabled={isLoading} onClick={() => switchLeague(h)} className="btn-quiet disabled:opacity-50">
+                {leagueLabel(h)}
+                <span className="text-muted font-normal ml-1">
+                  {SHORT[h.platform]}
+                  {h.format ? `, ${h.format}` : ''}
                 </span>
-              );
-            })}
+              </button>
+            ))}
           </div>
-          <p className="text-[12px] text-muted">Remove (×) takes a league off this list and out of your portfolio. Your league itself isn't changed.</p>
         </div>
       )}
 
@@ -308,6 +293,8 @@ export const ConnectScreen: React.FC<{ onDone?: () => void }> = ({ onDone }) => 
         <p className="text-[12px] text-muted text-center">By loading a league you agree to the Terms of Service and Privacy Policy.</p>
       </form>
 
+      {syncHistory.length > 0 && <ManageLeagues />}
+
       <p className="text-[14px] text-muted">
         No league handy?{' '}
         <button type="button" onClick={() => loadDemoRoster('contender')} className="font-semibold text-ink underline underline-offset-4">
@@ -315,5 +302,70 @@ export const ConnectScreen: React.FC<{ onDone?: () => void }> = ({ onDone }) => 
         </button>
       </p>
     </div>
+  );
+};
+
+const leagueLabel = (h: SavedLeague) => h.league_name || `${SHORT[h.platform] ?? h.platform} ${h.league_id}`;
+
+/** Connect → Manage your leagues: remove a saved league, with a confirm step so it doesn't happen by accident. */
+const ManageLeagues: React.FC = () => {
+  const { syncHistory, forgetLeague, evaluation } = useRoster();
+  const [confirming, setConfirming] = useState<string | null>(null);
+  const keyOf = (h: SavedLeague) => `${h.platform}-${h.league_id}`;
+  const openId = evaluation?.roster?.external_league_id;
+  return (
+    <details className="rounded-xl border border-line p-4">
+      <summary className="cursor-pointer font-semibold">Manage your leagues</summary>
+      <p className="text-[13px] text-muted mt-2">
+        Removing a league takes it off your list, the league switcher and your portfolio. It doesn't change anything in the league
+        itself, and you can connect it again any time.
+      </p>
+      <ul className="mt-3 divide-y divide-line border-y border-line">
+        {syncHistory.map((h) => {
+          const k = keyOf(h);
+          const isOpen = openId === h.league_id;
+          return (
+            <li key={k} className="py-2.5 text-[14px]">
+              {confirming === k ? (
+                <div className="space-y-2">
+                  <p>
+                    Remove <strong>{leagueLabel(h)}</strong>?{isOpen ? ' It stays open until you switch to another league.' : ''}
+                  </p>
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      className="btn-quiet !border-down !text-down"
+                      onClick={() => {
+                        forgetLeague(h);
+                        setConfirming(null);
+                      }}
+                    >
+                      Remove league
+                    </button>
+                    <button type="button" className="btn-quiet" onClick={() => setConfirming(null)}>
+                      Keep it
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div className="flex items-center gap-3">
+                  <span className="flex-1 min-w-0">
+                    <span className="block font-semibold truncate">{leagueLabel(h)}</span>
+                    <span className="block text-[12px] text-muted">
+                      {SHORT[h.platform] ?? h.platform} · {h.league_id}
+                      {h.format ? ` · ${h.format}` : ''}
+                      {isOpen ? ' · open now' : ''}
+                    </span>
+                  </span>
+                  <button type="button" className="text-[13px] text-muted underline hover:text-down" onClick={() => setConfirming(k)}>
+                    Remove
+                  </button>
+                </div>
+              )}
+            </li>
+          );
+        })}
+      </ul>
+    </details>
   );
 };

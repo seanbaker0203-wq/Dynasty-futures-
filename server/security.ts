@@ -16,7 +16,21 @@ declare module 'express-serve-static-core' {
   }
 }
 
-export const accountsEnabled = () => !!(process.env.SUPABASE_URL && (process.env.SUPABASE_ANON_KEY || process.env.SUPABASE_PUBLISHABLE_KEY));
+/**
+ * The Supabase project's base URL (https://<ref>.supabase.co). Dashboards sometimes show it with an API path
+ * (/rest/v1, /auth/v1) or a trailing slash; the client needs the bare origin, so strip anything after it.
+ */
+export function supabaseUrl(): string | null {
+  const raw = (process.env.SUPABASE_URL || '').trim().replace(/^['"]|['"]$/g, '');
+  if (!raw) return null;
+  try {
+    return new URL(raw.startsWith('http') ? raw : `https://${raw}`).origin;
+  } catch {
+    return null;
+  }
+}
+
+export const accountsEnabled = () => !!(supabaseUrl() && (process.env.SUPABASE_ANON_KEY || process.env.SUPABASE_PUBLISHABLE_KEY));
 
 const tokenCache = new Map<string, { at: number; user: { id: string; email: string | null } | null }>();
 
@@ -25,7 +39,7 @@ async function userForToken(token: string) {
   if (hit && Date.now() - hit.at < 10 * 60_000) return hit.user;
   let user: { id: string; email: string | null } | null = null;
   try {
-    const r = await fetch(`${process.env.SUPABASE_URL}/auth/v1/user`, {
+    const r = await fetch(`${supabaseUrl()}/auth/v1/user`, {
       headers: { apikey: String(process.env.SUPABASE_ANON_KEY || process.env.SUPABASE_PUBLISHABLE_KEY), Authorization: `Bearer ${token}` },
       signal: AbortSignal.timeout(5000),
     });
