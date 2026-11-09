@@ -400,7 +400,7 @@ export async function evaluateLeague(league: NormalizedLeague, requestedTeamId?:
     values_meta: {
       source: redraft
         ? 'Rest-of-season value: 50% our weekly projections through the fantasy playoffs (Sleeper/Rotowire), 50% FantasyCalc redraft market'
-        : `Futures Value: ${WEIGHTS.model * 100}% our projection model, ${WEIGHTS.market * 100}% FantasyCalc trade market, ${WEIGHTS.experts * 100}% FantasyPros experts (via DynastyProcess)`,
+        : `Futures Value: ${WEIGHTS.model * 100}% our projection model, ${WEIGHTS.market * 100}% FantasyCalc trade market, ${WEIGHTS.own * 100}% our own trade data (real trades from public Sleeper leagues)`,
       scrape_date: valueStore.meta.scrape_date,
       player_count: board.players.length,
     },

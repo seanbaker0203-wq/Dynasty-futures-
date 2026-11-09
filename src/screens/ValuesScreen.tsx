@@ -79,8 +79,8 @@ export const ValueRow: React.FC<{ p: BoardPlayer; owner?: string; mine?: boolean
               : [
                   ['Our model', p.model != null ? fmt(p.model) : null],
                   ['Trade market', p.market != null ? fmt(p.market) : null],
-                  ['Experts', p.experts != null ? fmt(p.experts) : null],
-                  ...(p.own_trade != null ? [[`Our trade data (${p.own_trade_count} trades)`, fmt(p.own_trade)]] : []),
+                  ...(p.experts != null ? [['Experts', fmt(p.experts)]] : []),
+                  [p.own_trade != null ? `Our trade data (${p.own_trade_count} trades)` : 'Our trade data', p.own_trade != null ? fmt(p.own_trade) : 'Too few trades'],
                 ]
             ).map(([k, v]) => (
               <div key={k as string} className="rounded-lg border border-line bg-card px-2.5 py-2">
@@ -95,7 +95,7 @@ export const ValueRow: React.FC<{ p: BoardPlayer; owner?: string; mine?: boolean
               <span className="text-muted">Market, 30 days </span>
               <Change value={p.market_trend_30d} className="font-semibold" />
             </span>
-            {!p.ros && (<span className="flex items-center gap-2">
+            {!p.ros && p.expert_trend_4w != null && (<span className="flex items-center gap-2">
               <span className="text-muted">Experts, 4 weeks </span>
               <Change value={p.expert_trend_4w} className="font-semibold" />
               <Sparkline values={p.expert_history.map((h) => h.value)} label="Expert value, last 12 weeks" />
@@ -191,7 +191,7 @@ export const ValuesScreen: React.FC = () => {
       ) : (
       <p className="text-[14px] text-muted max-w-[40rem]">
         Futures Value is our own number: {w.model * 100}% our projection model, {w.market * 100}% the trade market (FantasyCalc),{' '}
-        {w.experts * 100}% expert rankings (FantasyPros). Tuned to {s?.league_size} teams, {s?.superflex ? 'Superflex' : '1QB'},{' '}
+        {(w.own ?? 0) * 100}% our own data from real trades in public Sleeper leagues. Tuned to {s?.league_size} teams, {s?.superflex ? 'Superflex' : '1QB'},{' '}
         {s?.scoring_type?.toLowerCase()}. "vs market" is how far we sit above or below what the player trades for.
       </p>
       )}

@@ -4,7 +4,7 @@ Futures Value is our own number for every player and pick, tuned to each league'
 (league size, 1QB or Superflex, PPR level, TE premium, starting slots).
 
 ```
-Futures Value = 0.40 × Model + 0.30 × Market + 0.30 × Experts
+Futures Value = 0.40 × Model + 0.30 × Market + 0.30 × Our trade data
 ```
 
 If a source has no value for a player, the remaining weights are scaled up to 100%.
@@ -174,3 +174,18 @@ add up and the values are placed on the market scale by rank. Shown only for for
 Check against FantasyCalc (built from 8.2M trades), players traded 5+ times: Spearman rank correlation 0.91 Superflex
 (0.88 within FantasyCalc's top 100), 0.89 1QB (0.85). Shown in the app as "Our trade data"; not part of Futures
 Value yet. It is the planned replacement for the FantasyPros component if that can't be licensed.
+
+
+## Change, 9 Nov 2026: FantasyPros removed, our trade data in
+FantasyPros quoted $2,400/year for commercial use of its dynasty rankings, so expert values are switched off
+(`USE_EXPERTS = false` in server/model/futures.ts; code kept in case it's licensed later).
+- **Futures Value = 40% our model + 30% FantasyCalc market + 30% our own trade data.** A player with fewer than 3
+  collected trades uses the FantasyCalc market for that 30% (so thinly traded players don't jump).
+- **Picks:** FantasyCalc pick values only (previously averaged with experts). Future firsts drop, e.g. 2028 1st
+  2,558 → 2,176, 2029 1st 2,350 → 1,857 in a 10-team 1QB league; our own trade data prices them lower still.
+- **Removed:** the Experts figure, expert risers/fallers on Movers, and the FantasyPros option in Value gaps
+  (a saved choice falls back to FantasyCalc).
+- Effect on league 37804: rank order 0.90 correlated with before (top 300); team ranking unchanged except two adjacent
+  swaps; bench veterans down ~20–29% (Shakir, Hockenson, Doubs), young stars up ~6–7% (Bowers, McBride, Hampton).
+- FantasyCalc use is free in writing (Alex, 9 Nov) under 10k sessions/month or $1k/month revenue, with attribution on
+  every page and a plain-HTML backlink (done).

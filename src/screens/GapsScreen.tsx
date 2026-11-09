@@ -64,7 +64,6 @@ export const ReferencePicker: React.FC<{ compact?: boolean }> = ({ compact }) =>
           className="field mt-1"
         >
           <option value="market">{SOURCE_LABEL.market}</option>
-          <option value="experts">{SOURCE_LABEL.experts}</option>
           <option value="imported">{imp ? `${imp.label} (imported ${new Date(imp.imported_at).toLocaleDateString()})` : 'KTC or another list (import)'}</option>
         </select>
       </label>

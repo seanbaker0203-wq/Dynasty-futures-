@@ -7,7 +7,7 @@ import { useRoster } from '../context/RosterContext';
 export interface BoardResponse {
   built_at: number;
   season: number;
-  weights: { model: number; market: number; experts: number };
+  weights: { model: number; market: number; own?: number; experts: number };
   sources: { market: boolean; experts: boolean; production_season: number | null };
   players: BoardPlayer[];
   /** True when signed out: only the top of the board plus your league's players */

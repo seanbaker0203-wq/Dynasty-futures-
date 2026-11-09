@@ -263,11 +263,11 @@ const AppContent: React.FC = () => {
           <a href="https://fantasycalc.com" target="_blank" rel="noreferrer" className="underline underline-offset-2 hover:text-ink">
             FantasyCalc
           </a>
-          . Expert rankings via{' '}
+          . Futures Value blends them with our own projections and real trades from public Sleeper leagues. Player matching via{' '}
           <a href="https://github.com/dynastyprocess/data" target="_blank" rel="noreferrer" className="underline underline-offset-2 hover:text-ink">
             DynastyProcess
           </a>
-          . Futures Value blends them with our own projections and trade data.
+          .
         </p>
         <LegalLinks />
       </main>

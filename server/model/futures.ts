@@ -1,10 +1,13 @@
 /**
  * Futures Value: Dynasty Futures' own player value.
  *
- *   value = 0.40 × model + 0.30 × market + 0.30 × experts   (weights renormalised if one is missing)
+ *   value = 0.40 × model + 0.30 × market + 0.30 × own trade data   (weights renormalised if one is missing)
  *
  * - market:  FantasyCalc trade market for this league format (the shared scale everything is mapped onto)
- * - experts: FantasyPros-based DynastyProcess values, mapped to the market scale by rank
+ * - own:     our own trade market (real trades from public Sleeper leagues, scripts/analysis/trade_values.py),
+ *            mapped to the market scale by rank. Players with too few trades use the FantasyCalc market instead.
+ * - experts: FantasyPros-based values via DynastyProcess. Switched off 9 Nov 2026 (USE_EXPERTS): not licensed for
+ *            commercial use ($2,400/yr quote). Code kept so it can return if licensed.
  * - model:   our projection. Recent points per game under the league's scoring (blended 60/40 with
  *            what the market implies, so one hot or cold stretch doesn't swing it), carried forward five
  *            seasons with position age curves, counting only points above a replacement-level starter
@@ -26,7 +29,9 @@ import { contractOutlook } from './contracts';
 import { getRosBoard } from './ros';
 import type { NflContract } from '../../src/types';
 
-export const WEIGHTS = { model: 0.4, market: 0.3, experts: 0.3 };
+export const WEIGHTS = { model: 0.4, market: 0.3, own: 0.3, experts: 0 };
+/** FantasyPros expert values (via DynastyProcess). Off until licensed: they feed no value, pick or trend. */
+export const USE_EXPERTS = false;
 const HORIZON = 5;
 const DISCOUNT = 0.85;
 const GAMES = 17;
@@ -100,7 +105,7 @@ async function buildBoard(settings: LeagueSettings, key: string): Promise<Board>
   const [market, production, history] = await Promise.all([
     getMarket({ superflex: sf, teams, ppr }),
     getProduction(),
-    getExpertHistory(),
+    USE_EXPERTS ? getExpertHistory() : Promise.resolve(null),
     playerDirectory.refresh(),
     valueStore.refresh(),
   ]);
@@ -156,7 +161,7 @@ async function buildBoard(settings: LeagueSettings, key: string): Promise<Board>
   const marketScale = market ? [...market.players, ...market.picks].map((e) => e.value).sort((a, b) => b - a) : [];
   const expertAll = [...valueStore.allPlayers.map((v) => (sf ? v.value_sf : v.value_1qb))].sort((a, b) => b - a);
   const scale = marketScale.length ? marketScale : expertAll;
-  const expertOnScale = (raw: number | null) => (raw == null ? null : onScale(scale, pctOf(expertAll, raw)));
+  const expertOnScale = (raw: number | null) => (!USE_EXPERTS || raw == null ? null : onScale(scale, pctOf(expertAll, raw)));
   const tepAdj = (pos: string, v: number | null) => (v != null && pos === 'TE' && settings.te_premium ? Math.round(v * 1.15) : v);
 
   // ---- 3. Production: recent points per game under this league's scoring -------------------------
@@ -253,7 +258,7 @@ async function buildBoard(settings: LeagueSettings, key: string): Promise<Board>
   const modelDesc = [...projections.values()].map((p) => p.points).sort((a, b) => b - a);
   const playerScale = market ? market.players.map((e) => e.value).sort((a, b) => b - a) : expertAll;
 
-  // Our own trade market (real trades we collected), mapped to the shared scale by rank. Shown, not yet blended.
+  // Our own trade market (real trades we collected), mapped to the shared scale by rank.
   const MIN_OWN_TRADES = 3;
   const ownDesc = all
     .map((r) => ownTradeValue(r.sleeper_id, sf))
@@ -272,7 +277,10 @@ async function buildBoard(settings: LeagueSettings, key: string): Promise<Board>
     const parts: [number, number][] = [];
     if (modelV != null) parts.push([WEIGHTS.model, modelV]);
     if (marketV != null) parts.push([WEIGHTS.market, marketV]);
-    if (expertV != null) parts.push([WEIGHTS.experts, expertV]);
+    // Our trade data; a player with too few collected trades uses the FantasyCalc market in its place.
+    const ownOrMarket = ownV ?? marketV;
+    if (ownOrMarket != null) parts.push([WEIGHTS.own, ownOrMarket]);
+    if (USE_EXPERTS && expertV != null) parts.push([WEIGHTS.experts, expertV]);
     const wsum = parts.reduce((s, [w]) => s + w, 0) || 1;
     const value = Math.round(parts.reduce((s, [w, v]) => s + w * v, 0) / wsum);
 
@@ -310,7 +318,7 @@ async function buildBoard(settings: LeagueSettings, key: string): Promise<Board>
       ktc_url: ktcUrl(r.name, r.expertPlayer?.ktc_id ?? null),
       nfl_contract: proj?.contract ?? null,
       ext_ids: valueStore.externalIds(r.sleeper_id),
-      expert_history: (hist || []).slice(-12).map((h) => ({ date: h.date, value: sf ? h.value_sf : h.value_1qb })),
+      expert_history: USE_EXPERTS ? (hist || []).slice(-12).map((h) => ({ date: h.date, value: sf ? h.value_sf : h.value_1qb })) : [],
     };
   });
 
@@ -345,7 +353,7 @@ async function buildBoard(settings: LeagueSettings, key: string): Promise<Board>
     p.position_rank = posCount[p.position];
   });
 
-  // ---- 6. Picks on the shared scale: average of market pick values and expert pick values ---------
+  // ---- 6. Picks on the shared scale: the trade market's pick values (averaged with experts when licensed) ---
   const ord = (n: number) => ({ 1: '1st', 2: '2nd', 3: '3rd' } as Record<number, string>)[n] ?? `${n}th`;
   const marketPick = (year: number, round: number, tier?: string) => {
     if (!market) return null;
@@ -383,6 +391,6 @@ async function buildBoard(settings: LeagueSettings, key: string): Promise<Board>
     pickValue,
     pickSources,
     thresholds,
-    sources: { market: !!market, experts: valueStore.allPlayers.length > 0, production_season: currentMature ? seasonYear : seasonYear - 1 },
+    sources: { market: !!market, experts: USE_EXPERTS && valueStore.allPlayers.length > 0, production_season: currentMature ? seasonYear : seasonYear - 1 },
   };
 }

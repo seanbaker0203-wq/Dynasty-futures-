@@ -62,7 +62,7 @@ export const MoversScreen: React.FC = () => {
         showRank={false}
         right={
           <span className="flex items-center gap-3 shrink-0">
-            <Sparkline values={p.expert_history.map((h) => h.value)} width={56} />
+            {p.expert_history.length > 1 && <Sparkline values={p.expert_history.map((h) => h.value)} width={56} />}
             <span className="text-right">
               <span className="block font-semibold">{fmt(p.value)}</span>
               <Change value={change} className="text-[13px] font-semibold" />
@@ -107,7 +107,7 @@ export const MoversScreen: React.FC = () => {
         <Section title="Market fallers" note="Biggest trade-market drops, last 30 days." empty={!lists.fallers.length}>
           {lists.fallers.map((p) => row(p, p.market_trend_30d))}
         </Section>
-        {evaluation?.settings?.format !== 'redraft' && (<>
+        {evaluation?.settings?.format !== 'redraft' && (lists.expertUp.length > 0 || lists.expertDown.length > 0) && (<>
         <Section title="Experts moving up" note="Biggest gains in expert rankings, last 4 weeks." empty={!lists.expertUp.length}>
           {lists.expertUp.map((p) => row(p, p.expert_trend_4w))}
         </Section>

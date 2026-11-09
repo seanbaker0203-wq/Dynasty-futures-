@@ -112,8 +112,10 @@ export function makeReference(
     player = (p) => p.futures?.market ?? null;
     pick = (p) => p.sources?.market ?? null;
   } else if (source === 'experts') {
-    player = (p) => p.futures?.experts ?? null;
-    pick = (p) => p.sources?.experts ?? null;
+    // Expert rankings (FantasyPros) are no longer used; saved choices fall back to the market.
+    player = (p) => p.futures?.market ?? null;
+    pick = (p) => p.sources?.market ?? null;
+    label = SOURCE_LABEL.market;
   } else {
     if (!imported || (!imported.players.length && !imported.picks.length)) return null;
     label = imported.label;
