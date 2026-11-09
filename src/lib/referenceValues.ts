@@ -116,6 +116,11 @@ export function makeReference(
     player = (p) => p.futures?.market ?? null;
     pick = (p) => p.sources?.market ?? null;
     label = SOURCE_LABEL.market;
+  } else if (source === 'imported') {
+    // Imported lists (e.g. KTC) were removed 9 Nov 2026; any saved choice falls back to the market.
+    player = (p) => p.futures?.market ?? null;
+    pick = (p) => p.sources?.market ?? null;
+    label = SOURCE_LABEL.market;
   } else {
     if (!imported || (!imported.players.length && !imported.picks.length)) return null;
     label = imported.label;

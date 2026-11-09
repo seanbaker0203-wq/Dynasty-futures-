@@ -1,9 +1,8 @@
 import React, { useMemo, useState } from 'react';
 import { Lock } from 'lucide-react';
 import { useRoster } from '../context/RosterContext';
-import { useAccount } from '../context/AccountContext';
 import { useLeagueUniverse, useReference } from '../lib/useReference';
-import { gapOf, parseImported, SOURCE_LABEL, type ImportedValues, type ReferenceSource } from '../lib/referenceValues';
+import { gapOf, SOURCE_LABEL } from '../lib/referenceValues';
 import { fmt, pickName } from '../lib/leagueStats';
 
 interface GapRow {
@@ -17,88 +16,13 @@ interface GapRow {
   gap: number;
 }
 
-/** Choose which values your league mates use; import a list privately. */
-export const ReferencePicker: React.FC<{ compact?: boolean }> = ({ compact }) => {
-  const { reference, saveReference } = useAccount();
-  const universe = useLeagueUniverse();
-  const [open, setOpen] = useState(false);
-  const [text, setText] = useState('');
-  const [label, setLabel] = useState(reference.imported?.label ?? 'KTC');
-  const [msg, setMsg] = useState<string | null>(null);
-  const imp = reference.imported;
-
-  const doImport = (merge: boolean) => {
-    const known = universe.players.map((p) => p.full_name);
-    const parsed = parseImported(text, known, label.trim() || 'Imported');
-    if (!parsed.players.length && !parsed.picks.length) {
-      setMsg('Couldn’t find any players from your league with values in that text.');
-      return;
-    }
-    let next: ImportedValues = parsed;
-    if (merge && imp) {
-      const players = new Map(imp.players.map((p) => [p.key, p]));
-      parsed.players.forEach((p) => players.set(p.key, p));
-      const picks = new Map(imp.picks.map((p) => [`${p.year}-${p.round}-${p.tier}`, p]));
-      parsed.picks.forEach((p) => picks.set(`${p.year}-${p.round}-${p.tier}`, p));
-      next = { ...parsed, players: [...players.values()], picks: [...picks.values()] };
-    }
-    saveReference({ source: 'imported', imported: next });
-    setMsg(`Imported ${parsed.players.length} players and ${parsed.picks.length} picks${merge && imp ? ` (now ${next.players.length} and ${next.picks.length} in total)` : ''}.`);
-    setText('');
-    setOpen(false);
-  };
-
-  return (
-    <div className="space-y-2">
-      <label className="block">
-        <span className="text-[13px] font-semibold text-muted flex items-center gap-1.5">
-          Values my league uses <Lock className="w-3 h-3" aria-label="Private" />
-        </span>
-        <select
-          value={reference.source}
-          onChange={(e) => {
-            const s = e.target.value as ReferenceSource;
-            if (s === 'imported' && !imp) setOpen(true);
-            saveReference({ ...reference, source: s });
-          }}
-          className="field mt-1"
-        >
-          <option value="market">{SOURCE_LABEL.market}</option>
-          <option value="imported">{imp ? `${imp.label} (imported ${new Date(imp.imported_at).toLocaleDateString()})` : 'KTC or another list (import)'}</option>
-        </select>
-      </label>
-      {reference.source === 'imported' && (
-        <button type="button" className="text-[13px] underline underline-offset-2 text-muted" onClick={() => setOpen(!open)}>
-          {imp ? 'Update imported values' : 'Import values'}
-        </button>
-      )}
-      {msg && <p className="text-[13px] text-up">{msg}</p>}
-      {open && (
-        <div className="space-y-2 rounded-lg border border-line p-3">
-          {!compact && (
-            <p className="text-[13px] text-muted">
-              Open the KTC dynasty rankings in your league’s format (1QB or Superflex), select the whole page, copy, and paste it here. If the
-              rankings span several pages, paste each one with “Add to list”. A simple “name, value” list works too. Saved privately; never
-              shared or published.
-            </p>
-          )}
-          <input value={label} onChange={(e) => setLabel(e.target.value)} className="field" aria-label="Name of this list" placeholder="List name, e.g. KTC" />
-          <textarea value={text} onChange={(e) => setText(e.target.value)} rows={5} className="field font-mono text-[12px]" placeholder="Paste rankings here" aria-label="Pasted rankings" />
-          <div className="flex flex-wrap gap-2">
-            <button type="button" className="btn-primary" disabled={!text.trim()} onClick={() => doImport(false)}>
-              Replace list
-            </button>
-            {imp && (
-              <button type="button" className="btn-quiet" disabled={!text.trim()} onClick={() => doImport(true)}>
-                Add to list
-              </button>
-            )}
-          </div>
-        </div>
-      )}
-    </div>
-  );
-};
+/** The values your league mates trade on. Only the FantasyCalc trade market for now (imported lists like KTC were
+ *  removed 9 Nov 2026: KTC's terms don't allow its data in other apps, and we have our own trade data). */
+export const ReferencePicker: React.FC<{ compact?: boolean }> = () => (
+  <p className="text-[13px] text-muted flex items-center gap-1.5">
+    <Lock className="w-3 h-3" aria-label="Private" /> Compared with the values most leagues trade on: {SOURCE_LABEL.market}.
+  </p>
+);
 
 export const GapsScreen: React.FC = () => {
   const { evaluation } = useRoster();

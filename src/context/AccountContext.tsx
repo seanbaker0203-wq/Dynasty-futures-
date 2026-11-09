@@ -13,6 +13,8 @@ export interface ReferenceSettings {
   imported: ImportedValues | null;
 }
 const DEFAULT_REFERENCE: ReferenceSettings = { source: 'market', imported: null };
+/** Imported value lists (KTC etc.) are no longer used or kept: anything saved falls back to the market. */
+const cleanReference = (r: Partial<ReferenceSettings> | null | undefined): ReferenceSettings => ({ ...DEFAULT_REFERENCE, ...(r ?? {}), source: 'market', imported: null });
 
 /** A player you're watching. value_at_add is his Futures Value (in that format) when you added him. */
 export interface WatchItem {
@@ -93,7 +95,7 @@ export const AccountProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const [rules, setRules] = useState<DynastyRule[]>(() => readLocal<DynastyRule[]>(LOCAL_RULES, []));
   const [adjustments, setAdjustments] = useState<ValueAdjustments>(() => normalizeAdj(readLocal(LOCAL_ADJ, null)));
   const [error, setError] = useState<string | null>(null);
-  const [reference, setReference] = useState<ReferenceSettings>(() => ({ ...DEFAULT_REFERENCE, ...readLocal(LOCAL_REF, {}) }));
+  const [reference, setReference] = useState<ReferenceSettings>(DEFAULT_REFERENCE);
   const [watchlist, setWatchlist] = useState<WatchItem[]>(() => readLocal<WatchItem[]>(LOCAL_WATCH, []));
 
   useEffect(() => {
@@ -136,12 +138,10 @@ export const AccountProvider: React.FC<{ children: React.ReactNode }> = ({ child
         setAdjustments(normalizeAdj(localAdj));
       }
       dropLocal(LOCAL_ADJ);
-      const localRef = readLocal<ReferenceSettings | null>(LOCAL_REF, null);
-      if (st?.reference_values) setReference({ ...DEFAULT_REFERENCE, ...st.reference_values });
-      else if (localRef) {
-        await sb.from('user_settings').upsert({ user_id: userId, reference_values: localRef, updated_at: new Date().toISOString() });
-        setReference({ ...DEFAULT_REFERENCE, ...localRef });
-      }
+      // Imported lists are no longer kept: wipe any saved copy from the account.
+      if (st?.reference_values?.imported || (st?.reference_values && st.reference_values.source !== 'market'))
+        await sb.from('user_settings').upsert({ user_id: userId, reference_values: DEFAULT_REFERENCE, updated_at: new Date().toISOString() });
+      setReference(DEFAULT_REFERENCE);
       dropLocal(LOCAL_REF);
 
       // Watchlist (separate query: an older database without this column shouldn't break the rest).
@@ -166,7 +166,8 @@ export const AccountProvider: React.FC<{ children: React.ReactNode }> = ({ child
     else {
       setRules(readLocal<DynastyRule[]>(LOCAL_RULES, []));
       setAdjustments(normalizeAdj(readLocal(LOCAL_ADJ, null)));
-      setReference({ ...DEFAULT_REFERENCE, ...readLocal(LOCAL_REF, {}) });
+      setReference(DEFAULT_REFERENCE);
+      dropLocal(LOCAL_REF); // imported lists are no longer kept on the device either
       setWatchlist(readLocal<WatchItem[]>(LOCAL_WATCH, []));
     }
   }, [userId, load]);
@@ -222,6 +223,7 @@ export const AccountProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
   const saveReference = async (r: ReferenceSettings) => {
     setError(null);
+    r = cleanReference(r);
     setReference(r);
     if (sb && userId) {
       const { error: e } = await sb.from('user_settings').upsert({ user_id: userId, reference_values: r, updated_at: new Date().toISOString() });

@@ -5,8 +5,8 @@ export const LEGAL = {
   product: 'Dynasty Futures',
   operator: 'Sean Baker',
   contact: 'the contact link in the app',
-  governingState: 'the State of [STATE]',
-  updated: 'October 24, 2026',
+  governingState: 'the State of Texas',
+  updated: 'November 9, 2026',
 };
 
 const H: React.FC<{ children: React.ReactNode }> = ({ children }) => <h2 className="display text-[22px] text-ink mt-6 mb-1">{children}</h2>;
@@ -71,8 +71,8 @@ export const TermsScreen: React.FC = () => (
 
     <H>8. Third-party content and links</H>
     <P>
-      The Service shows information from and links to third parties (for example FantasyCalc, FantasyPros, Footballguys, KeepTradeCut and
-      YouTube). We don’t control them and aren’t responsible for their content. Some links may be partner or affiliate links, which means we
+      The Service shows information from third parties (for example FantasyCalc trade values) and links to third-party sites (for
+      example FantasyPros, Footballguys, KeepTradeCut and YouTube). We don’t control them and aren’t responsible for their content. Some links may be partner or affiliate links, which means we
       may earn a commission at no cost to you. Partner links are labelled. Partners never pay to change our values or advice.
     </P>
 
@@ -130,7 +130,7 @@ export const PrivacyScreen: React.FC = () => (
         MyFantasyLeague to analyse it. We don’t store platform passwords; an MFL API key, if you enter one, is used for that request only.
       </li>
       <li>
-        <b>What you save:</b> rules, notes, tags, settings and value lists you import.
+        <b>What you save:</b> rules, notes, tags, settings and your watchlist.
       </li>
       <li>
         <b>Public trade records:</b> to build our market values we read completed trades from public Sleeper dynasty leagues: the league
