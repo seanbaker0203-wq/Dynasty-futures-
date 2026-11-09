@@ -258,24 +258,20 @@ const AppContent: React.FC = () => {
             )}
           </>
         )}
+        <p className="text-[12px] text-muted pt-2">
+          Market values by{' '}
+          <a href="https://fantasycalc.com" target="_blank" rel="noreferrer" className="underline underline-offset-2 hover:text-ink">
+            FantasyCalc
+          </a>
+          . Expert rankings via{' '}
+          <a href="https://github.com/dynastyprocess/data" target="_blank" rel="noreferrer" className="underline underline-offset-2 hover:text-ink">
+            DynastyProcess
+          </a>
+          . Futures Value blends them with our own projections and trade data.
+        </p>
         <LegalLinks />
       </main>
 
-      <footer className="hidden md:block border-t border-line py-6 text-sm text-muted">
-        <div className="max-w-5xl mx-auto px-6 flex items-center justify-between gap-2">
-          <span>Dynasty Futures</span>
-          <span>
-            Futures Value blends our projections with{' '}
-            <a href="https://fantasycalc.com" target="_blank" rel="noreferrer" className="underline underline-offset-2 hover:text-ink">
-              FantasyCalc
-            </a>{' '}
-            and{' '}
-            <a href="https://github.com/dynastyprocess/data" target="_blank" rel="noreferrer" className="underline underline-offset-2 hover:text-ink">
-              DynastyProcess
-            </a>
-          </span>
-        </div>
-      </footer>
 
       <nav
         aria-label="Main"
