@@ -28,7 +28,9 @@ export const IdeasScreen: React.FC = () => {
   const [fairOn, setFairOn] = useState<'ours' | 'theirs'>('ours');
   const ref = useReference();
   const [want, setWant] = useState<string[]>([]);
-  const filtered = sellIds.length > 0 || want.length > 0;
+  const [partner, setPartner] = useState<string>('');
+  const [fireSale, setFireSale] = useState(false);
+  const filtered = sellIds.length > 0 || want.length > 0 || !!partner;
   const { adjustments, reference } = useAccount();
   const [personal, setPersonal] = useState<PersonalIdea[]>([]);
   const lr = leagueRequest();
@@ -51,6 +53,8 @@ export const IdeasScreen: React.FC = () => {
           ...lr,
           sell_ids: sellIds,
           want_positions: want,
+          partner_id: partner || undefined,
+          fire_sale: partner ? fireSale : undefined,
           fair: fairOn === 'theirs' && ref ? { source: reference.source, imported: reference.source === 'imported' ? reference.imported : null } : null,
         },
         ctl.signal
@@ -62,7 +66,7 @@ export const IdeasScreen: React.FC = () => {
       ctl.abort();
       window.clearTimeout(t);
     };
-  }, [lrKey, !!history, sellIds.join(), want.join(), fairOn, ref?.label, reference.source]);
+  }, [lrKey, !!history, sellIds.join(), want.join(), fairOn, ref?.label, reference.source, partner, fireSale]);
 
   useEffect(() => {
     if (!lr || !adjustments.enabled) return setPersonal([]);
@@ -93,11 +97,46 @@ export const IdeasScreen: React.FC = () => {
   ];
   const positions = ['QB', 'RB', 'WR', 'TE'];
   const shortName = (id: string) => myAssets.find((a) => a.id === id)?.label.replace(/ \(.*\)$/, '').replace(/^(QB|RB|WR|TE|K|DEF) /, '') ?? '';
+  const partnerName = (evaluation.league_teams || []).find((t) => t.franchise_id === partner)?.franchise_name ?? '';
   const sellName = sellIds.length === 1 ? shortName(sellIds[0]) : sellIds.length > 1 ? `any mix of ${sellIds.map(shortName).join(', ')}` : '';
 
   return (
     <div className="space-y-6">
       <section className="rounded-xl bg-card border border-line p-4 space-y-3" aria-label="Trade search">
+        <div>
+          <label htmlFor="ideas-team" className="text-[13px] font-semibold text-muted">
+            Trade with
+          </label>
+          <select
+            id="ideas-team"
+            value={partner}
+            onChange={(e) => {
+              setPartner(e.target.value);
+              if (!e.target.value) setFireSale(false);
+            }}
+            className="field mt-1"
+          >
+            <option value="">Every team (best calls first)</option>
+            {(evaluation.league_teams || [])
+              .filter((t) => t.franchise_id !== me)
+              .map((t) => (
+                <option key={t.franchise_id} value={t.franchise_id}>
+                  {t.franchise_name} (up to 15 ideas)
+                </option>
+              ))}
+          </select>
+          {partner && (
+            <label className="flex items-start gap-2 mt-2 text-[14px]">
+              <input type="checkbox" checked={fireSale} onChange={(e) => setFireSale(e.target.checked)} className="mt-1" />
+              <span>
+                <span className="font-semibold">They’re having a fire sale</span>
+                <span className="block text-[13px] text-muted">
+                  Price their players about 18% below value when you pay in picks and players 25 or younger, which is what a seller wants. Also shows value buys: players worth more than you give, even if they won’t start for you yet.
+                </span>
+              </span>
+            </label>
+          )}
+        </div>
         <div>
           <span className="text-[13px] font-semibold text-muted">Trade away {sellIds.length > 1 ? '(mixed and matched, up to three at once)' : ''}</span>
           {sellIds.length > 0 && (
@@ -169,7 +208,7 @@ export const IdeasScreen: React.FC = () => {
           {fairOn === 'theirs' && <p className="text-[12px] text-muted mt-1">Deals that look even on the values your league uses, ranked by how much you gain on ours. Change the source in Value gaps.</p>}
         </div>
         {filtered && (
-          <button type="button" className="text-[13px] underline underline-offset-2 text-muted" onClick={() => { setSellIds([]); setWant([]); }}>
+          <button type="button" className="text-[13px] underline underline-offset-2 text-muted" onClick={() => { setSellIds([]); setWant([]); setPartner(''); setFireSale(false); }}>
             Clear search
           </button>
         )}
@@ -177,7 +216,7 @@ export const IdeasScreen: React.FC = () => {
 
       <p className="text-[14px] text-muted">
         {filtered
-          ? `Fair-value deals${sellName ? ` that move ${sellName}` : ''}${want.length ? ` for a ${want.join(' or ')}` : ''}, best for your ${horizon} first. Picks or a second player are added to even out value when needed.`
+          ? `${fireSale ? 'Fire-sale deals' : 'Fair-value deals'}${partnerName ? ` with ${partnerName}` : ''}${sellName ? ` that move ${sellName}` : ''}${want.length ? ` for a ${want.join(' or ')}` : ''}, best for your ${horizon} first. Picks or a second player are added to even out value when needed.`
           : 'Deals that are fair on value, so the other side could say yes, but make your lineup better over the ' + horizon + '. Best calls first.'}{' '}
         {history ? 'Ranked using how each manager actually trades.' : ''}
       </p>

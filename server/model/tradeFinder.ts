@@ -55,11 +55,20 @@ export function findTrades(opts: {
   fairValue?: (a: FinderAsset) => number;
   /** Only deals where the main piece you get plays one of these positions. */
   wantPositions?: string[];
+  /** One team only: search much wider and return many more ideas with that team. */
+  partnerId?: string;
+  /** That team is selling ("fire sale"): they want picks and young players and take about 18% less for their players. */
+  fireSale?: boolean;
 }): TradeIdea[] {
   const { me, mine, teams, settings, seasons, profiles = [], capHits, sellIds = [], wantPositions = [] } = opts;
   const fv = opts.fairValue ?? value;
   const filtered = sellIds.length > 0 || wantPositions.length > 0;
-  const perPartner = opts.perPartner ?? (filtered ? 4 : 3);
+  const one = !!opts.partnerId;
+  const fire = one && !!opts.fireSale;
+  const perPartner = opts.perPartner ?? (one ? 15 : filtered ? 4 : 3);
+  // A seller in a fire sale takes picks and young players (25 or younger), not veterans, at a discount.
+  const youthOrPick = (a: FinderAsset) => a.kind === 'pick' || (a.item.age ?? 99) <= 25;
+  const DISCOUNT = 0.82; // they accept about 82% of a veteran's value when paid in picks/youth
   const cap = settings?.salary_cap?.cap;
   const salary = (list: FinderAsset[]) => list.reduce((s, a) => s + (a.kind === 'player' ? a.item.contract?.salary ?? 0 : 0), 0);
   if (!seasons.length) return [];
@@ -81,6 +90,7 @@ export function findTrades(opts: {
   const ideas: TradeIdea[] = [];
   for (const team of teams) {
     if (team.franchise_id === me) continue;
+    if (one && team.franchise_id !== opts.partnerId) continue;
     const theirs: Side = { players: [...team.starters, ...team.bench, ...(team.reserves || [])], picks: team.draft_picks };
     const theirBase = totals(theirs, settings, seasons);
     const theirBaseW = weighted(theirBase);
@@ -111,21 +121,23 @@ export function findTrades(opts: {
           ? wantPositions.includes(p.position) && p.market_value >= 300 && (!sellSets.length || inSellRange(p))
           : sellSets.length
             ? inSellRange(p)
-            : p.market_value >= 1000
+            : p.market_value >= (one ? 500 : 1000)
       )
       .map((p) => {
         const a: FinderAsset = { kind: 'player', item: p };
         return { a, gain: weighted(totals(swap(mine, [], [a]), settings, seasons)) - myBaseW };
       })
-      .filter((t) => (filtered ? true : t.gain > 0.3))
+      // A fire sale is a chance to buy value below market even if he won't start for you yet.
+      .filter((t) => (filtered ? true : one ? t.gain > 0.1 || (fire && fv(t.a) >= 1500) : t.gain > 0.3))
       .sort((x, y) => y.gain - x.gain)
-      .slice(0, filtered ? 10 : 6);
+      .slice(0, one ? 25 : filtered ? 10 : 6);
 
     const candidates: { give: FinderAsset[]; get: FinderAsset[]; approx: number }[] = [];
     if (filtered) {
       // Fair for them: they receive 97-125% of what they give (more when they give two pieces for one).
-      const fair = (giveV: number, getV: number, getN: number, giveN: number) => {
-        const r = giveV / Math.max(getV, 1);
+      const fair = (giveV: number, getV: number, getN: number, giveN: number, give?: FinderAsset[]) => {
+        let r = giveV / Math.max(getV, 1);
+        if (fire && give?.every(youthOrPick)) r /= DISCOUNT; // a seller takes less for veterans when paid in picks/youth
         if (giveN > getN) return r >= 1.1 && r <= 1.35; // I consolidate: I pay a premium
         if (getN > giveN) return r >= 0.97 && r <= 1.15; // they consolidate: I give the best piece
         return r >= 0.97 && r <= 1.2;
@@ -152,13 +164,13 @@ export function findTrades(opts: {
       for (const t of targets) {
         for (const give of myGiveSets) {
           const gv = give.reduce((x, a) => x + fv(a), 0);
-          if (fair(gv, fv(t.a), 1, give.length)) candidates.push({ give, get: [t.a], approx: t.gain - cost(give) });
+          if (fair(gv, fv(t.a), 1, give.length, give)) candidates.push({ give, get: [t.a], approx: t.gain - cost(give) });
           // My side is worth more: ask for something extra back (one-for-two).
           if (give.length <= 2 && gv > fv(t.a) * 1.15) {
             for (const x of theirExtras) {
               if (finderAssetId(x) === finderAssetId(t.a)) continue;
               if (value(x) > value(t.a)) continue; // the player you asked for stays the main piece
-              if (fair(gv, fv(t.a) + fv(x), 2, give.length)) candidates.push({ give, get: [t.a, x], approx: t.gain - cost(give) + value(x) / 2000 });
+              if (fair(gv, fv(t.a) + fv(x), 2, give.length, give)) candidates.push({ give, get: [t.a, x], approx: t.gain - cost(give) + value(x) / 2000 });
             }
           }
         }
@@ -168,8 +180,11 @@ export function findTrades(opts: {
       const v = fv(t.a);
       // They should get at least as much value back, but not wildly more.
       // In a 2-for-1 the side getting the best player pays a premium, so ask for ~10%+ more value back.
-      const fits = (total: number, n: number) => (n === 1 ? total >= v * 0.97 && total <= v * 1.2 : total >= v * 1.1 && total <= v * 1.35);
-      const pool = myAssets.filter((a) => fv(a) <= v * 1.35);
+      // In a fire sale the price drops (about 82%) and only picks and young players count as payment.
+      const lo = fire ? DISCOUNT : 1;
+      const fits = (total: number, n: number) =>
+        n === 1 ? total >= v * 0.97 * lo && total <= v * 1.2 * lo : total >= v * 1.1 * lo && total <= v * 1.35 * lo;
+      const pool = myAssets.filter((a) => fv(a) <= v * 1.35 && (!fire || youthOrPick(a)));
       for (let i = 0; i < pool.length; i++) {
         const a = pool[i];
         if (fits(fv(a), 1)) candidates.push({ give: [a], get: [t.a], approx: t.gain - (costToMe.get(finderAssetId(a)) ?? 0) });
@@ -187,7 +202,18 @@ export function findTrades(opts: {
 
     // Score the most promising ones exactly, for both teams.
     const scored: TradeIdea[] = [];
-    for (const c of candidates.sort((x, y) => y.approx - x.approx).slice(0, filtered ? 60 : 40)) {
+    // One team: keep the best few packages for every player of theirs, so a handful of big upgrades can't crowd out
+    // the rest. Otherwise the most promising candidates overall.
+    let shortlist: typeof candidates;
+    if (one) {
+      const byTarget = new Map<string, typeof candidates>();
+      for (const c of candidates) {
+        const k = finderAssetId(c.get[0]);
+        (byTarget.get(k) ?? byTarget.set(k, []).get(k)!).push(c);
+      }
+      shortlist = [...byTarget.values()].flatMap((g) => g.sort((x, y) => y.approx - x.approx).slice(0, 12));
+    } else shortlist = candidates.sort((x, y) => y.approx - x.approx).slice(0, filtered ? 60 : 40);
+    for (const c of shortlist) {
       if (cap && capHits) {
         const net = salary(c.get) - salary(c.give);
         if ((capHits[me] ?? 0) + net > cap || (capHits[team.franchise_id] ?? 0) - net > cap) continue;
@@ -198,7 +224,9 @@ export function findTrades(opts: {
       const their_change = theirAfter.map((x, i) => Math.round((x - theirBase[i]) * 10) / 10);
       const my_gain = weighted(myAfter) - myBaseW;
       const their_gain = weighted(theirAfter) - theirBaseW;
-      if (my_gain <= (filtered ? -1.5 : 0.5)) continue;
+      const edge = c.get.reduce((x, a) => x + value(a), 0) - c.give.reduce((x, a) => x + value(a), 0); // value you gain
+      const valueBuy = fire && edge >= 300;
+      if (my_gain <= (filtered ? -1.5 : valueBuy ? -0.5 : one ? 0.1 : 0.5)) continue;
 
       const reasons: string[] = [];
       // Filtered searches can include small lineup losses (you chose to move that player); keep the score positive.
@@ -230,7 +258,18 @@ export function findTrades(opts: {
         score *= 1.15;
         reasons.push('They’re trying to win now and this doesn’t hurt this year’s lineup.');
       }
-      if (their_gain < -2 && !reasons.length) reasons.push('Costs them lineup points, so lead with the value edge.');
+      if (fire) {
+        score += Math.max(0, edge) / 400; // buying below value counts in a fire sale
+        if (my_gain < 0.5 && valueBuy) reasons.push(`Value buy: about ${Math.round(edge)} more value than you give; he may not start for you yet.`);
+        if (c.give.every(youthOrPick)) {
+          score *= 1.3;
+          reasons.push('Fire sale: priced at a discount because you pay in picks and young players.');
+        } else {
+          score *= 0.6;
+          reasons.push('Includes a veteran, which a seller is less likely to want.');
+        }
+      }
+      if (their_gain < -2 && !reasons.length && !fire) reasons.push('Costs them lineup points, so lead with the value edge.');
       if (c.give.length === 2) reasons.push('2-for-1: they get depth, you get the best player.');
 
       scored.push({
@@ -259,9 +298,17 @@ export function findTrades(opts: {
       if (kept >= perPartner) break;
       const g = finderAssetId(idea.get[0]);
       const main = finderAssetId([...idea.give].sort((a, b) => value(b) - value(a))[0]);
-      if (usedGet.has(g) || (!sellIds.length && usedGive.has(main))) continue;
-      usedGet.add(g);
-      usedGive.add(main);
+      if (one) {
+        // One team: up to two different packages for the same player, never the same package twice.
+        const gk = `${g}|${main}`;
+        const perTarget = [...usedGet].filter((k) => k.startsWith(`${g}|`)).length;
+        if (usedGet.has(gk) || perTarget >= 2) continue;
+        usedGet.add(gk);
+      } else {
+        if (usedGet.has(g) || (!sellIds.length && usedGive.has(main))) continue;
+        usedGet.add(g);
+        usedGive.add(main);
+      }
       ideas.push(idea);
       kept++;
     }

@@ -479,6 +479,8 @@ app.post(
     const s = ev.settings as LeagueSettings | undefined;
     const sellIds: string[] = Array.isArray(req.body?.sell_ids) ? req.body.sell_ids.map(String).slice(0, 12) : [];
     const wantPositions: string[] = Array.isArray(req.body?.want_positions) ? req.body.want_positions.map(String).slice(0, 4) : [];
+    const partnerId = typeof req.body?.partner_id === 'string' && req.body.partner_id ? req.body.partner_id : undefined;
+    const fireSale = !!partnerId && req.body?.fire_sale === true;
     const history = historyCache.get(`${req.body.platform}:${req.body.league_id}`)?.data;
     const capHits = s?.salary_cap
       ? Object.fromEntries([[me, ev.cap?.hit ?? 0], ...(ev.league_teams || []).filter((t) => t.cap).map((t) => [t.franchise_id, t.cap!.hit])])
@@ -494,6 +496,8 @@ app.post(
       sellIds,
       wantPositions,
       fairValue: ref ? ref.asset : undefined,
+      partnerId,
+      fireSale,
     });
     res.json({ ideas: ideas.slice(0, 40), fair_label: ref?.label ?? null, profiles_used: !!history });
   })
