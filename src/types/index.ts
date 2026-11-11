@@ -337,6 +337,7 @@ export interface FlexForFirstOpportunity {
 }
 
 export type DashboardViewMode =
+  | 'playoffs'
   | 'watchlist'
   | 'mytrades'
   | 'portfolio'
@@ -354,6 +355,8 @@ export interface LeagueTeamSummary {
   franchise_id: string;
   franchise_name: string;
   owner_name?: string;
+  /** This season's record, when the platform reports it */
+  record?: { wins: number; losses: number; ties: number; points_for: number };
   power_rank: number;
   classification: ClassificationType;
   championship_window_status: string;

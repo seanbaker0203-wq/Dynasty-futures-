@@ -24,6 +24,7 @@ import { nflState, sleeperIdFor, weeklyProjections } from './server/sources/week
 import { weatherForTeams } from './server/sources/weather';
 import { marketTrades, ownTradeMeta } from './server/model/marketTrades';
 import { buildPortfolio } from './server/model/portfolio';
+import { buildPlayoffRun } from './server/model/playoffs';
 import type { NormalizedLeague } from './server/leagues/types';
 import { SEASON } from './src/lib/season';
 import { accountsEnabled, identify, rateLimit, supabaseUrl } from './server/security';
@@ -368,6 +369,16 @@ app.post(
       rememberLeague(league);
     }
     res.json(await buildLeagueHistory(league, mfl_api_key));
+  })
+);
+
+/** Playoff run: playoff-schedule targets (incl. K/DEF free agents) and players to buy cheap for later. */
+app.post(
+  '/api/playoffs',
+  rateLimit('projections', { anon: 60, user: 240 }),
+  asyncRoute(async (req, res) => {
+    const ev = await evaluationFor(req);
+    res.json(await buildPlayoffRun(ev));
   })
 );
 

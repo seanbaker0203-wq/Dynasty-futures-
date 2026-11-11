@@ -115,14 +115,15 @@ export async function fetchMflLeague(
   const exp = (type: string, extra = '') =>
     fetchJson<any>(`${host}/${year}/export?TYPE=${type}&L=${id}${extra}${keyParam}&JSON=1`, { headers });
 
-  let league: any, rosters: any, futurePicks: any, rules: any, myLeagues: any;
+  let league: any, rosters: any, futurePicks: any, rules: any, myLeagues: any, standings: any;
   try {
-    [league, rosters, futurePicks, rules, myLeagues] = await Promise.all([
+    [league, rosters, futurePicks, rules, myLeagues, standings] = await Promise.all([
       exp('league'),
       exp('rosters'),
       exp('futureDraftPicks').catch(() => null),
       exp('rules').catch(() => null),
       headers.Cookie ? exp('myleagues').catch(() => null) : Promise.resolve(null),
+      exp('leagueStandings').catch(() => null),
     ]);
   } catch (err) {
     if (err instanceof HttpError) throw new LeagueSyncError(`MFL couldn't be reached (${err.message}). Try again shortly.`, 502);
@@ -151,6 +152,19 @@ export async function fetchMflLeague(
     };
   }
   const franchiseMeta = new Map(asArray<any>(L.franchises?.franchise).map((f) => [String(f.id), f]));
+  // Fantasy playoffs: the weeks after the last regular-season week, through the league's last week.
+  const lastReg = Number(L.lastRegularSeasonWeek) || 14;
+  const endWeek = Number(L.endWeek) || 17;
+  if (!settings.playoffs && endWeek > lastReg) settings.playoffs = { start_week: lastReg + 1, teams: 6, weeks: endWeek - lastReg };
+  const records = new Map<string, NonNullable<LeagueTeam['record']>>();
+  for (const f of asArray<any>(standings?.leagueStandings?.franchise)) {
+    records.set(String(f.id), {
+      wins: Number(f.h2hw) || 0,
+      losses: Number(f.h2hl) || 0,
+      ties: Number(f.h2ht) || 0,
+      points_for: Number(String(f.pf ?? '0').replace(/,/g, '')) || 0,
+    });
+  }
 
   // Picks. Some leagues draft offline and never run the draft on MFL, so MFL keeps listing
   // picks for drafts that already happened. Only count picks from the next real draft onward.
@@ -190,6 +204,7 @@ export async function fetchMflLeague(
       designations,
       contracts: Object.keys(contracts).length ? contracts : undefined,
       picks: picksByTeam.get(String(f.id)) || [],
+      record: records.get(String(f.id)),
     };
   });
 

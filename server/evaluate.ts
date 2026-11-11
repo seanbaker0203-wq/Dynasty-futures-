@@ -297,6 +297,7 @@ export async function evaluateLeague(league: NormalizedLeague, requestedTeamId?:
       franchise_id: t.team_id,
       franchise_name: t.name,
       owner_name: t.owner_name,
+      record: t.record,
       power_rank: 0,
       classification: ev.metrics.classification as ClassificationType,
       championship_window_status: ev.championship_window?.status || 'Strong Contender',
