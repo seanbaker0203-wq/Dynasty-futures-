@@ -42,13 +42,14 @@ import { PortfolioScreen } from './screens/PortfolioScreen';
 import { WatchlistScreen } from './screens/WatchlistScreen';
 import { MyTradesScreen } from './screens/MyTradesScreen';
 import { PlayoffScreen } from './screens/PlayoffScreen';
+import { RebuildScreen } from './screens/RebuildScreen';
 import { useAccount } from './context/AccountContext';
 import { ArrowLeftRight, LineChart, Link2, Shield, Trophy } from 'lucide-react';
 
 type Destination = 'team' | 'league' | 'values' | 'trade' | 'connect';
 
 const DESTINATIONS: { id: Destination; label: string; icon: React.FC<{ className?: string }>; views: DashboardViewMode[] }[] = [
-  { id: 'team', label: 'My team', icon: Shield, views: ['single', 'week', 'season', 'waivers', 'playoffs', 'plan', 'optimization', 'portfolio', 'rules'] },
+  { id: 'team', label: 'My team', icon: Shield, views: ['single', 'week', 'season', 'waivers', 'playoffs', 'rebuild', 'plan', 'optimization', 'portfolio', 'rules'] },
   { id: 'league', label: 'League', icon: Trophy, views: ['league', 'compare', 'trades', 'picks', 'freeagents'] },
   { id: 'values', label: 'Values', icon: LineChart, views: ['values', 'movers', 'market', 'watchlist'] },
   { id: 'trade', label: 'Trade', icon: ArrowLeftRight, views: ['trade', 'ideas', 'gaps', 'mytrades'] },
@@ -179,6 +180,7 @@ const AppContent: React.FC = () => {
                       { view: 'plan', label: 'Plan' },
                       { view: 'optimization', label: 'Moves', count: evaluation?.remediations?.length },
                       { view: 'playoffs', label: 'Playoff run' },
+                      { view: 'rebuild', label: 'Rebuild' },
                       ...(multiLeague ? ([{ view: 'portfolio', label: 'Portfolio' }] as const) : []),
                       { view: 'rules', label: 'Rules' },
                     ]
@@ -189,6 +191,7 @@ const AppContent: React.FC = () => {
             {activeView === 'rules' && <RulesScreen />}
             {activeView === 'portfolio' && <PortfolioScreen />}
             {activeView === 'playoffs' && <PlayoffScreen />}
+            {activeView === 'rebuild' && <RebuildScreen />}
             {activeView === 'week' && <WeekScreen />}
             {activeView === 'single' && <TeamScreen />}
             {activeView === 'plan' && <PlanScreen />}

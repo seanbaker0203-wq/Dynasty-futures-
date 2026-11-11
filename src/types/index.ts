@@ -338,6 +338,7 @@ export interface FlexForFirstOpportunity {
 
 export type DashboardViewMode =
   | 'playoffs'
+  | 'rebuild'
   | 'watchlist'
   | 'mytrades'
   | 'portfolio'

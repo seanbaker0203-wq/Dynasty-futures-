@@ -24,6 +24,7 @@ import { nflState, sleeperIdFor, weeklyProjections } from './server/sources/week
 import { weatherForTeams } from './server/sources/weather';
 import { marketTrades, ownTradeMeta } from './server/model/marketTrades';
 import { buildPortfolio } from './server/model/portfolio';
+import { buildRebuildPlan, checkRebuildOffer } from './server/model/rebuild';
 import { buildPlayoffRun } from './server/model/playoffs';
 import type { NormalizedLeague } from './server/leagues/types';
 import { SEASON } from './src/lib/season';
@@ -373,6 +374,23 @@ app.post(
 );
 
 /** Playoff run: playoff-schedule targets (incl. K/DEF free agents) and players to buy cheap for later. */
+app.post(
+  '/api/rebuild',
+  rateLimit('ideas', { anon: 40, user: 300 }),
+  asyncRoute(async (req, res) => {
+    const ev = await evaluationFor(req);
+    res.json(buildRebuildPlan(ev));
+  })
+);
+app.post(
+  '/api/rebuild/check',
+  rateLimit('ideas', { anon: 40, user: 300 }),
+  asyncRoute(async (req, res) => {
+    const ev = await evaluationFor(req);
+    const ids = (x: unknown) => (Array.isArray(x) ? x.map(String).slice(0, 6) : []);
+    res.json(checkRebuildOffer(ev, String(req.body?.partner_id || ''), ids(req.body?.give), ids(req.body?.get)));
+  })
+);
 app.post(
   '/api/playoffs',
   rateLimit('projections', { anon: 60, user: 240 }),
