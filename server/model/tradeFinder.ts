@@ -126,12 +126,26 @@ export function findTrades(opts: {
         ]
       : [];
     if (aimed && !chosen.length) continue;
+    // "Picks" under Looking for: their draft picks are targets too (best value first, since picks don't score now).
+    const wantPicks = wantPositions.includes('PICK');
+    const pickTargets = wantPicks
+      ? theirs.picks
+          .filter((pk) => pk.market_value >= 300)
+          .map((pk) => ({ kind: 'pick' as const, item: pk }) as FinderAsset)
+          .filter((a) => !sellSets.length || (fv(a) >= sellMin * 0.4 && fv(a) <= sellMax * 1.6))
+          .sort((x, y) => fv(y) - fv(x))
+          .slice(0, 8)
+          .map((a) => ({ a, gain: weighted(totals(swap(mine, [], [a]), settings, seasons)) - myBaseW }))
+      : [];
+    const playerPositions = wantPositions.filter((w) => w !== 'PICK');
     const targets = aimed
       ? chosen.map((a) => ({ a, gain: weighted(totals(swap(mine, [], [a]), settings, seasons)) - myBaseW }))
-      : theirs.players
+      : wantPicks && !playerPositions.length
+        ? pickTargets
+        : [...(wantPicks ? pickTargets : []), ...theirs.players
       .filter((p) =>
-        wantPositions.length
-          ? wantPositions.includes(p.position) && p.market_value >= 300 && (!sellSets.length || inSellRange(p))
+        playerPositions.length
+          ? playerPositions.includes(p.position) && p.market_value >= 300 && (!sellSets.length || inSellRange(p))
           : sellSets.length
             ? inSellRange(p)
             : p.market_value >= (one ? 500 : 1000)
@@ -143,7 +157,7 @@ export function findTrades(opts: {
       // A fire sale is a chance to buy value below market even if he won't start for you yet.
       .filter((t) => (filtered ? true : one ? t.gain > 0.1 || (fire && fv(t.a) >= 1500) : t.gain > 0.3))
       .sort((x, y) => y.gain - x.gain)
-      .slice(0, one ? 25 : filtered ? 10 : 6);
+      .slice(0, one ? 25 : filtered ? 10 : 6)];
 
     const candidates: { give: FinderAsset[]; get: FinderAsset[]; approx: number }[] = [];
     if (filtered) {
@@ -176,6 +190,8 @@ export function findTrades(opts: {
         : [...myAssets.map((a) => [a]), ...myAssets.flatMap((a, i) => myAssets.slice(i + 1).map((b) => [a, b]))];
       for (const t of targets) {
         for (const give of myGiveSets) {
+          // Trading picks for picks isn't what "looking for picks" means: pay for a pick with a player.
+          if (t.a.kind === 'pick' && give.every((a) => a.kind === 'pick')) continue;
           const gv = give.reduce((x, a) => x + fv(a), 0);
           if (fair(gv, fv(t.a), 1, give.length, give)) candidates.push({ give, get: [t.a], approx: t.gain - cost(give) });
           // My side is worth more: ask for something extra back (one-for-two).
@@ -226,7 +242,12 @@ export function findTrades(opts: {
       const net = salary(c.get) - salary(c.give);
       return (capHits[me] ?? 0) + net <= cap && (capHits[team.franchise_id] ?? 0) - net <= cap;
     };
-    if (cap && capHits) candidates.splice(0, candidates.length, ...candidates.filter(capOk));
+    if (cap && capHits) {
+      // In place (a spread of a huge array overflows the call stack).
+      let w = 0;
+      for (const c of candidates) if (capOk(c)) candidates[w++] = c;
+      candidates.length = w;
+    }
     let shortlist: typeof candidates;
     if (one || aimed) {
       const byTarget = new Map<string, typeof candidates>();

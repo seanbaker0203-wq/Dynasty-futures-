@@ -507,7 +507,7 @@ app.post(
     const ref = referenceFor(ev, req.body?.fair);
     const s = ev.settings as LeagueSettings | undefined;
     const sellIds: string[] = Array.isArray(req.body?.sell_ids) ? req.body.sell_ids.map(String).slice(0, 12) : [];
-    const wantPositions: string[] = Array.isArray(req.body?.want_positions) ? req.body.want_positions.map(String).slice(0, 4) : [];
+    const wantPositions: string[] = Array.isArray(req.body?.want_positions) ? req.body.want_positions.map(String).slice(0, 5) : [];
     const partnerId = typeof req.body?.partner_id === 'string' && req.body.partner_id ? req.body.partner_id : undefined;
     const targetIds: string[] = Array.isArray(req.body?.target_ids) ? req.body.target_ids.map(String).slice(0, 4) : [];
     const fireSale = !!partnerId && req.body?.fire_sale === true;

@@ -97,7 +97,7 @@ export const IdeasScreen: React.FC = () => {
     ...[...evaluation.players].filter((p) => p.market_value >= 300).sort((a, b) => b.market_value - a.market_value).map((p) => ({ id: `player:${p.id}`, label: `${p.position} ${p.full_name} (${fmt(p.market_value)})` })),
     ...[...(evaluation.draft_picks || [])].filter((p) => p.market_value >= 300).sort((a, b) => a.year - b.year || a.round - b.round).map((p) => ({ id: `pick:${p.id}`, label: `${pickName(p, me)} (${fmt(p.market_value)})` })),
   ];
-  const positions = ['QB', 'RB', 'WR', 'TE'];
+  const positions = ['QB', 'RB', 'WR', 'TE', 'PICK'];
   const shortName = (id: string) => myAssets.find((a) => a.id === id)?.label.replace(/ \(.*\)$/, '').replace(/^(QB|RB|WR|TE|K|DEF) /, '') ?? '';
   // Their players and picks you can target, by team.
   const otherTeams = (evaluation.league_teams || []).filter((t) => t.franchise_id !== me);
@@ -254,7 +254,7 @@ export const IdeasScreen: React.FC = () => {
                   onClick={() => setWant(pos ? (want.includes(pos) ? want.filter((w) => w !== pos) : [...want, pos]) : [])}
                   className={`rounded-full px-3.5 py-1.5 text-[14px] font-semibold border ${on ? 'bg-ink text-paper border-ink' : 'border-line text-muted'}`}
                 >
-                  {pos ?? 'Any position'}
+                  {pos === 'PICK' ? 'Picks' : (pos ?? 'Any position')}
                 </button>
               );
             })}
@@ -289,7 +289,7 @@ export const IdeasScreen: React.FC = () => {
         {filtered
           ? targetIds.length
             ? `Fair packages to get ${targetIds.map(targetName).join(' or ')}${sellName ? ` using ${sellName}` : ''}, best for your ${horizon} first, with overpaying counted against a package. Each is built around a different main piece. If a package costs you lineup points, it says how many.`
-            : `${fireSale ? 'Fire-sale deals' : 'Fair-value deals'}${partnerName ? ` with ${partnerName}` : ''}${sellName ? ` that move ${sellName}` : ''}${want.length ? ` for a ${want.join(' or ')}` : ''}, best for your ${horizon} first. Picks or a second player are added to even out value when needed.`
+            : `${fireSale ? 'Fire-sale deals' : 'Fair-value deals'}${partnerName ? ` with ${partnerName}` : ''}${sellName ? ` that move ${sellName}` : ''}${want.length ? ` for ${want.map((w) => (w === 'PICK' ? 'picks' : `a ${w}`)).join(' or ')}` : ''}, best for your ${horizon} first. Picks or a second player are added to even out value when needed.`
           : 'Deals that are fair on value, so the other side could say yes, but make your lineup better over the ' + horizon + '. Best calls first.'}{' '}
         {history ? 'Ranked using how each manager actually trades.' : ''}
       </p>
