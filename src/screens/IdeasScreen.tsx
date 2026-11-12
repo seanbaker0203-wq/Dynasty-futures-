@@ -30,7 +30,8 @@ export const IdeasScreen: React.FC = () => {
   const [want, setWant] = useState<string[]>([]);
   const [partner, setPartner] = useState<string>('');
   const [fireSale, setFireSale] = useState(false);
-  const filtered = sellIds.length > 0 || want.length > 0 || !!partner;
+  const [targetIds, setTargetIds] = useState<string[]>([]);
+  const filtered = sellIds.length > 0 || want.length > 0 || !!partner || targetIds.length > 0;
   const { adjustments, reference } = useAccount();
   const [personal, setPersonal] = useState<PersonalIdea[]>([]);
   const lr = leagueRequest();
@@ -54,6 +55,7 @@ export const IdeasScreen: React.FC = () => {
           sell_ids: sellIds,
           want_positions: want,
           partner_id: partner || undefined,
+          target_ids: targetIds,
           fire_sale: partner ? fireSale : undefined,
           fair: fairOn === 'theirs' && ref ? { source: reference.source, imported: reference.source === 'imported' ? reference.imported : null } : null,
         },
@@ -66,7 +68,7 @@ export const IdeasScreen: React.FC = () => {
       ctl.abort();
       window.clearTimeout(t);
     };
-  }, [lrKey, !!history, sellIds.join(), want.join(), fairOn, ref?.label, reference.source, partner, fireSale]);
+  }, [lrKey, !!history, sellIds.join(), want.join(), fairOn, ref?.label, reference.source, partner, fireSale, targetIds.join()]);
 
   useEffect(() => {
     if (!lr || !adjustments.enabled) return setPersonal([]);
@@ -97,6 +99,31 @@ export const IdeasScreen: React.FC = () => {
   ];
   const positions = ['QB', 'RB', 'WR', 'TE'];
   const shortName = (id: string) => myAssets.find((a) => a.id === id)?.label.replace(/ \(.*\)$/, '').replace(/^(QB|RB|WR|TE|K|DEF) /, '') ?? '';
+  // Their players and picks you can target, by team.
+  const otherTeams = (evaluation.league_teams || []).filter((t) => t.franchise_id !== me);
+  const theirAssets = otherTeams.map((t) => ({
+    team: t,
+    assets: [
+      ...[...t.starters, ...t.bench, ...(t.reserves || [])]
+        .filter((p) => p.market_value >= 300 && p.position !== 'K' && p.position !== 'DEF')
+        .sort((a, b) => b.market_value - a.market_value)
+        .map((p) => ({ id: `player:${p.id}`, name: p.full_name, label: `${p.position} ${p.full_name} (${fmt(p.market_value)})` })),
+      ...[...t.draft_picks]
+        .filter((p) => p.market_value >= 300)
+        .sort((a, b) => a.year - b.year || a.round - b.round)
+        .map((p) => ({ id: `pick:${p.id}`, name: `${t.franchise_name}'s ${pickName(p, t.franchise_id)}`, label: `${pickName(p, t.franchise_id)} (${fmt(p.market_value)})` })),
+    ],
+  }));
+  const ownerOf = (id: string) => theirAssets.find((g) => g.assets.some((a) => a.id === id))?.team.franchise_id ?? '';
+  const targetName = (id: string) => theirAssets.flatMap((g) => g.assets).find((a) => a.id === id)?.name ?? '';
+  const addTarget = (id: string) => {
+    const next = [...targetIds, id];
+    setTargetIds(next);
+    setWant([]);
+    const owners = new Set(next.map(ownerOf));
+    setPartner(owners.size === 1 ? ownerOf(id) : '');
+    if (owners.size !== 1) setFireSale(false);
+  };
   const partnerName = (evaluation.league_teams || []).find((t) => t.franchise_id === partner)?.franchise_name ?? '';
   const sellName = sellIds.length === 1 ? shortName(sellIds[0]) : sellIds.length > 1 ? `any mix of ${sellIds.map(shortName).join(', ')}` : '';
 
@@ -113,6 +140,7 @@ export const IdeasScreen: React.FC = () => {
             onChange={(e) => {
               setPartner(e.target.value);
               if (!e.target.value) setFireSale(false);
+              if (e.target.value) setTargetIds(targetIds.filter((id) => ownerOf(id) === e.target.value));
             }}
             className="field mt-1"
           >
@@ -135,6 +163,49 @@ export const IdeasScreen: React.FC = () => {
                 </span>
               </span>
             </label>
+          )}
+        </div>
+        <div>
+          <span className="text-[13px] font-semibold text-muted">Trade for {targetIds.length > 1 ? '(ideas for each)' : ''}</span>
+          {targetIds.length > 0 && (
+            <div className="flex flex-wrap gap-1.5 mt-1">
+              {targetIds.map((id) => (
+                <button
+                  key={id}
+                  type="button"
+                  onClick={() => {
+                    const next = targetIds.filter((x) => x !== id);
+                    setTargetIds(next);
+                    if (!next.length) {
+                      setPartner('');
+                      setFireSale(false);
+                    }
+                  }}
+                  className="rounded-full pl-3 pr-2 py-1 text-[13px] font-semibold bg-ink text-paper flex items-center gap-1"
+                  aria-label={`Remove ${targetName(id)}`}
+                >
+                  {targetName(id)} <span aria-hidden>×</span>
+                </button>
+              ))}
+            </div>
+          )}
+          {targetIds.length < 4 && (
+            <select value="" onChange={(e) => e.target.value && addTarget(e.target.value)} className="field mt-1.5" aria-label="Add a player or pick you want">
+              <option value="">{targetIds.length ? 'Add another…' : 'Anyone, or pick a player or pick you want…'}</option>
+              {theirAssets
+                .filter((g) => !partner || g.team.franchise_id === partner)
+                .map((g) => (
+                  <optgroup key={g.team.franchise_id} label={g.team.franchise_name}>
+                    {g.assets
+                      .filter((a) => !targetIds.includes(a.id))
+                      .map((a) => (
+                        <option key={a.id} value={a.id}>
+                          {a.label}
+                        </option>
+                      ))}
+                  </optgroup>
+                ))}
+            </select>
           )}
         </div>
         <div>
@@ -170,7 +241,7 @@ export const IdeasScreen: React.FC = () => {
               ))}
           </select>
         </div>
-        <div>
+        {!targetIds.length && <div>
           <span className="text-[13px] font-semibold text-muted">Looking for</span>
           <div className="flex flex-wrap gap-1.5 mt-1">
             {[null, ...positions].map((pos) => {
@@ -188,7 +259,7 @@ export const IdeasScreen: React.FC = () => {
               );
             })}
           </div>
-        </div>
+        </div>}
         <div>
           <span className="text-[13px] font-semibold text-muted">Looks fair on</span>
           <div className="flex flex-wrap gap-1.5 mt-1">
@@ -208,7 +279,7 @@ export const IdeasScreen: React.FC = () => {
           {fairOn === 'theirs' && <p className="text-[12px] text-muted mt-1">Deals that look even on the values your league uses, ranked by how much you gain on ours. Change the source in Value gaps.</p>}
         </div>
         {filtered && (
-          <button type="button" className="text-[13px] underline underline-offset-2 text-muted" onClick={() => { setSellIds([]); setWant([]); setPartner(''); setFireSale(false); }}>
+          <button type="button" className="text-[13px] underline underline-offset-2 text-muted" onClick={() => { setSellIds([]); setWant([]); setPartner(''); setFireSale(false); setTargetIds([]); }}>
             Clear search
           </button>
         )}
@@ -216,7 +287,9 @@ export const IdeasScreen: React.FC = () => {
 
       <p className="text-[14px] text-muted">
         {filtered
-          ? `${fireSale ? 'Fire-sale deals' : 'Fair-value deals'}${partnerName ? ` with ${partnerName}` : ''}${sellName ? ` that move ${sellName}` : ''}${want.length ? ` for a ${want.join(' or ')}` : ''}, best for your ${horizon} first. Picks or a second player are added to even out value when needed.`
+          ? targetIds.length
+            ? `Fair packages to get ${targetIds.map(targetName).join(' or ')}${sellName ? ` using ${sellName}` : ''}, best for your ${horizon} first, with overpaying counted against a package. Each is built around a different main piece. If a package costs you lineup points, it says how many.`
+            : `${fireSale ? 'Fire-sale deals' : 'Fair-value deals'}${partnerName ? ` with ${partnerName}` : ''}${sellName ? ` that move ${sellName}` : ''}${want.length ? ` for a ${want.join(' or ')}` : ''}, best for your ${horizon} first. Picks or a second player are added to even out value when needed.`
           : 'Deals that are fair on value, so the other side could say yes, but make your lineup better over the ' + horizon + '. Best calls first.'}{' '}
         {history ? 'Ranked using how each manager actually trades.' : ''}
       </p>

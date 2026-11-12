@@ -59,13 +59,17 @@ export function findTrades(opts: {
   partnerId?: string;
   /** That team is selling ("fire sale"): they want picks and young players and take about 18% less for their players. */
   fireSale?: boolean;
+  /** Build ideas to acquire these specific assets of theirs (e.g. "player:123", "pick:2027-1-0004"). */
+  targetIds?: string[];
 }): TradeIdea[] {
   const { me, mine, teams, settings, seasons, profiles = [], capHits, sellIds = [], wantPositions = [] } = opts;
   const fv = opts.fairValue ?? value;
+  const targetIds = opts.targetIds ?? [];
+  const aimed = targetIds.length > 0;
   const filtered = sellIds.length > 0 || wantPositions.length > 0;
   const one = !!opts.partnerId;
   const fire = one && !!opts.fireSale;
-  const perPartner = opts.perPartner ?? (one ? 15 : filtered ? 4 : 3);
+  const perPartner = opts.perPartner ?? (aimed ? 12 * targetIds.length : one ? 15 : filtered ? 4 : 3);
   // A seller in a fire sale takes picks and young players (25 or younger), not veterans, at a discount.
   const youthOrPick = (a: FinderAsset) => a.kind === 'pick' || (a.item.age ?? 99) <= 25;
   const DISCOUNT = 0.82; // they accept about 82% of a veteran's value when paid in picks/youth
@@ -115,7 +119,16 @@ export function findTrades(opts: {
       const v = fv({ kind: 'player', item: p });
       return v >= sellMin * 0.4 && v <= sellMax * 1.6;
     };
-    const targets = theirs.players
+    const chosen: FinderAsset[] = aimed
+      ? [
+          ...theirs.players.filter((p) => targetIds.includes(`player:${p.id}`)).map((p) => ({ kind: 'player' as const, item: p })),
+          ...theirs.picks.filter((p) => targetIds.includes(`pick:${p.id}`)).map((p) => ({ kind: 'pick' as const, item: p })),
+        ]
+      : [];
+    if (aimed && !chosen.length) continue;
+    const targets = aimed
+      ? chosen.map((a) => ({ a, gain: weighted(totals(swap(mine, [], [a]), settings, seasons)) - myBaseW }))
+      : theirs.players
       .filter((p) =>
         wantPositions.length
           ? wantPositions.includes(p.position) && p.market_value >= 300 && (!sellSets.length || inSellRange(p))
@@ -185,17 +198,20 @@ export function findTrades(opts: {
       const fits = (total: number, n: number) =>
         n === 1 ? total >= v * 0.97 * lo && total <= v * 1.2 * lo : total >= v * 1.1 * lo && total <= v * 1.35 * lo;
       const pool = myAssets.filter((a) => fv(a) <= v * 1.35 && (!fire || youthOrPick(a)));
+      const c2m = (a: FinderAsset) => costToMe.get(finderAssetId(a)) ?? 0;
       for (let i = 0; i < pool.length; i++) {
         const a = pool[i];
-        if (fits(fv(a), 1)) candidates.push({ give: [a], get: [t.a], approx: t.gain - (costToMe.get(finderAssetId(a)) ?? 0) });
+        if (fits(fv(a), 1)) candidates.push({ give: [a], get: [t.a], approx: t.gain - c2m(a) });
         for (let j = i + 1; j < pool.length; j++) {
           const b = pool[j];
-          if (!fits(fv(a) + fv(b), 2)) continue;
-          candidates.push({
-            give: [a, b],
-            get: [t.a],
-            approx: t.gain - (costToMe.get(finderAssetId(a)) ?? 0) - (costToMe.get(finderAssetId(b)) ?? 0),
-          });
+          if (fits(fv(a) + fv(b), 2)) candidates.push({ give: [a, b], get: [t.a], approx: t.gain - c2m(a) - c2m(b) });
+          // A specific target: also three-piece packages (a star often takes more than two pieces).
+          if (!aimed || fv(a) + fv(b) >= v * 1.35 * lo) continue;
+          for (let k = j + 1; k < pool.length; k++) {
+            const c = pool[k];
+            const tot = fv(a) + fv(b) + fv(c);
+            if (tot >= v * 1.15 * lo && tot <= v * 1.4 * lo) candidates.push({ give: [a, b, c], get: [t.a], approx: t.gain - c2m(a) - c2m(b) - c2m(c) });
+          }
         }
       }
     }
@@ -204,14 +220,32 @@ export function findTrades(opts: {
     const scored: TradeIdea[] = [];
     // One team: keep the best few packages for every player of theirs, so a handful of big upgrades can't crowd out
     // the rest. Otherwise the most promising candidates overall.
+    // Salary cap first, so the shortlist isn't spent on deals that can't be made.
+    const capOk = (c: (typeof candidates)[number]) => {
+      if (!cap || !capHits) return true;
+      const net = salary(c.get) - salary(c.give);
+      return (capHits[me] ?? 0) + net <= cap && (capHits[team.franchise_id] ?? 0) - net <= cap;
+    };
+    if (cap && capHits) candidates.splice(0, candidates.length, ...candidates.filter(capOk));
     let shortlist: typeof candidates;
-    if (one) {
+    if (one || aimed) {
       const byTarget = new Map<string, typeof candidates>();
       for (const c of candidates) {
         const k = finderAssetId(c.get[0]);
         (byTarget.get(k) ?? byTarget.set(k, []).get(k)!).push(c);
       }
-      shortlist = [...byTarget.values()].flatMap((g) => g.sort((x, y) => y.approx - x.approx).slice(0, 12));
+      // A chosen target: the best few packages built around each different main piece, so the list isn't twelve
+      // variations on one offer.
+      const spread = (g: typeof candidates) => {
+        const byMain = new Map<string, typeof candidates>();
+        for (const c of g.sort((x, y) => y.approx - x.approx)) {
+          const k = finderAssetId([...c.give].sort((x, y) => value(y) - value(x))[0]);
+          const l = byMain.get(k) ?? byMain.set(k, []).get(k)!;
+          if (l.length < 4) l.push(c);
+        }
+        return [...byMain.values()].flat().slice(0, 120);
+      };
+      shortlist = [...byTarget.values()].flatMap((g) => (aimed ? spread(g) : g.sort((x, y) => y.approx - x.approx).slice(0, 12)));
     } else shortlist = candidates.sort((x, y) => y.approx - x.approx).slice(0, filtered ? 60 : 40);
     for (const c of shortlist) {
       if (cap && capHits) {
@@ -226,16 +260,18 @@ export function findTrades(opts: {
       const their_gain = weighted(theirAfter) - theirBaseW;
       const edge = c.get.reduce((x, a) => x + value(a), 0) - c.give.reduce((x, a) => x + value(a), 0); // value you gain
       const valueBuy = fire && edge >= 300;
-      if (my_gain <= (filtered ? -1.5 : valueBuy ? -0.5 : one ? 0.1 : 0.5)) continue;
+      // A target you chose: show what it costs even when it doesn't raise your weighted outlook.
+      if (my_gain <= (aimed ? -4 : filtered ? -1.5 : valueBuy ? -0.5 : one ? 0.1 : 0.5)) continue;
 
       const reasons: string[] = [];
       // Filtered searches can include small lineup losses (you chose to move that player); keep the score positive.
       // ...and prefer deals that don't give away more value than needed (about 1 pt/wk per 300 of overpay).
       const overpay = c.give.reduce((x, a) => x + value(a), 0) - c.get.reduce((x, a) => x + value(a), 0);
       // When fairness is judged on another source, reward deals that are fair to them but cheaper on our values.
-      let score = (filtered ? my_gain + 20 : my_gain) - (opts.fairValue ? overpay / 300 : filtered ? Math.max(0, overpay) / 300 : 0);
+      let score = (filtered || aimed ? my_gain + 20 : my_gain) - (opts.fairValue ? overpay / 300 : filtered ? Math.max(0, overpay) / 300 : 0);
       if (opts.fairValue && overpay < -150) reasons.push(`Even on their values, but you gain about ${Math.round(-overpay)} on ours.`);
-      if (filtered && my_gain < 0) reasons.push(`Costs you about ${Math.abs(Math.round(my_gain * 10) / 10)} pts/wk (weighted), but it’s the move you asked for.`);
+      if (aimed && overpay > 0) score -= overpay / 300; // cheapest fair package first
+      if ((filtered || aimed) && my_gain < 0) reasons.push(`Costs you about ${Math.abs(Math.round(my_gain * 10) / 10)} pts/wk (weighted), but it’s the move you asked for.`);
       if (their_gain > 0) {
         score *= 1.25;
         reasons.push('Improves their lineup too, so it’s an easier yes.');
@@ -298,11 +334,11 @@ export function findTrades(opts: {
       if (kept >= perPartner) break;
       const g = finderAssetId(idea.get[0]);
       const main = finderAssetId([...idea.give].sort((a, b) => value(b) - value(a))[0]);
-      if (one) {
+      if (one || aimed) {
         // One team: up to two different packages for the same player, never the same package twice.
         const gk = `${g}|${main}`;
         const perTarget = [...usedGet].filter((k) => k.startsWith(`${g}|`)).length;
-        if (usedGet.has(gk) || perTarget >= 2) continue;
+        if (usedGet.has(gk) || perTarget >= (aimed ? 12 : 2)) continue;
         usedGet.add(gk);
       } else {
         if (usedGet.has(g) || (!sellIds.length && usedGive.has(main))) continue;
