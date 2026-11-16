@@ -160,6 +160,8 @@ export interface LeagueSettings {
   format_source?: 'platform' | 'user' | 'default';
   /** Fantasy playoffs: first week and number of teams */
   playoffs?: { start_week: number; teams: number; weeks: number } | null;
+  /** League trade deadline from the platform: a date, or the last NFL week trades are allowed (MFL doesn't publish one) */
+  trade_deadline?: { at?: string | null; week?: number | null } | null;
   /** How this league actually plays: QBs rostered per team, best waiver QB, how QBs trade (set during evaluation) */
   league_norms?: LeagueNorms;
   /** Each week also counts as a game against the league median score */

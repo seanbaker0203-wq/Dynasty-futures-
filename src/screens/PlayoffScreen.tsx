@@ -30,6 +30,8 @@ interface PlayoffRun {
   scoring: string;
   mine: PPlayer[];
   targets: PPlayer[];
+  waivers: PPlayer[];
+  trade_deadline: { at: string; week: number | null; source: 'platform' } | null;
   build_later: (PPlayer & { why: string })[];
   schedules: Record<string, { team: string; grade: number; opponents: string[] }[]>;
 }
@@ -74,6 +76,27 @@ function gainFor(t: PPlayer, starters: { slot: string; p: PPlayer | null }[]) {
   return Math.max(0, Math.round((t.playoff_ppg - weakest) * 10) / 10);
 }
 
+const deadlineKey = (lrKey: string) => `df:trade-deadline:${lrKey}`;
+function readStored(lrKey: string): string | null {
+  try {
+    return localStorage.getItem(deadlineKey(lrKey));
+  } catch {
+    return null;
+  }
+}
+function countdown(ms: number) {
+  const m = Math.max(0, Math.floor(ms / 60000));
+  const d = Math.floor(m / 1440);
+  const h = Math.floor((m % 1440) / 60);
+  const min = m % 60;
+  return d > 0 ? `${d} day${d === 1 ? '' : 's'}, ${h} hr` : h > 0 ? `${h} hr ${min} min` : `${min} min`;
+}
+/** datetime-local value in the viewer's time zone */
+const toLocalInput = (iso: string) => {
+  const d = new Date(iso);
+  return new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+};
+
 const Who: React.FC<{ p: PPlayer }> = ({ p }) => (
   <span className="block text-[12px] text-muted truncate">
     {p.owner_name ? (
@@ -98,6 +121,26 @@ export const PlayoffScreen: React.FC = () => {
   const [schedPos, setSchedPos] = useState('RB');
   const lr = leagueRequest();
   const lrKey = lr ? `${lr.platform}:${lr.league_id}:${lr.franchise_id}` : '';
+  // Trade deadline: what you set for this league (saved on this device), else what the platform says.
+  const [stored, setStored] = useState<string | null>(() => readStored(lrKey));
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState('');
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => setStored(readStored(lrKey)), [lrKey]);
+  useEffect(() => {
+    const t = window.setInterval(() => setNow(Date.now()), 30_000);
+    return () => window.clearInterval(t);
+  }, []);
+  const saveDeadline = (value: string | null) => {
+    try {
+      if (value) localStorage.setItem(deadlineKey(lrKey), value);
+      else localStorage.removeItem(deadlineKey(lrKey));
+    } catch {
+      /* private mode: keep it for this visit only */
+    }
+    setStored(value);
+    setEditing(false);
+  };
 
   useEffect(() => {
     if (!lr) return;
@@ -113,14 +156,17 @@ export const PlayoffScreen: React.FC = () => {
 
   const slots = (evaluation?.settings?.slots || {}) as Record<string, number>;
   const starters = useMemo(() => (data ? lineupOf(data.mine, slots) : []), [data, slots]);
+  const deadlineAt = stored ?? data?.trade_deadline?.at ?? null;
+  const deadlineMs = deadlineAt ? new Date(deadlineAt).getTime() : null;
+  const tradesClosed = deadlineMs != null && now >= deadlineMs;
   const upgrades = useMemo(() => {
     if (!data) return [];
-    return data.targets
+    return (tradesClosed ? data.waivers : data.targets)
       .map((t) => ({ t, gain: gainFor(t, starters) }))
-      .filter((x) => x.gain >= 0.5 && (pos === 'All' || x.t.position === pos) && (!sellersOnly || x.t.owner_out || !x.t.owner_id))
+      .filter((x) => x.gain >= 0.5 && (pos === 'All' || x.t.position === pos) && (tradesClosed || !sellersOnly || x.t.owner_out || !x.t.owner_id))
       .sort((a, b) => b.gain - a.gain)
       .slice(0, 25);
-  }, [data, starters, pos, sellersOnly]);
+  }, [data, starters, pos, sellersOnly, tradesClosed]);
 
   if (error) return <p role="alert" className="text-down">{error}</p>;
   if (!data)
@@ -131,8 +177,80 @@ export const PlayoffScreen: React.FC = () => {
     );
 
   const weeks = `weeks ${data.weeks[0]}–${data.weeks[data.weeks.length - 1]}`;
+  const when = deadlineMs
+    ? new Date(deadlineMs).toLocaleString(undefined, { weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })
+    : '';
+  const left = deadlineMs ? deadlineMs - now : 0;
   return (
     <div className="space-y-8">
+      <section
+        aria-label="Trade deadline"
+        className={`rounded-xl border p-4 space-y-2 ${!deadlineMs ? 'border-line bg-card' : tradesClosed ? 'border-line bg-card' : left < 2 * 86400000 ? 'border-down/50 bg-down/5' : 'border-gold/50 bg-card'}`}
+      >
+        {deadlineMs && !editing ? (
+          <>
+            <p className="text-[13px] font-semibold text-muted">League trade deadline</p>
+            {tradesClosed ? (
+              <p className="text-[15px]">
+                <span className="font-semibold">Passed</span> ({when}). Trades are closed, so upgrades below are free agents you can add.
+              </p>
+            ) : (
+              <p>
+                <span className="display text-[28px] text-ink">{countdown(left)}</span>
+                <span className="block text-[13px] text-muted">left to trade · {when}</span>
+              </p>
+            )}
+            <p className="text-[12px] text-muted">
+              {stored ? 'You set this date.' : data.trade_deadline?.week ? `From your league: trades end after Week ${data.trade_deadline.week}.` : 'From your league settings.'}{' '}
+              <button
+                type="button"
+                className="underline"
+                onClick={() => {
+                  setDraft(toLocalInput(deadlineAt!));
+                  setEditing(true);
+                }}
+              >
+                Change
+              </button>
+              {stored && data.trade_deadline && (
+                <>
+                  {' · '}
+                  <button type="button" className="underline" onClick={() => saveDeadline(null)}>
+                    Use league's
+                  </button>
+                </>
+              )}
+            </p>
+          </>
+        ) : (
+          <form
+            className="space-y-2"
+            onSubmit={(e) => {
+              e.preventDefault();
+              if (draft) saveDeadline(new Date(draft).toISOString());
+            }}
+          >
+            <label htmlFor="po-deadline" className="block text-[14px]">
+              <span className="font-semibold">When is your league's trade deadline?</span>
+              <span className="block text-[13px] text-muted">
+                {lr?.platform === 'mfl' ? "MFL doesn't share it, so set it once. " : ''}After it passes, this page switches from trade targets to free agents.
+              </span>
+            </label>
+            <div className="flex gap-2">
+              <input id="po-deadline" type="datetime-local" className="field" value={draft} onChange={(e) => setDraft(e.target.value)} required />
+              <button type="submit" className="btn-primary shrink-0">
+                Save
+              </button>
+              {editing && (
+                <button type="button" className="btn-quiet shrink-0" onClick={() => setEditing(false)}>
+                  Cancel
+                </button>
+              )}
+            </div>
+          </form>
+        )}
+      </section>
+
       <p className="text-[14px] text-muted">
         Your fantasy playoffs are {weeks}. Matchups are graded by the fantasy points each defense has allowed to that position in weeks
         1–{data.through_week}, scaled back because a half-season is a small sample. Estimates are this season's points per game × that
@@ -157,8 +275,10 @@ export const PlayoffScreen: React.FC = () => {
       </section>
 
       <section className="space-y-3">
-        <h2 className="display text-[24px] text-ink">Best upgrades for your playoff run</h2>
-        <p className="text-[14px] text-muted">Points a week each player would add over the starter he'd replace in your lineup.</p>
+        <h2 className="display text-[24px] text-ink">{tradesClosed ? 'Best waiver pickups for your playoff run' : 'Best upgrades for your playoff run'}</h2>
+        <p className="text-[14px] text-muted">
+          {tradesClosed ? 'Free agents only. ' : ''}Points a week each player would add over the starter he'd replace in your lineup.
+        </p>
         <div className="flex flex-wrap gap-2 items-center">
           {POSITIONS.map((p) => (
             <button
@@ -171,9 +291,9 @@ export const PlayoffScreen: React.FC = () => {
               {p}
             </button>
           ))}
-          <label className="flex items-center gap-1.5 text-[13px] ml-auto">
+          {!tradesClosed && <label className="flex items-center gap-1.5 text-[13px] ml-auto">
             <input type="checkbox" checked={sellersOnly} onChange={(e) => setSellersOnly(e.target.checked)} /> Losing teams and free agents only
-          </label>
+          </label>}
         </div>
         {upgrades.length ? (
           <ul className="divide-y divide-line border-y border-line">
@@ -197,7 +317,7 @@ export const PlayoffScreen: React.FC = () => {
             ))}
           </ul>
         ) : (
-          <p className="text-muted">No clear upgrades at this position.</p>
+          <p className="text-muted">{tradesClosed ? 'No free agent beats your starters here right now. Check back after injuries and bye weeks.' : 'No clear upgrades at this position.'}</p>
         )}
       </section>
 

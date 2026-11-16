@@ -49,6 +49,11 @@ export function parseSleeperSettings(league: any): LeagueSettings {
         }
       : null,
     median_game: league?.settings?.league_average_match === 1,
+    // Sleeper: the last week trades are allowed (99 or 0 = no deadline).
+    trade_deadline:
+      Number(league?.settings?.trade_deadline) >= 1 && Number(league?.settings?.trade_deadline) <= 18
+        ? { week: Number(league.settings.trade_deadline) }
+        : null,
     faab_budget: league?.settings?.waiver_type === 2 ? Number(league.settings.waiver_budget) || 100 : null,
   };
 }

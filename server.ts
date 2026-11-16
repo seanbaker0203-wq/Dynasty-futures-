@@ -510,6 +510,7 @@ app.post(
     const wantPositions: string[] = Array.isArray(req.body?.want_positions) ? req.body.want_positions.map(String).slice(0, 5) : [];
     const partnerId = typeof req.body?.partner_id === 'string' && req.body.partner_id ? req.body.partner_id : undefined;
     const targetIds: string[] = Array.isArray(req.body?.target_ids) ? req.body.target_ids.map(String).slice(0, 4) : [];
+    const exclude = new Set<string>(Array.isArray(req.body?.exclude) ? req.body.exclude.map(String).slice(0, 3000) : []);
     const fireSale = !!partnerId && req.body?.fire_sale === true;
     const history = historyCache.get(`${req.body.platform}:${req.body.league_id}`)?.data;
     const capHits = s?.salary_cap
@@ -529,6 +530,7 @@ app.post(
       partnerId,
       fireSale,
       targetIds,
+      exclude,
     });
     res.json({ ideas: ideas.slice(0, 40), fair_label: ref?.label ?? null, profiles_used: !!history });
   })

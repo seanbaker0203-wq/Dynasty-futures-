@@ -75,6 +75,19 @@ async function schedule(season: number): Promise<Map<string, Map<number, string>
   });
 }
 
+/** First game date of each NFL week (YYYY-MM-DD). */
+async function weekStarts(season: number): Promise<Map<number, string>> {
+  return cached(`weekstart-${season}`, 12 * 3600_000, async () => {
+    const games = await fetchJson<any[]>(`https://api.sleeper.app/schedule/nfl/regular/${season}`);
+    const out = new Map<number, string>();
+    for (const g of games || []) {
+      const w = Number(g.week);
+      if (g.date && (!out.has(w) || g.date < out.get(w)!)) out.set(w, g.date);
+    }
+    return out;
+  });
+}
+
 export interface PlayoffPlayer {
   key: string;
   name: string;
@@ -102,6 +115,9 @@ export interface PlayoffRun {
   scoring: 'std' | 'half' | 'ppr';
   mine: PlayoffPlayer[];
   targets: PlayoffPlayer[]; // other teams' players and free-agent K/DEF, best playoff estimate first
+  waivers: PlayoffPlayer[]; // free agents at every position (after the trade deadline, this is the upgrade list)
+  /** League trade deadline as an instant, when the platform gives one (a week becomes the start of the next week) */
+  trade_deadline: { at: string; week: number | null; source: 'platform' } | null;
   build_later: (PlayoffPlayer & { why: string })[];
   schedules: Record<string, { team: string; grade: number; opponents: string[] }[]>; // by position, easiest first
 }
@@ -231,9 +247,50 @@ export async function buildPlayoffRun(ev: RosterEvaluationResult): Promise<Playo
     });
   }
 
+  // Free agents at QB/RB/WR/TE: anyone with 3+ games not on a roster (name check too, in case an id didn't match).
+  const norm = (n: string) => n.toLowerCase().replace(/[^a-z]/g, '').replace(/(jr|sr|ii|iii|iv)$/, '');
+  const rosteredNames = new Set([...all, ...mine].map((p) => `${norm(p.name)}|${p.position}`));
+  for (const [k, g] of games) {
+    const r = meta.get(k)!;
+    if (!['QB', 'RB', 'WR', 'TE'].includes(r.pos) || seen.has(k) || rosteredNames.has(`${norm(r.name)}|${r.pos}`) || g.length < 3) continue;
+    const ppg = g.reduce((a, b) => a + b, 0) / g.length;
+    if (ppg < 4) continue;
+    const { grade, opponents } = gradeOf(r.team, r.pos);
+    all.push({
+      key: `fa:${k}`,
+      name: r.name,
+      position: r.pos,
+      nfl_team: r.team,
+      age: null,
+      owner_id: null,
+      owner_name: null,
+      owner_record: null,
+      owner_out: false,
+      value: 0,
+      games: g.length,
+      ppg: Math.round(ppg * 10) / 10,
+      playoff_ppg: Math.round(ppg * grade * 10) / 10,
+      grade,
+      opponents,
+      injury: r.injury,
+      designation: null,
+    });
+  }
+
   const others = all.filter((p) => p.owner_id !== me);
   const healthy = (p: PlayoffPlayer) => !['IR', 'Out', 'PUP', 'Sus'].includes(p.injury ?? '') && p.designation !== 'IR';
-  const targets = others.filter((p) => healthy(p) && p.games >= 3).sort((a, b) => b.playoff_ppg - a.playoff_ppg);
+  const ranked_ = others.filter((p) => healthy(p) && p.games >= 3).sort((a, b) => b.playoff_ppg - a.playoff_ppg);
+  const targets = ranked_.filter((p) => p.owner_id || p.position === 'K' || p.position === 'DEF');
+  const waivers = ranked_.filter((p) => !p.owner_id);
+
+  // Trade deadline: a date from the platform, or the end of the last trade week (= first game of the next week).
+  let trade_deadline: PlayoffRun['trade_deadline'] = null;
+  const td = settings.trade_deadline;
+  if (td?.at) trade_deadline = { at: td.at, week: td.week ?? null, source: 'platform' };
+  else if (td?.week) {
+    const next = (await weekStarts(season).catch(() => new Map<number, string>())).get(td.week + 1);
+    if (next) trade_deadline = { at: new Date(`${next}T00:00:00-05:00`).toISOString(), week: td.week, source: 'platform' };
+  }
 
   // Build for later: valuable players who are hurt or producing well below their value, on any other team.
   const ranked = new Map<string, { byValue: Map<string, number>; byPpg: Map<string, number> }>();
@@ -270,6 +327,8 @@ export async function buildPlayoffRun(ev: RosterEvaluationResult): Promise<Playo
     scoring,
     mine: mine.sort((a, b) => b.playoff_ppg - a.playoff_ppg),
     targets: targets.slice(0, 200),
+    waivers: waivers.slice(0, 120),
+    trade_deadline,
     build_later: build_later.slice(0, 40),
     schedules,
   };

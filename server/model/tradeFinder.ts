@@ -6,7 +6,7 @@
 import { projectOutlook } from './outlook';
 import { pickName } from '../../src/lib/leagueStats';
 import type { DraftPick, LeagueSettings, LeagueTeamSummary, ManagerProfile, MasterPlayer } from '../../src/types';
-import { finderAssetId, type FinderAsset, type TradeIdea } from '../../src/lib/assets';
+import { finderAssetId, tradeKey, type FinderAsset, type TradeIdea } from '../../src/lib/assets';
 export { finderAssetId, type FinderAsset, type TradeIdea };
 
 
@@ -61,6 +61,8 @@ export function findTrades(opts: {
   fireSale?: boolean;
   /** Build ideas to acquire these specific assets of theirs (e.g. "player:123", "pick:2027-1-0004"). */
   targetIds?: string[];
+  /** Packages already shown (tradeKey), so "Show different ideas" returns new ones until none are left. */
+  exclude?: Set<string>;
 }): TradeIdea[] {
   const { me, mine, teams, settings, seasons, profiles = [], capHits, sellIds = [], wantPositions = [] } = opts;
   const fv = opts.fairValue ?? value;
@@ -242,6 +244,12 @@ export function findTrades(opts: {
       const net = salary(c.get) - salary(c.give);
       return (capHits[me] ?? 0) + net <= cap && (capHits[team.franchise_id] ?? 0) - net <= cap;
     };
+    const exclude = opts.exclude;
+    if (exclude?.size) {
+      let w = 0;
+      for (const c of candidates) if (!exclude.has(tradeKey(team.franchise_id, c.give, c.get))) candidates[w++] = c;
+      candidates.length = w;
+    }
     if (cap && capHits) {
       // In place (a spread of a huge array overflows the call stack).
       let w = 0;
@@ -332,6 +340,7 @@ export function findTrades(opts: {
       scored.push({
         partner_id: team.franchise_id,
         partner_name: team.franchise_name,
+        key: tradeKey(team.franchise_id, c.give, c.get),
         give: c.give,
         get: c.get,
         value_give: c.give.reduce((s, a) => s + value(a), 0),

@@ -5,6 +5,8 @@ export type FinderAsset = { kind: 'player'; item: MasterPlayer } | { kind: 'pick
 export const finderAssetId = (a: FinderAsset) => `${a.kind}:${a.item.id}`;
 
 export interface TradeIdea {
+  /** Stable id of this exact package (partner, give, get), so a refresh can skip ideas already shown */
+  key?: string;
   partner_id: string;
   partner_name: string;
   give: FinderAsset[];
@@ -45,4 +47,9 @@ export interface TradeImpactRow {
   them: { before: number; after: number };
   meRank: { before: number; after: number };
   themRank: { before: number; after: number };
+}
+
+/** Stable id of one trade package: the same assets with the same team give the same key. */
+export function tradeKey(partnerId: string, give: FinderAsset[], get: FinderAsset[]): string {
+  return `${partnerId}|${give.map(finderAssetId).sort().join(',')}>${get.map(finderAssetId).sort().join(',')}`;
 }

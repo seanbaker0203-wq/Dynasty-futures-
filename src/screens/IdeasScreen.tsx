@@ -1,5 +1,5 @@
-import React, { useEffect, useMemo, useState } from 'react';
-import { Loader2 } from 'lucide-react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { Loader2, RefreshCw } from 'lucide-react';
 import { useRoster } from '../context/RosterContext';
 import { fmt, pickName } from '../lib/leagueStats';
 import { finderAssetId, type FinderAsset, type PersonalIdea, type TradeIdea } from '../lib/assets';
@@ -41,6 +41,26 @@ export const IdeasScreen: React.FC = () => {
     if (!isDemo) loadHistory();
   }, [isDemo]);
 
+  // "Show different ideas": every package already shown is skipped on the next ask, until none are left.
+  const searchKey = [lrKey, sellIds.join(), want.join(), fairOn, ref?.label, reference.source, partner, fireSale, targetIds.join()].join('~');
+  const [seen, setSeen] = useState<string[]>([]);
+  const [round, setRound] = useState(0);
+  const seenRef = useRef<string[]>([]);
+  seenRef.current = seen;
+  useEffect(() => {
+    setSeen([]);
+  }, [searchKey]);
+  const showDifferent = () => {
+    setSeen((s) => [...s, ...(ideas || []).map((i) => i.key).filter((k): k is string => !!k)]);
+    setRound((r) => r + 1);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+  const startOver = () => {
+    setSeen([]);
+    setRound((r) => r + 1);
+  };
+  const exhausted = !!ideas && ideas.length === 0 && seen.length > 0;
+
   // Ideas are built on the server. Re-ask when the search changes or manager profiles arrive.
   useEffect(() => {
     if (!lr) return;
@@ -56,6 +76,7 @@ export const IdeasScreen: React.FC = () => {
           want_positions: want,
           partner_id: partner || undefined,
           target_ids: targetIds,
+          exclude: seenRef.current,
           fire_sale: partner ? fireSale : undefined,
           fair: fairOn === 'theirs' && ref ? { source: reference.source, imported: reference.source === 'imported' ? reference.imported : null } : null,
         },
@@ -68,7 +89,7 @@ export const IdeasScreen: React.FC = () => {
       ctl.abort();
       window.clearTimeout(t);
     };
-  }, [lrKey, !!history, sellIds.join(), want.join(), fairOn, ref?.label, reference.source, partner, fireSale, targetIds.join()]);
+  }, [searchKey, !!history, round]);
 
   useEffect(() => {
     if (!lr || !adjustments.enabled) return setPersonal([]);
@@ -303,7 +324,18 @@ export const IdeasScreen: React.FC = () => {
           <Loader2 className="w-4 h-4 animate-spin" /> Looking for trades
         </p>
       )}
-      {ideas && filtered && ideas.length === 0 && (
+      {exhausted && (
+        <div className="space-y-2">
+          <p className="text-muted">That's every fair combination for these settings ({seen.length} ideas shown). Change the search, or start over.</p>
+          <button type="button" className="btn-quiet" onClick={startOver}>
+            Start over
+          </button>
+        </div>
+      )}
+      {seen.length > 0 && !exhausted && ideas && ideas.length > 0 && (
+        <p className="text-[13px] text-muted">New ideas only: skipping the {seen.length} you've already seen.</p>
+      )}
+      {ideas && filtered && ideas.length === 0 && !exhausted && (
         <p className="text-muted">No fair deals found for that search. Try another position, or let the finder add a pick by choosing “Anyone”.</p>
       )}
       {!filtered && personal.length > 0 && (
@@ -353,7 +385,7 @@ export const IdeasScreen: React.FC = () => {
           </ul>
         </section>
       )}
-      {ideas && !filtered && byPartner.length === 0 && <p className="text-muted">No clear improvements right now. Your roster is already well balanced for its value.</p>}
+      {ideas && !filtered && byPartner.length === 0 && !exhausted && <p className="text-muted">No clear improvements right now. Your roster is already well balanced for its value.</p>}
       {byPartner.map((list) => {
         const first = list[0];
         const profile = history?.profiles.find((p) => p.team_id === first.partner_id);
@@ -432,6 +464,14 @@ export const IdeasScreen: React.FC = () => {
           </section>
         );
       })}
+      {ideas && ideas.length > 0 && (
+        <div className="pt-2 space-y-1">
+          <button type="button" className="btn-quiet w-full" onClick={showDifferent}>
+            <RefreshCw className="w-4 h-4 inline -mt-0.5 mr-1" aria-hidden /> Show different ideas
+          </button>
+          <p className="text-[12px] text-muted text-center">Skips every idea you've seen. Repeat until you find one you like.</p>
+        </div>
+      )}
     </div>
   );
 };

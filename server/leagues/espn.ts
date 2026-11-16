@@ -52,6 +52,7 @@ export function parseEspnSettings(s: any): LeagueSettings {
     format: Number(s?.draftSettings?.keeperCount) > 3 ? 'dynasty' : Number(s?.draftSettings?.keeperCount) > 0 ? 'keeper' : 'redraft',
     format_source: 'platform',
     playoffs: { start_week: regWeeks + 1, teams: playoffTeams, weeks: rounds * perRound },
+    trade_deadline: Number(s?.tradeSettings?.deadlineDate) > 0 ? { at: new Date(Number(s.tradeSettings.deadlineDate)).toISOString() } : null,
     faab_budget: acq.isUsingAcquisitionBudget ? Number(acq.acquisitionBudget) || 100 : null,
   };
 }

@@ -168,6 +168,8 @@ export async function fetchYahooLeague(leagueKey: string, token: string, teamId?
     format: Number(st.uses_keepers || 0) === 1 || st.is_keeper ? 'keeper' : 'redraft',
     format_source: 'platform',
     playoffs: { start_week: Number(st.playoff_start_week) || 15, teams: playoffTeams, weeks: Math.max(1, Math.ceil(Math.log2(Math.max(2, playoffTeams)))) },
+    // Yahoo: last day trades are allowed (end of that day, US Eastern).
+    trade_deadline: /^\d{4}-\d{2}-\d{2}$/.test(String(st.trade_end_date || '')) ? { at: new Date(`${st.trade_end_date}T23:59:00-05:00`).toISOString() } : null,
     faab_budget: String(st.uses_faab) === '1' ? 100 : null,
   };
 
