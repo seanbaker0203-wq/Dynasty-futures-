@@ -221,3 +221,34 @@ before charging.
   after the draft, rookie-pick values from our own trade data (picks by round and draft year already fitted), and
   prospect profiles. Needs a college data source (e.g. CollegeFootballData, free API key) and draft capital.
 - Public value-chart and market-report pages (search traffic); draft assistant before August.
+
+## Contention tools, targeted trades, league history — 11 to 18 Nov 2026
+- **Playoff run** (My team, 11 Nov). Every player's fantasy-playoff schedule is graded from the fantasy points his
+  playoff opponents allow, and the screen shows:
+  - your playoff lineup
+  - upgrades ranked by points a week over the starter they'd replace
+  - "Build for later": injured or underperforming players on losing teams
+  - the easiest schedules by position
+
+  Trade-deadline countdown added 16 Nov. The deadline comes from Sleeper (week), ESPN and Yahoo (dates); MFL users
+  set it themselves. After the deadline, upgrades switch to free agents. Tested by Sean 16 Nov.
+- **Rebuild mode** (My team, 11 Nov): sell veterans past their position's sell age to teams with winning records, for
+  picks and players 24 or younger, scored on seasons two to five. "Check an offer" flags sideways starter-for-starter
+  swaps. Tested by Sean 16 Nov.
+- **Trade ideas** (Trade → Ideas):
+  - "Trade for" any player or pick on another team, with 1-, 2- and 3-piece packages (12 Nov; tested by Sean 16 Nov)
+  - "Picks" under Looking for (12 Nov)
+  - "Show different ideas" skips every package already shown until none are left (16 Nov)
+- **League → History** (18 Nov), MFL and Sleeper:
+  - champions from the playoff bracket
+  - all-time standings
+  - highest weekly scores, blowouts, lowest scores
+  - head to head
+  - notes on scoring and lineup changes between eras
+
+  Teams are followed through name changes (Sleeper: by owner). It closes the main feature gap with Roster Audit (see
+  competitor-roster-audit.md).
+- **Landing page** (18 Nov) now leads with what isn't free elsewhere: trade ideas for your roster, contend or rebuild,
+  salary-cap leagues, every platform.
+- **Name:** "Dynasty Futures" and "Fantasy Futures" are taken. Sean's checks found **Chase Rings** clear on USPTO,
+  the App Store and Google Play. Proposed tagline: "Always contend." Waiting on the domain purchase before renaming.
