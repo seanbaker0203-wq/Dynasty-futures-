@@ -4,6 +4,7 @@ import { useAccount } from '../context/AccountContext';
 import { useRoster } from '../context/RosterContext';
 import { useBoard } from '../lib/useBoard';
 import { fmt } from '../lib/leagueStats';
+import { UsageDetail } from '../components/Usage';
 import { Change, NflChip, NflContractDetail, SignalTag, Sparkline, TIER_STYLE } from '../components/ValueBits';
 import type { BoardPlayer } from '../types';
 import { PlayerLinks } from '../components/PlayerLinks';
@@ -134,6 +135,7 @@ export const ValueRow: React.FC<{ p: BoardPlayer; owner?: string; mine?: boolean
             <Star className={`w-3.5 h-3.5 ${watched ? 'fill-gold' : ''}`} /> {watched ? 'Watching' : 'Watch'}
           </button>
 
+          <UsageDetail sleeperId={p.sleeper_id} position={p.position} />
           <NflContractDetail c={p.nfl_contract} />
           {!p.ros && <PlayerMarketTrades sleeperId={p.sleeper_id} superflex={superflex} />}
           <PlayerLinks player={{ name: p.name, position: p.position, team: p.team, ktc_url: p.ktc_url, ext_ids: p.ext_ids, format: p.ros ? 'redraft' : 'dynasty' }} />

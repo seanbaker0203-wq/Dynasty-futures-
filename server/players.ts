@@ -11,6 +11,9 @@ export interface PlayerInfo {
   position: string;
   team: string | null;
   age: number | null;
+  /** Sleeper's depth chart (e.g. RB, 1), when listed */
+  depth_chart_position?: string | null;
+  depth_chart_order?: number | null;
 }
 
 const CACHE_PATH = path.resolve(process.cwd(), 'cache', 'sleeper_players_min.json');
@@ -43,7 +46,14 @@ class PlayerDirectory {
     try {
       const cached = JSON.parse(fs.readFileSync(CACHE_PATH, 'utf8'));
       for (const [id, p] of Object.entries<any>(cached)) {
-        this.players.set(id, { full_name: p.full_name, position: p.position, team: p.team ?? null, age: p.age ?? null });
+        this.players.set(id, {
+          full_name: p.full_name,
+          position: p.position,
+          team: p.team ?? null,
+          age: p.age ?? null,
+          depth_chart_position: p.depth_chart_position ?? null,
+          depth_chart_order: p.depth_chart_order ?? null,
+        });
       }
       this.loadedAt = fs.statSync(CACHE_PATH).mtimeMs;
     } catch {
@@ -94,6 +104,8 @@ class PlayerDirectory {
           position: p.position || (p.fantasy_positions?.[0] ?? ''),
           team: p.team ?? null,
           age: ageFromBirthdate(p.birth_date) ?? (typeof p.age === 'number' ? p.age : null),
+          depth_chart_position: p.team && p.depth_chart_position ? String(p.depth_chart_position) : null,
+          depth_chart_order: p.team && Number(p.depth_chart_order) > 0 ? Number(p.depth_chart_order) : null,
         };
         next.set(id, info);
         out[id] = info;

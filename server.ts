@@ -25,10 +25,11 @@ import { weatherForTeams } from './server/sources/weather';
 import { marketTrades, ownTradeMeta } from './server/model/marketTrades';
 import { buildPortfolio } from './server/model/portfolio';
 import { buildRecordBook } from './server/model/history';
+import { usageFor } from './server/sources/usage';
 import { buildRebuildPlan, checkRebuildOffer } from './server/model/rebuild';
 import { buildPlayoffRun } from './server/model/playoffs';
 import type { NormalizedLeague } from './server/leagues/types';
-import { SEASON } from './src/lib/season';
+import { SEASON, getSeasonContext } from './src/lib/season';
 import { accountsEnabled, identify, rateLimit, supabaseUrl } from './server/security';
 import { findTrades } from './server/model/tradeFinder';
 import { findPersonalIdeas } from './server/model/personalIdeas';
@@ -375,6 +376,14 @@ app.post(
 );
 
 /** Playoff run: playoff-schedule targets (incl. K/DEF free agents) and players to buy cheap for later. */
+app.post(
+  '/api/usage',
+  rateLimit('projections', { anon: 120, user: 600 }),
+  asyncRoute(async (req, res) => {
+    const ids = (Array.isArray(req.body?.ids) ? req.body.ids : []).map(String).filter((x: string) => /^[0-9A-Za-z:_-]{1,24}$/.test(x)).slice(0, 60);
+    res.json(await usageFor(ids, getSeasonContext().seasonYear));
+  })
+);
 app.post(
   '/api/league/records',
   rateLimit('projections', { anon: 30, user: 120 }),
