@@ -252,3 +252,14 @@ before charging.
   salary-cap leagues, every platform.
 - **Name:** "Dynasty Futures" and "Fantasy Futures" are taken. Sean's checks found **Chase Rings** clear on USPTO,
   the App Store and Google Play. Proposed tagline: "Always contend." Waiting on the domain purchase before renaming.
+
+## From the first tester's feedback — 18 Nov 2026 (see user-feedback.md)
+- **Usage on player pages:** weekly snap share, trend, and rank among teammates by snaps (nflverse/PFR). Sleeper
+  depth charts are stored but not shown because they're stale.
+- **RB aging by tier** (docs/VALUES.md): elite backs hold through 28, other starters drop at 27. Non-elite backs
+  aged 25+ now fall a little faster in the model.
+- **Draft-class strength** from ~100k trades since 2024: 2027 class +9%, 2026 −7%, 2028 −8%. Shown on League → Picks.
+- **Next from this feedback:**
+  1. athleticism percentiles from combine data
+  2. devy rankings (needs college data plus a recruiting-rankings source)
+  3. ask the tester what felt complicated in redraft
