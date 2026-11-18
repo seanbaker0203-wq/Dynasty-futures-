@@ -8,6 +8,7 @@ import { generateDemoLeagueTeams } from '../lib/demoLeague';
 
 export type DashboardViewMode =
   | 'playoffs'
+  | 'records'
   | 'rebuild'
   | 'watchlist'
   | 'mytrades'

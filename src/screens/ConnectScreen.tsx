@@ -81,11 +81,24 @@ export const ConnectScreen: React.FC<{ onDone?: () => void }> = ({ onDone }) => 
   return (
     <div className="space-y-8 pt-2">
       <div className="space-y-2">
-        <h1 className="display text-[44px] sm:text-[56px] text-ink uppercase">Where does your team stand?</h1>
+        <h1 className="display text-[44px] sm:text-[56px] text-ink uppercase">Find the trade that wins your title</h1>
         <p className="text-[17px] text-muted max-w-[34rem]">
-          Connect a dynasty, keeper or redraft league. Dynasty leagues get long-term values and plans; redraft leagues get this week’s
-          lineup, playoff odds and waiver targets. Add as many leagues as you like and switch between them at the top.
+          Values are everywhere. This tells you what to do with them: the trades worth making in your league, and whether to push for a
+          ring now or build for later.
         </p>
+        <ul className="grid sm:grid-cols-2 gap-x-6 gap-y-2 pt-2 text-[15px] max-w-[40rem]">
+          {[
+            ['Trade ideas for your roster', 'Fair deals with every team, or aimed at the player or pick you want. Keep refreshing until one fits.'],
+            ['Contend or rebuild', 'Playoff-schedule upgrades before the deadline, or sell veterans for picks and youth.'],
+            ['Salary-cap leagues', 'Contracts and cap room are checked on every idea.'],
+            ['Every platform', 'Sleeper, MFL, ESPN and Fleaflicker, all your leagues in one place.'],
+          ].map(([h, d]) => (
+            <li key={h}>
+              <span className="block font-semibold text-ink">{h}</span>
+              <span className="block text-muted text-[14px]">{d}</span>
+            </li>
+          ))}
+        </ul>
       </div>
 
       {evaluation && !isDemo && (

@@ -24,6 +24,7 @@ import { nflState, sleeperIdFor, weeklyProjections } from './server/sources/week
 import { weatherForTeams } from './server/sources/weather';
 import { marketTrades, ownTradeMeta } from './server/model/marketTrades';
 import { buildPortfolio } from './server/model/portfolio';
+import { buildRecordBook } from './server/model/history';
 import { buildRebuildPlan, checkRebuildOffer } from './server/model/rebuild';
 import { buildPlayoffRun } from './server/model/playoffs';
 import type { NormalizedLeague } from './server/leagues/types';
@@ -374,6 +375,16 @@ app.post(
 );
 
 /** Playoff run: playoff-schedule targets (incl. K/DEF free agents) and players to buy cheap for later. */
+app.post(
+  '/api/league/records',
+  rateLimit('projections', { anon: 30, user: 120 }),
+  asyncRoute(async (req, res) => {
+    const platform = String(req.body?.platform || '');
+    const leagueId = String(req.body?.league_id || '').trim();
+    if (!/^[A-Za-z0-9_-]{1,40}$/.test(leagueId)) throw new LeagueSyncError('Missing league.');
+    res.json(await buildRecordBook(platform, leagueId, req.body?.franchise_id ? String(req.body.franchise_id) : undefined));
+  })
+);
 app.post(
   '/api/rebuild',
   rateLimit('ideas', { anon: 40, user: 300 }),

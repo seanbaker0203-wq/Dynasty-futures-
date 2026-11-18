@@ -42,6 +42,7 @@ import { PortfolioScreen } from './screens/PortfolioScreen';
 import { WatchlistScreen } from './screens/WatchlistScreen';
 import { MyTradesScreen } from './screens/MyTradesScreen';
 import { PlayoffScreen } from './screens/PlayoffScreen';
+import { RecordsScreen } from './screens/RecordsScreen';
 import { RebuildScreen } from './screens/RebuildScreen';
 import { useAccount } from './context/AccountContext';
 import { ArrowLeftRight, LineChart, Link2, Shield, Trophy } from 'lucide-react';
@@ -50,7 +51,7 @@ type Destination = 'team' | 'league' | 'values' | 'trade' | 'connect';
 
 const DESTINATIONS: { id: Destination; label: string; icon: React.FC<{ className?: string }>; views: DashboardViewMode[] }[] = [
   { id: 'team', label: 'My team', icon: Shield, views: ['single', 'week', 'season', 'waivers', 'playoffs', 'rebuild', 'plan', 'optimization', 'portfolio', 'rules'] },
-  { id: 'league', label: 'League', icon: Trophy, views: ['league', 'compare', 'trades', 'picks', 'freeagents'] },
+  { id: 'league', label: 'League', icon: Trophy, views: ['league', 'compare', 'trades', 'picks', 'freeagents', 'records'] },
   { id: 'values', label: 'Values', icon: LineChart, views: ['values', 'movers', 'market', 'watchlist'] },
   { id: 'trade', label: 'Trade', icon: ArrowLeftRight, views: ['trade', 'ideas', 'gaps', 'mytrades'] },
   { id: 'connect', label: 'Connect', icon: Link2, views: ['ingest', 'terms', 'privacy'] },
@@ -87,7 +88,7 @@ const SubTabs: React.FC<{ options: { view: DashboardViewMode; label: string; cou
 };
 
 const AppContent: React.FC = () => {
-  const { activeView, setActiveView, evaluation, format, syncHistory } = useRoster();
+  const { activeView, setActiveView, evaluation, format, syncHistory, leagueRequest } = useRoster();
   const redraft = format === 'redraft';
   const multiLeague = syncHistory.length >= 2;
   const { watchlist } = useAccount();
@@ -212,6 +213,7 @@ const AppContent: React.FC = () => {
                       { view: 'picks', label: 'Picks' },
                       { view: 'freeagents', label: 'Free agents' },
                     ] as const)),
+                ...(['mfl', 'sleeper'].includes(leagueRequest()?.platform ?? '') ? ([{ view: 'records', label: 'History' }] as const) : []),
               ]}
             />
             {activeView === 'trades' && <TradesScreen />}
@@ -219,6 +221,7 @@ const AppContent: React.FC = () => {
             {activeView === 'league' && <LeagueScreen />}
             {activeView === 'compare' && <CompareScreen />}
             {activeView === 'freeagents' && <FreeAgentsScreen />}
+            {activeView === 'records' && <RecordsScreen />}
           </>
         )}
 
