@@ -1,0 +1,650 @@
+{
+ "by_tier": {
+  "23-24": {
+   "elite": {
+    "n": 44,
+    "mean": 0.848,
+    "median": 0.846,
+    "fell_off": 0.205
+   },
+   "starter": {
+    "n": 45,
+    "mean": 0.867,
+    "median": 0.891,
+    "fell_off": 0.2
+   },
+   "other": {
+    "n": 143,
+    "mean": 0.817,
+    "median": 0.787,
+    "fell_off": 0.336
+   }
+  },
+  "25-26": {
+   "elite": {
+    "n": 46,
+    "mean": 0.816,
+    "median": 0.793,
+    "fell_off": 0.217
+   },
+   "starter": {
+    "n": 35,
+    "mean": 0.886,
+    "median": 0.881,
+    "fell_off": 0.171
+   },
+   "other": {
+    "n": 115,
+    "mean": 0.739,
+    "median": 0.732,
+    "fell_off": 0.452
+   }
+  },
+  "27": {
+   "elite": {
+    "n": 14,
+    "mean": 0.801,
+    "median": 0.766,
+    "fell_off": 0.214
+   },
+   "starter": {
+    "n": 23,
+    "mean": 0.702,
+    "median": 0.626,
+    "fell_off": 0.478
+   },
+   "other": {
+    "n": 40,
+    "mean": 0.781,
+    "median": 0.776,
+    "fell_off": 0.4
+   }
+  },
+  "28": {
+   "elite": {
+    "n": 13,
+    "mean": 0.638,
+    "median": 0.764,
+    "fell_off": 0.308
+   },
+   "starter": {
+    "n": 10,
+    "mean": 0.61,
+    "median": 0.628,
+    "fell_off": 0.4
+   },
+   "other": {
+    "n": 30,
+    "mean": 0.668,
+    "median": 0.665,
+    "fell_off": 0.433
+   }
+  },
+  "29": {
+   "elite": {
+    "n": 6,
+    "mean": 0.539,
+    "median": 0.504,
+    "fell_off": 0.667
+   },
+   "starter": {
+    "n": 11,
+    "mean": 0.67,
+    "median": 0.686,
+    "fell_off": 0.273
+   },
+   "other": {
+    "n": 22,
+    "mean": 0.377,
+    "median": 0.236,
+    "fell_off": 0.682
+   }
+  },
+  "30+": {
+   "elite": {
+    "n": 5,
+    "mean": 0.407,
+    "median": 0.278,
+    "fell_off": 0.6
+   },
+   "starter": {
+    "n": 11,
+    "mean": 0.699,
+    "median": 0.808,
+    "fell_off": 0.273
+   },
+   "other": {
+    "n": 42,
+    "mean": 0.58,
+    "median": 0.597,
+    "fell_off": 0.524
+   }
+  }
+ },
+ "by_era": {
+  "23-24": {
+   "2012-18": {
+    "n": 46,
+    "mean": 0.854,
+    "median": 0.841,
+    "fell_off": 0.217
+   },
+   "2019-24": {
+    "n": 43,
+    "mean": 0.861,
+    "median": 0.875,
+    "fell_off": 0.186
+   }
+  },
+  "25-26": {
+   "2012-18": {
+    "n": 39,
+    "mean": 0.796,
+    "median": 0.735,
+    "fell_off": 0.282
+   },
+   "2019-24": {
+    "n": 42,
+    "mean": 0.893,
+    "median": 0.897,
+    "fell_off": 0.119
+   }
+  },
+  "27": {
+   "2012-18": {
+    "n": 18,
+    "mean": 0.852,
+    "median": 0.868,
+    "fell_off": 0.333
+   },
+   "2019-24": {
+    "n": 19,
+    "mean": 0.633,
+    "median": 0.626,
+    "fell_off": 0.421
+   }
+  },
+  "28": {
+   "2012-18": {
+    "n": 16,
+    "mean": 0.605,
+    "median": 0.617,
+    "fell_off": 0.375
+   },
+   "2019-24": {
+    "n": 7,
+    "mean": 0.674,
+    "median": 0.768,
+    "fell_off": 0.286
+   }
+  },
+  "29": {
+   "2012-18": {
+    "n": 11,
+    "mean": 0.577,
+    "median": 0.659,
+    "fell_off": 0.455
+   },
+   "2019-24": {
+    "n": 6,
+    "mean": 0.709,
+    "median": 0.681,
+    "fell_off": 0.333
+   }
+  },
+  "30+": {
+   "2012-18": {
+    "n": 12,
+    "mean": 0.629,
+    "median": 0.789,
+    "fell_off": 0.333
+   },
+   "2019-24": {
+    "n": 4,
+    "mean": 0.544,
+    "median": 0.555,
+    "fell_off": 0.5
+   }
+  }
+ },
+ "elite_by_era": {
+  "23-24": {
+   "2012-18": {
+    "n": 24,
+    "mean": 0.806,
+    "median": 0.809,
+    "fell_off": 0.25
+   },
+   "2019-24": {
+    "n": 20,
+    "mean": 0.898,
+    "median": 0.862,
+    "fell_off": 0.15
+   }
+  },
+  "25-26": {
+   "2012-18": {
+    "n": 22,
+    "mean": 0.727,
+    "median": 0.645,
+    "fell_off": 0.364
+   },
+   "2019-24": {
+    "n": 24,
+    "mean": 0.898,
+    "median": 0.897,
+    "fell_off": 0.083
+   }
+  },
+  "27": {
+   "2012-18": {
+    "n": 7,
+    "mean": 0.932,
+    "median": 0.984,
+    "fell_off": 0.143
+   },
+   "2019-24": {
+    "n": 7,
+    "mean": 0.67,
+    "median": 0.631,
+    "fell_off": 0.286
+   }
+  },
+  "28": {
+   "2012-18": {
+    "n": 9,
+    "mean": 0.603,
+    "median": 0.62,
+    "fell_off": 0.333
+   },
+   "2019-24": {
+    "n": 4,
+    "mean": 0.716,
+    "median": 0.884,
+    "fell_off": 0.25
+   }
+  },
+  "29": {
+   "2012-18": {
+    "n": 4,
+    "mean": 0.618,
+    "median": 0.602,
+    "fell_off": 0.5
+   },
+   "2019-24": {
+    "n": 2,
+    "mean": 0.381,
+    "median": 0.381,
+    "fell_off": 1.0
+   }
+  },
+  "30+": {
+   "2012-18": {
+    "n": 3,
+    "mean": 0.309,
+    "median": 0.145,
+    "fell_off": 0.667
+   },
+   "2019-24": {
+    "n": 2,
+    "mean": 0.555,
+    "median": 0.555,
+    "fell_off": 0.5
+   }
+  }
+ },
+ "by_workload": {
+  "23-24": {
+   "heavy (18+ touches/g)": {
+    "n": 50,
+    "mean": 0.877,
+    "median": 0.863,
+    "fell_off": 0.18
+   },
+   "lighter (<18)": {
+    "n": 39,
+    "mean": 0.832,
+    "median": 0.845,
+    "fell_off": 0.231
+   }
+  },
+  "25-26": {
+   "heavy (18+ touches/g)": {
+    "n": 45,
+    "mean": 0.883,
+    "median": 0.892,
+    "fell_off": 0.178
+   },
+   "lighter (<18)": {
+    "n": 36,
+    "mean": 0.8,
+    "median": 0.81,
+    "fell_off": 0.222
+   }
+  },
+  "27": {
+   "heavy (18+ touches/g)": {
+    "n": 17,
+    "mean": 0.785,
+    "median": 0.699,
+    "fell_off": 0.294
+   },
+   "lighter (<18)": {
+    "n": 20,
+    "mean": 0.701,
+    "median": 0.684,
+    "fell_off": 0.45
+   }
+  },
+  "28": {
+   "heavy (18+ touches/g)": {
+    "n": 13,
+    "mean": 0.626,
+    "median": 0.768,
+    "fell_off": 0.308
+   },
+   "lighter (<18)": {
+    "n": 10,
+    "mean": 0.626,
+    "median": 0.628,
+    "fell_off": 0.4
+   }
+  },
+  "29": {
+   "heavy (18+ touches/g)": {
+    "n": 8,
+    "mean": 0.731,
+    "median": 0.616,
+    "fell_off": 0.5
+   },
+   "lighter (<18)": {
+    "n": 9,
+    "mean": 0.528,
+    "median": 0.676,
+    "fell_off": 0.333
+   }
+  },
+  "30+": {
+   "heavy (18+ touches/g)": {
+    "n": 5,
+    "mean": 0.749,
+    "median": 0.832,
+    "fell_off": 0.2
+   },
+   "lighter (<18)": {
+    "n": 11,
+    "mean": 0.544,
+    "median": 0.702,
+    "fell_off": 0.455
+   }
+  }
+ },
+ "elite_27_plus": [
+  {
+   "name": "Adrian Peterson",
+   "year": 2012,
+   "age": 27.4,
+   "ppg": 20.2,
+   "next": 15.2
+  },
+  {
+   "name": "Darren Sproles",
+   "year": 2012,
+   "age": 29.2,
+   "ppg": 13.7,
+   "next": 9.1
+  },
+  {
+   "name": "Matt Forte",
+   "year": 2013,
+   "age": 27.7,
+   "ppg": 18.6,
+   "next": 18.4
+  },
+  {
+   "name": "Marshawn Lynch",
+   "year": 2013,
+   "age": 27.4,
+   "ppg": 15.9,
+   "next": 17.6
+  },
+  {
+   "name": "Adrian Peterson",
+   "year": 2013,
+   "age": 28.4,
+   "ppg": 15.2,
+   "next": 0.0
+  },
+  {
+   "name": "Reggie Bush",
+   "year": 2013,
+   "age": 28.5,
+   "ppg": 14.8,
+   "next": 7.9
+  },
+  {
+   "name": "Chris Johnson",
+   "year": 2013,
+   "age": 27.9,
+   "ppg": 13.5,
+   "next": 6.4
+  },
+  {
+   "name": "Arian Foster",
+   "year": 2014,
+   "age": 28.0,
+   "ppg": 19.4,
+   "next": 16.0
+  },
+  {
+   "name": "Matt Forte",
+   "year": 2014,
+   "age": 28.7,
+   "ppg": 18.4,
+   "next": 14.7
+  },
+  {
+   "name": "Marshawn Lynch",
+   "year": 2014,
+   "age": 28.4,
+   "ppg": 17.6,
+   "next": 10.9
+  },
+  {
+   "name": "Jamaal Charles",
+   "year": 2014,
+   "age": 27.7,
+   "ppg": 15.0,
+   "next": 17.5
+  },
+  {
+   "name": "Justin Forsett",
+   "year": 2014,
+   "age": 28.9,
+   "ppg": 14.0,
+   "next": 10.7
+  },
+  {
+   "name": "Ahmad Bradshaw",
+   "year": 2014,
+   "age": 28.5,
+   "ppg": 13.2,
+   "next": 6.3
+  },
+  {
+   "name": "Adrian Peterson",
+   "year": 2015,
+   "age": 30.4,
+   "ppg": 14.9,
+   "next": 2.2
+  },
+  {
+   "name": "Matt Forte",
+   "year": 2015,
+   "age": 29.7,
+   "ppg": 14.7,
+   "next": 12.0
+  },
+  {
+   "name": "LeSean McCoy",
+   "year": 2015,
+   "age": 27.1,
+   "ppg": 13.4,
+   "next": 18.0
+  },
+  {
+   "name": "DeAngelo Williams",
+   "year": 2015,
+   "age": 32.4,
+   "ppg": 13.0,
+   "next": 10.1
+  },
+  {
+   "name": "Danny Woodhead",
+   "year": 2015,
+   "age": 30.6,
+   "ppg": 12.7,
+   "next": 0.0
+  },
+  {
+   "name": "LeSean McCoy",
+   "year": 2016,
+   "age": 28.1,
+   "ppg": 18.0,
+   "next": 14.4
+  },
+  {
+   "name": "DeMarco Murray",
+   "year": 2016,
+   "age": 28.6,
+   "ppg": 16.5,
+   "next": 10.1
+  },
+  {
+   "name": "LeGarrette Blount",
+   "year": 2016,
+   "age": 29.7,
+   "ppg": 14.2,
+   "next": 6.4
+  },
+  {
+   "name": "Mark Ingram",
+   "year": 2017,
+   "age": 27.7,
+   "ppg": 15.4,
+   "next": 10.8
+  },
+  {
+   "name": "LeSean McCoy",
+   "year": 2017,
+   "age": 29.1,
+   "ppg": 14.4,
+   "next": 7.9
+  },
+  {
+   "name": "Mark Ingram",
+   "year": 2019,
+   "age": 29.7,
+   "ppg": 15.2,
+   "next": 4.5
+  },
+  {
+   "name": "Derrick Henry",
+   "year": 2021,
+   "age": 27.7,
+   "ppg": 22.9,
+   "next": 17.8
+  },
+  {
+   "name": "Austin Ekeler",
+   "year": 2022,
+   "age": 27.3,
+   "ppg": 18.8,
+   "next": 11.4
+  },
+  {
+   "name": "Derrick Henry",
+   "year": 2022,
+   "age": 28.7,
+   "ppg": 17.8,
+   "next": 13.7
+  },
+  {
+   "name": "James Conner",
+   "year": 2022,
+   "age": 27.3,
+   "ppg": 13.6,
+   "next": 14.5
+  },
+  {
+   "name": "Jamaal Williams",
+   "year": 2022,
+   "age": 27.4,
+   "ppg": 12.9,
+   "next": 4.0
+  },
+  {
+   "name": "Aaron Jones Sr.",
+   "year": 2022,
+   "age": 27.7,
+   "ppg": 12.8,
+   "next": 10.9
+  },
+  {
+   "name": "Christian McCaffrey",
+   "year": 2023,
+   "age": 27.2,
+   "ppg": 22.4,
+   "next": 10.1
+  },
+  {
+   "name": "Raheem Mostert",
+   "year": 2023,
+   "age": 31.4,
+   "ppg": 17.0,
+   "next": 4.7
+  },
+  {
+   "name": "Alvin Kamara",
+   "year": 2023,
+   "age": 28.1,
+   "ppg": 15.0,
+   "next": 16.5
+  },
+  {
+   "name": "James Conner",
+   "year": 2023,
+   "age": 28.3,
+   "ppg": 14.5,
+   "next": 14.5
+  },
+  {
+   "name": "Saquon Barkley",
+   "year": 2024,
+   "age": 27.6,
+   "ppg": 21.2,
+   "next": 13.4
+  },
+  {
+   "name": "Derrick Henry",
+   "year": 2024,
+   "age": 30.7,
+   "ppg": 19.2,
+   "next": 16.0
+  },
+  {
+   "name": "Alvin Kamara",
+   "year": 2024,
+   "age": 29.1,
+   "ppg": 16.5,
+   "next": 7.7
+  },
+  {
+   "name": "Joe Mixon",
+   "year": 2024,
+   "age": 28.1,
+   "ppg": 15.9,
+   "next": 0.0
+  }
+ ]
+}

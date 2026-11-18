@@ -216,6 +216,21 @@ async function buildBoard(settings: LeagueSettings, key: string): Promise<Board>
     if (ppg >= t.replacement * 0.75) return 'Depth';
     return 'Fading';
   };
+  // Running backs: elite producers (top 12 in PPG) follow the age curve, which matches how they've aged since 2012.
+  // Other backs fall off sooner: from age 27 they kept ~20% less of their production than the curve implies
+  // (scripts/analysis/rb_aging.py, data/rb-aging.json). Small samples, so we apply half of that gap.
+  const rbPpg = all.filter((r) => r.position === 'RB').map((r) => recent.get(r.key)?.ppg ?? 0).sort((a, b) => b - a);
+  const eliteRbPpg = rbPpg[11] ?? Infinity;
+  const RB_NON_ELITE_EXTRA: Record<number, number> = { 27: 0.9, 28: 0.95 }; // extra drop when he reaches this age
+  const rbExtra = (r: (typeof all)[number], t: number) => {
+    // Young backs (under 25) can still become elite, so this year's production says little about how they'll age.
+    if (r.position !== 'RB' || r.age == null || r.age < 25) return 1;
+    if ((recent.get(r.key)?.ppg ?? 0) >= eliteRbPpg) return 1;
+    let f = 1;
+    for (const [a, m] of Object.entries(RB_NON_ELITE_EXTRA)) if (r.age < Number(a) && r.age + t >= Number(a)) f *= m;
+    // Already past 27 now: the drop is in his current production; only later birthdays add more.
+    return f;
+  };
   const projections = new Map<string, { proj: SeasonProjection[]; points: number; falloff: number | null; contract: NflContract | null }>();
   for (const r of all) {
     if (r.age == null || !thresholds[r.position]) continue;
@@ -227,7 +242,7 @@ async function buildBoard(settings: LeagueSettings, key: string): Promise<Board>
     const proj: SeasonProjection[] = [];
     let points = 0;
     // Contract risk: free agency and cut-risk seasons (relative to the average risk already in the age curves).
-    const raw = Array.from({ length: HORIZON }, (_, t) => (base * curveAt(r.position, r.age! + t)) / now);
+    const raw = Array.from({ length: HORIZON }, (_, t) => ((base * curveAt(r.position, r.age! + t)) / now) * rbExtra(r, t));
     const thr = thresholds[r.position];
     const { factors, contract } = contractOutlook(
       r.sleeper_id,

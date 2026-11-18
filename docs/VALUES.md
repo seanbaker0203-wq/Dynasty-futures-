@@ -189,3 +189,35 @@ FantasyPros quoted $2,400/year for commercial use of its dynasty rankings, so ex
   swaps; bench veterans down ~20–29% (Shakir, Hockenson, Doubs), young stars up ~6–7% (Bowers, McBride, Hampton).
 - FantasyCalc use is free in writing (Alex, 9 Nov) under 10k sessions/month or $1k/month revenue, with attribution on
   every page and a plain-HTML backlink (done).
+
+## Running back aging by tier (18 Nov 2026)
+Question from a tester: do elite and modern backs (Bijan, Gibbs, CMC, Henry, Saquon) beat the age cliff?
+`scripts/analysis/rb_aging.py` → `data/rb-aging.json`.
+
+**Method.** Sleeper stats 2012–2025, 777 RB seasons with 6+ games. For each, the next season's half-PPR points per
+game is divided by this season's. A back who doesn't play the next year counts as 0. Tiers are by PPG rank that
+season: elite = top 12, starter = 13–24.
+
+| Age | Elite: mean kept | Elite: lost 40%+ | Starters: mean kept | Starters: lost 40%+ |
+|---|---|---|---|---|
+| 25–26 | 82% | 22% | 89% | 17% |
+| 27 | 80% | 21% | 70% | 48% |
+| 28 | 64% (median 76%) | 31% | 61% | 40% |
+| 29 | 54% | 67% | 67% | 27% |
+
+**Findings**
+- **Elite backs hold through 28.** At 27 they keep about what they kept at 25–26; regression to the mean is already
+  in both numbers.
+- **Other starters drop at 27.** They keep about 20% less than at 25–26.
+- **At 29 even elite backs fall.** Henry is the exception, not the rule. Samples here are small (6–13 seasons).
+- **Modern era (2019–24) vs 2012–18:** better at 25–26 (89% vs 80%) but no better at 27+. At 27 they're worse (63%
+  vs 85%), though samples are small. No evidence the cliff has moved later.
+- **Workload:** backs getting 18+ touches a game kept more than lighter-use backs at every age. That's mostly
+  selection: teams keep feeding the good ones.
+
+**Model change.**
+- Backs aged 25+ outside the top 12 in recent PPG get an extra 10% drop when they reach 27 and 5% at 28. That's
+  half the measured gap, given the small samples.
+- Elite backs stay on the standard curve.
+- Backs under 25 are unaffected, since they can still become elite.
+- Effect on values: roughly −2% to −6% for non-elite backs aged 25–28 (Corum, Kyren Williams, Chase Brown, Hubbard).
