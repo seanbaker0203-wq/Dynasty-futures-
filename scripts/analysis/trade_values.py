@@ -24,14 +24,17 @@ ap.add_argument('--half-life', type=float, default=90)
 ap.add_argument('--lam', type=float, default=0.05)
 ap.add_argument('--holdout', type=float, default=0.2)
 ap.add_argument('--asof', default=None)
+ap.add_argument('--since', default=None, help='only trades on/after this date (class-strength windows)')
+ap.add_argument('--abs-picks', type=int, default=0, help='key picks by draft year (PICK_R1_2027) instead of years ahead')
 A = ap.parse_args()
 
-asof = datetime.datetime.fromisoformat(A.asof) if A.asof else datetime.datetime.now(datetime.timezone.utc)
+asof = datetime.datetime.fromisoformat(A.asof).replace(tzinfo=datetime.timezone.utc) if A.asof else datetime.datetime.now(datetime.timezone.utc)
 
 def pick_key(p, traded):
     # Rookie drafts happen around May; after May 31 the next draft is next year's.
     nxt = traded.year + (1 if traded.month >= 6 else 0)
     yo = max(0, min(2, p['year'] - nxt))
+    if A.abs_picks: return f"PICK_R{min(p['round'], 4)}_{p['year']}" if p['year'] >= nxt else None
     return f"PICK_R{min(p['round'], 4)}_Y{yo}"
 
 trades = []
@@ -46,9 +49,11 @@ for line in open(A.trades):
     ts = datetime.datetime.fromisoformat(t['traded_at'].replace('Z', '+00:00'))
     age = (asof - ts).days
     if age < 0 or age > 365: continue
+    if A.since and ts < datetime.datetime.fromisoformat(A.since).replace(tzinfo=datetime.timezone.utc): continue
     sides = []
     for s in t['sides']:
         sides.append([a['id'] if a['kind'] == 'player' else pick_key(a, ts) for a in s['received']])
+    if any(x is None for side in sides for x in side): continue  # a pick already used (abs-picks mode)
     if len(sides) != 2 or not sides[0] or not sides[1]: continue
     trades.append((sides, 0.5 ** (age / A.half_life)))
 
@@ -108,7 +113,7 @@ def fit(train, alpha, theta0=None):
     if theta0 is None:
         th = np.full(n, MU)
         for a, i in idx.items():
-            if a.startswith('PICK_R'): th[i] = MU + (5 - int(a[6])) * 0.6 - int(a[-1]) * 0.15
+            if a.startswith('PICK_R'): th[i] = MU + (5 - int(a[6])) * 0.6 - (int(a[-1]) if '_Y' in a else 0) * 0.15
             else: th[i] = MU + 0.1 * math.log1p(counts[i])
     else:
         th = theta0.copy()
