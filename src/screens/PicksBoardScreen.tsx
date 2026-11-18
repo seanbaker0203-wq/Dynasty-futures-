@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useRoster } from '../context/RosterContext';
 import { fmt, fmtShort, pickName } from '../lib/leagueStats';
 import type { DraftPick } from '../types';
@@ -51,8 +51,17 @@ export const PicksBoardScreen: React.FC = () => {
   const rounds = useMemo(() => Math.max(0, ...picks.map((p) => p.round)), [picks]);
   const [year, setYear] = useState<number | 'all'>(() => years[0] ?? 'all');
 
+  const [classes, setClasses] = useState<{ year: number; vs_typical: number; label: 'strong' | 'typical' | 'weak' }[]>([]);
+  useEffect(() => {
+    fetch('/api/values/classes')
+      .then((r) => (r.ok ? r.json() : { classes: [] }))
+      .then((d) => setClasses(d.classes || []))
+      .catch(() => {});
+  }, []);
+
   if (!evaluation) return null;
   if (!picks.length) return <p className="text-muted">No future picks found for this league.</p>;
+  const shownClasses = classes.filter((c) => years.includes(c.year));
 
   const cellOf = (orig: string, y: number, r: number) => picks.find((p) => p.original_owner_id === orig && p.year === y && p.round === r);
   const owned = (team: string, y?: number) => picks.filter((p) => p.current_owner_id === team && (y == null || p.year === y));
@@ -92,6 +101,29 @@ export const PicksBoardScreen: React.FC = () => {
           </button>
         ))}
       </div>
+
+      {shownClasses.length > 0 && (
+        <div className="rounded-lg border border-line bg-card px-3 py-2.5 space-y-1">
+          <p className="text-[13px] font-semibold">How the trade market rates each draft class</p>
+          <ul className="flex flex-wrap gap-x-5 gap-y-1 text-[13px]">
+            {shownClasses.map((c) => {
+              const pct = Math.round((c.vs_typical - 1) * 100);
+              return (
+                <li key={c.year}>
+                  <span className="font-semibold">{c.year}</span>{' '}
+                  <span className={c.label === 'strong' ? 'text-up font-semibold' : c.label === 'weak' ? 'text-down font-semibold' : 'text-muted'}>
+                    {c.label === 'typical' ? 'typical' : `${c.label}, ${pct > 0 ? '+' : '−'}${Math.abs(pct)}%`}
+                  </span>
+                </li>
+              );
+            })}
+          </ul>
+          <p className="text-[12px] text-muted">
+            1st-round prices in about 100,000 real Sleeper dynasty trades from 2024 to now, compared with a typical class at the same point in the year. Already
+            reflected in pick values.
+          </p>
+        </div>
+      )}
 
       <label className="flex items-center gap-3">
         <span className="text-[13px] font-semibold text-muted shrink-0">Highlight</span>

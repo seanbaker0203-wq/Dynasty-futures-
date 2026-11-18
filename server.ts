@@ -26,6 +26,7 @@ import { marketTrades, ownTradeMeta } from './server/model/marketTrades';
 import { buildPortfolio } from './server/model/portfolio';
 import { buildRecordBook } from './server/model/history';
 import { usageFor } from './server/sources/usage';
+import { classOutlook } from './server/model/classStrength';
 import { buildRebuildPlan, checkRebuildOffer } from './server/model/rebuild';
 import { buildPlayoffRun } from './server/model/playoffs';
 import type { NormalizedLeague } from './server/leagues/types';
@@ -141,6 +142,9 @@ app.get(
 );
 
 /** Pick values on the league's scale, for the trade builder. */
+app.get('/api/values/classes', (_req, res) => {
+  res.json(classOutlook());
+});
 app.get('/api/values/pick', (req, res) => {
   const year = Number(req.query.year) || SEASON.upcomingDraftYear;
   const round = Number(req.query.round) || 1;

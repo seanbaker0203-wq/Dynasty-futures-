@@ -221,3 +221,30 @@ season: elite = top 12, starter = 13–24.
 - Elite backs stay on the standard curve.
 - Backs under 25 are unaffected, since they can still become elite.
 - Effect on values: roughly −2% to −6% for non-elite backs aged 25–28 (Corum, Kyren Williams, Chase Brown, Hubbard).
+
+## Draft-class strength (18 Nov 2026)
+Question from a tester: last year the 2027 1.01 (Jeremiah Smith's class) seemed worth more than the 2026 1.01, and
+Malachi Toney may do the same for 2028. Is class strength priced?
+`scripts/analysis/class_strength.py` → `data/class-strength.json`.
+
+**Data.** The 2026 crawl plus a backfill of 2024–2025 trades from ~900 of the same Sleeper leagues
+(`scripts/collect/backfill-history.ts`, following previous_league_id). About 100,000 trades in all.
+
+**Method.** For each window (spring = Jan–Apr before the draft; fall = mid-Aug to Nov), fit 1st-round pick values by
+draft year. Then compare each class's price with the class a year earlier. Time to the draft is the same for that
+comparison in every year, so how far a class sits above or below the usual ratio is class strength. Each class has
+2–6 measures (windows × formats × one or two years out); the median is reported.
+
+| Class | Measures | Priced vs a typical class | Notes |
+|---|---|---|---|
+| 2025 | 2 | −3% (typical) | |
+| 2026 | 5 | −7% (weak) | |
+| 2027 | 6 | +9% (strong) | Above typical on every measure, +7% to +19%. In fall 2025 a 2027 1st cost ~95% of a 2026 1st (Superflex); normally ~85–90%. |
+| 2028 | 4 | −8% (weak) | The market isn't pricing any Toney effect into 2028 1sts as a whole. |
+
+**What this does and doesn't show**
+- Generic 1sts never cost more than the year before. The tester's "2027 1.01 > 2026 1.01" is about the very top
+  pick, where a single prospect matters. Sleeper trades rarely name the pick slot, so we can't measure it here.
+- Our pick values already come from the trade market, so class strength is shown, not applied a second time.
+- Shown on League → Picks.
+- Next: refresh with each crawl, and add devy rankings to explain why a class is strong.
