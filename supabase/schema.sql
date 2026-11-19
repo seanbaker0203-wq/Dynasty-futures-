@@ -166,3 +166,39 @@ begin
   end if;
 end $$;
 -- league_trades has no public policy: only the server reads/writes it.
+
+-- ---------- Usage analytics and feedback (added 18 Nov 2026) ----------
+-- Written by the server with the anon key; insert-only (nobody can read them through the API).
+-- Read them in the Supabase dashboard (Table Editor) or SQL editor.
+create table if not exists public.usage_events (
+  id bigint generated always as identity primary key,
+  at timestamptz not null default now(),
+  device text,            -- random id stored on the device, not tied to a person
+  user_id uuid,           -- set when signed in
+  event text not null,    -- e.g. view, league_synced, trade_ideas, feedback_sent
+  view text,
+  platform text,
+  props jsonb
+);
+create index if not exists usage_events_at on public.usage_events (at desc);
+create table if not exists public.feedback (
+  id bigint generated always as identity primary key,
+  at timestamptz not null default now(),
+  device text,
+  user_id uuid,
+  email text,             -- only if they chose to leave one
+  message text not null,
+  view text,
+  platform text,
+  user_agent text
+);
+alter table public.usage_events enable row level security;
+alter table public.feedback enable row level security;
+do $$ begin
+  if not exists (select 1 from pg_policies where policyname = 'insert usage_events') then
+    create policy "insert usage_events" on public.usage_events for insert to anon, authenticated with check (true);
+  end if;
+  if not exists (select 1 from pg_policies where policyname = 'insert feedback') then
+    create policy "insert feedback" on public.feedback for insert to anon, authenticated with check (true);
+  end if;
+end $$;

@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
+import { track, setTrackPlatform } from '../lib/track';
 import { RosterEvaluationResult, SyncRequest, Platform, LeagueHistory, LeagueFormat } from '../types';
 import { apiPost } from '../lib/api';
 import { SEED_PLAYERS } from '../data/seedPlayers';
@@ -198,6 +199,10 @@ export const RosterProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       setActivePlatform(req.platform);
       setIsDemo(false);
       setEvaluation(result);
+      setTrackPlatform(req.platform);
+      track('league_synced', {
+        props: { format: result.settings?.format ?? 'dynasty', superflex: !!result.settings?.superflex, teams: result.league_teams?.length ?? 0, new_league: !sameLeague },
+      });
       setComparisonEvaluation(null);
       setPartnerId(null);
       // New league or new mode: open its home screen. Same league (refresh, switch team): stay put.

@@ -6,7 +6,7 @@ export const LEGAL = {
   operator: 'Sean Baker',
   contact: 'the contact link in the app',
   governingState: 'the State of Texas',
-  updated: 'November 9, 2026',
+  updated: 'November 18, 2026',
 };
 
 const H: React.FC<{ children: React.ReactNode }> = ({ children }) => <h2 className="display text-[22px] text-ink mt-6 mb-1">{children}</h2>;
@@ -138,6 +138,15 @@ export const PrivacyScreen: React.FC = () => (
       </li>
       <li>
         <b>Technical data:</b> IP address and basic request information, used for security and rate limiting.
+      </li>
+      <li>
+        <b>Usage:</b> which screens and features are used (for example “opened Trade ideas”, “synced a 1QB league”), with a random ID
+        stored on your device and your account ID if you’re signed in. No league IDs, usernames or rosters. We don’t use third-party
+        analytics or advertising trackers. If your browser sends Do Not Track or Global Privacy Control, we don’t record usage.
+      </li>
+      <li>
+        <b>Feedback:</b> what you write in “Send feedback”, the screen you were on, your browser type, and an email address only if you
+        choose to give one.
       </li>
     </ul>
 

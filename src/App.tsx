@@ -43,6 +43,8 @@ import { WatchlistScreen } from './screens/WatchlistScreen';
 import { MyTradesScreen } from './screens/MyTradesScreen';
 import { PlayoffScreen } from './screens/PlayoffScreen';
 import { RecordsScreen } from './screens/RecordsScreen';
+import { FeedbackButton } from './components/Feedback';
+import { track } from './lib/track';
 import { RebuildScreen } from './screens/RebuildScreen';
 import { useAccount } from './context/AccountContext';
 import { ArrowLeftRight, LineChart, Link2, Shield, Trophy } from 'lucide-react';
@@ -107,6 +109,10 @@ const AppContent: React.FC = () => {
   useEffect(() => {
     window.scrollTo(0, 0);
   }, [activeView, evaluation?.roster?.external_league_id]);
+  // Which screens get used (first-party, anonymous; see src/lib/track.ts).
+  useEffect(() => {
+    track('view', { view: activeView });
+  }, [activeView]);
 
   const navButton = (d: (typeof DESTINATIONS)[number], variant: 'top' | 'bottom') => {
     const Icon = d.icon;
@@ -143,9 +149,12 @@ const AppContent: React.FC = () => {
           <button type="button" onClick={() => go(evaluation ? 'team' : 'connect')} className="display text-[22px] text-ink uppercase">
             Dynasty Futures
           </button>
-          <nav aria-label="Main" className="hidden md:flex items-center gap-2 self-stretch">
-            {DESTINATIONS.map((d) => navButton(d, 'top'))}
-          </nav>
+          <div className="flex items-center gap-4 self-stretch">
+            <nav aria-label="Main" className="hidden md:flex items-center gap-2 self-stretch">
+              {DESTINATIONS.map((d) => navButton(d, 'top'))}
+            </nav>
+            <FeedbackButton view={activeView} platform={leagueRequest()?.platform} />
+          </div>
         </div>
       </header>
 

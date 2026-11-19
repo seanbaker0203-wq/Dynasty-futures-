@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { track } from '../lib/track';
 import { Loader2, RefreshCw } from 'lucide-react';
 import { useRoster } from '../context/RosterContext';
 import { fmt, pickName } from '../lib/leagueStats';
@@ -51,6 +52,7 @@ export const IdeasScreen: React.FC = () => {
     setSeen([]);
   }, [searchKey]);
   const showDifferent = () => {
+    track('show_different_ideas', { props: { round: round + 1 } });
     setSeen((s) => [...s, ...(ideas || []).map((i) => i.key).filter((k): k is string => !!k)]);
     setRound((r) => r + 1);
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -82,7 +84,12 @@ export const IdeasScreen: React.FC = () => {
         },
         ctl.signal
       )
-        .then((d) => setIdeas(d.ideas))
+        .then((d) => {
+          setIdeas(d.ideas);
+          track('trade_ideas', {
+            props: { count: d.ideas.length, targeted: targetIds.length > 0, one_team: !!partner, fire_sale: fireSale, picks: want.includes('PICK'), refresh: seenRef.current.length > 0 },
+          });
+        })
         .catch((e) => e?.name !== 'AbortError' && setIdeasError(e.message));
     }, 150);
     return () => {

@@ -26,6 +26,7 @@ import { marketTrades, ownTradeMeta } from './server/model/marketTrades';
 import { buildPortfolio } from './server/model/portfolio';
 import { buildRecordBook } from './server/model/history';
 import { usageFor } from './server/sources/usage';
+import { trackEvents, saveFeedback } from './server/telemetry';
 import { classOutlook } from './server/model/classStrength';
 import { buildRebuildPlan, checkRebuildOffer } from './server/model/rebuild';
 import { buildPlayoffRun } from './server/model/playoffs';
@@ -380,6 +381,23 @@ app.post(
 );
 
 /** Playoff run: playoff-schedule targets (incl. K/DEF free agents) and players to buy cheap for later. */
+app.post(
+  '/api/track',
+  rateLimit('track', { anon: 300, user: 600 }),
+  asyncRoute(async (req, res) => {
+    // Analytics must never break the app: failures are logged, the client always gets 204.
+    trackEvents(req.body, req.caller?.userId ?? null).catch((e) => console.warn('[track]', e.message));
+    res.status(204).end();
+  })
+);
+app.post(
+  '/api/feedback',
+  rateLimit('feedback', { anon: 10, user: 30 }),
+  asyncRoute(async (req, res) => {
+    await saveFeedback(req.body, req.caller?.userId ?? null, req.headers['user-agent']);
+    res.json({ ok: true });
+  })
+);
 app.post(
   '/api/usage',
   rateLimit('projections', { anon: 120, user: 600 }),
