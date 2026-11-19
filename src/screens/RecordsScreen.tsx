@@ -76,7 +76,7 @@ export const RecordsScreen: React.FC = () => {
   if (!data)
     return (
       <p className="flex items-center gap-2 text-muted py-8">
-        <Loader2 className="w-4 h-4 animate-spin" /> Reading every season of your league
+        <Loader2 className="w-4 h-4 animate-spin" /> Reading every season of your league. The first time can take up to 30 seconds.
       </p>
     );
   if (!data.seasons.length) return <p className="text-muted">No past seasons found for this league.</p>;

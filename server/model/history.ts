@@ -74,16 +74,33 @@ interface Season {
 }
 
 // ---------- MFL ----------
+// MFL throttles bursts from one IP (it answers with an error body instead of data), so requests go one at a time
+// with a short gap and are retried with backoff.
+let mflLast = 0;
+async function mflGet<T = any>(url: string, tries = 4): Promise<T> {
+  for (let i = 0; ; i++) {
+    const wait = Math.max(0, mflLast + 250 - Date.now());
+    mflLast = Date.now() + wait;
+    if (wait) await new Promise((r) => setTimeout(r, wait));
+    try {
+      const d = await fetchJson<any>(url, { timeoutMs: 20000 });
+      if (d && typeof d === 'object' && 'error' in d && Object.keys(d).length <= 2) throw new Error(`MFL: ${JSON.stringify(d.error).slice(0, 120)}`);
+      return d as T;
+    } catch (e) {
+      if (i >= tries - 1) throw e;
+      await new Promise((r) => setTimeout(r, 1000 * 2 ** i));
+    }
+  }
+}
 async function mflSeason(host: string, year: number, leagueId: string): Promise<Season> {
+  const key = `hist-mfl-${year}-${leagueId}`;
   const ttl = year >= new Date().getFullYear() ? 3600_000 : 24 * 3600_000;
-  return cached(`hist-mfl-${year}-${leagueId}`, ttl, async () => {
+  const p = cached(key, ttl, async () => {
     const base = `${host}/${year}/export?L=${leagueId}&JSON=1`;
-    const [lg, wr, br, rules] = await Promise.all([
-      fetchJson<any>(`${base}&TYPE=league`),
-      fetchJson<any>(`${base}&TYPE=weeklyResults&W=YTD`),
-      fetchJson<any>(`${base}&TYPE=playoffBrackets`).catch(() => null),
-      fetchJson<any>(`${base}&TYPE=rules`).catch(() => null),
-    ]);
+    const lg = await mflGet<any>(`${base}&TYPE=league`);
+    const wr = await mflGet<any>(`${base}&TYPE=weeklyResults&W=YTD`);
+    const br = await mflGet<any>(`${base}&TYPE=playoffBrackets`).catch(() => null);
+    const rules = await mflGet<any>(`${base}&TYPE=rules`).catch(() => null);
     const L = lg?.league;
     if (!L) throw new Error(`MFL ${year}: no league`);
     const names = new Map<string, string>(asArray(L.franchises?.franchise).map((f: any) => [String(f.id), String(f.name)]));
@@ -102,7 +119,7 @@ async function mflSeason(host: string, year: number, leagueId: string): Promise<
     let champion: Season['champion'];
     const brackets = asArray(br?.playoffBrackets?.playoffBracket).sort((x: any, y: any) => Number(y.teamsInvolved) - Number(x.teamsInvolved));
     if (brackets[0]) {
-      const b = await fetchJson<any>(`${base}&TYPE=playoffBracket&BRACKET_ID=${brackets[0].id}`).catch(() => null);
+      const b = await mflGet<any>(`${base}&TYPE=playoffBracket&BRACKET_ID=${brackets[0].id}`).catch(() => null);
       const rounds = asArray(b?.playoffBracket?.playoffRound);
       const finals = asArray(rounds[rounds.length - 1]?.playoffGame);
       const g = finals.length === 1 ? finals[0] : null;
@@ -122,10 +139,15 @@ async function mflSeason(host: string, year: number, leagueId: string): Promise<
     if (!rules) ppr = null;
     return { season: year, lastRegular, names, games, champion, ppr, starters: Number(L.starters?.count) || null };
   });
+  // A finished season without a champion means a bracket request failed: don't keep that for a day.
+  p.then((s) => {
+    if (!s.champion && year < new Date().getFullYear()) setTimeout(() => cache.delete(key), 5 * 60_000);
+  }).catch(() => {});
+  return p;
 }
 
 async function mflHistory(leagueId: string, year: number): Promise<{ seasons: Season[]; missing: number[]; current: Map<string, string> }> {
-  const lg = await fetchJson<any>(`https://api.myfantasyleague.com/${year}/export?TYPE=league&L=${leagueId}&JSON=1`);
+  const lg = await mflGet<any>(`https://api.myfantasyleague.com/${year}/export?TYPE=league&L=${leagueId}&JSON=1`);
   const hist = asArray(lg?.league?.history?.league);
   const list = (hist.length ? hist : [{ year: String(year), url: `https://api.myfantasyleague.com/${year}/home/${leagueId}` }])
     .map((h: any) => {
@@ -134,7 +156,9 @@ async function mflHistory(leagueId: string, year: number): Promise<{ seasons: Se
     })
     .filter((h) => h.year <= year)
     .sort((a, b) => a.year - b.year);
-  const results = await Promise.allSettled(list.map((h) => mflSeason(h.host, h.year, h.id)));
+  // One season at a time (see mflGet).
+  const results: PromiseSettledResult<Season>[] = [];
+  for (const h of list) results.push(await mflSeason(h.host, h.year, h.id).then((value) => ({ status: 'fulfilled' as const, value }), (reason) => ({ status: 'rejected' as const, reason })));
   const seasons: Season[] = [];
   const missing: number[] = [];
   results.forEach((r, i) => (r.status === 'fulfilled' && r.value.games.length ? seasons.push(r.value) : missing.push(list[i].year)));
