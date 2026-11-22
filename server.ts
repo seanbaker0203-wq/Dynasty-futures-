@@ -26,6 +26,7 @@ import { marketTrades, ownTradeMeta } from './server/model/marketTrades';
 import { buildPortfolio } from './server/model/portfolio';
 import { buildRecordBook } from './server/model/history';
 import { usageFor } from './server/sources/usage';
+import { buildLineupReport } from './server/model/lineupReport';
 import { trackEvents, saveFeedback } from './server/telemetry';
 import { classOutlook } from './server/model/classStrength';
 import { buildRebuildPlan, checkRebuildOffer } from './server/model/rebuild';
@@ -404,6 +405,14 @@ app.post(
   asyncRoute(async (req, res) => {
     const ids = (Array.isArray(req.body?.ids) ? req.body.ids : []).map(String).filter((x: string) => /^[0-9A-Za-z:_-]{1,24}$/.test(x)).slice(0, 60);
     res.json(await usageFor(ids, getSeasonContext().seasonYear));
+  })
+);
+app.post(
+  '/api/lineup/report',
+  rateLimit('projections', { anon: 30, user: 120 }),
+  asyncRoute(async (req, res) => {
+    const ev = await evaluationFor(req);
+    res.json(await buildLineupReport(ev, String(req.body?.platform || ''), String(req.body?.league_id || '')));
   })
 );
 app.post(

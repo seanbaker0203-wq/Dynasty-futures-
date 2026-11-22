@@ -340,6 +340,7 @@ export interface FlexForFirstOpportunity {
 
 export type DashboardViewMode =
   | 'playoffs'
+  | 'lineupreport'
   | 'records'
   | 'rebuild'
   | 'watchlist'

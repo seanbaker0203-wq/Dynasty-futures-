@@ -9,6 +9,7 @@ import { generateDemoLeagueTeams } from '../lib/demoLeague';
 
 export type DashboardViewMode =
   | 'playoffs'
+  | 'lineupreport'
   | 'records'
   | 'rebuild'
   | 'watchlist'
